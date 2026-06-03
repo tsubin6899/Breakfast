@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>初一食午營運分析 Dashboard</title>
+  <style>
+    :root {
+      --ink: #17211c;
+      --muted: #66736d;
+      --line: #d9e1dc;
+      --paper: #fbfcf8;
+      --panel: #ffffff;
+      --green: #2f7d5a;
+      --blue: #3b78a3;
+      --gold: #c17a2c;
+      --red: #b24b51;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--paper);
+      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+      line-height: 1.55;
+    }
+    header {
+      padding: 32px clamp(16px, 4vw, 52px) 20px;
+      background: #f3f7f1;
+      border-bottom: 1px solid var(--line);
+    }
+    main { padding: 24px clamp(16px, 4vw, 52px) 44px; }
+    h1 {
+      margin: 0;
+      font-size: clamp(26px, 3.4vw, 42px);
+      letter-spacing: 0;
+    }
+    .sub {
+      margin: 8px 0 0;
+      color: var(--muted);
+      max-width: 860px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .metric,
+    .entry,
+    .note {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(23, 33, 28, 0.06);
+    }
+    .metric { padding: 16px; min-height: 112px; }
+    .metric span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(22px, 3vw, 31px);
+    }
+    .metric em {
+      display: block;
+      margin-top: 5px;
+      color: var(--muted);
+      font-style: normal;
+      font-size: 13px;
+    }
+    .entries {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .entry {
+      display: grid;
+      gap: 14px;
+      padding: 18px;
+      min-height: 280px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 21px;
+    }
+    .entry p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .mini-chart {
+      display: grid;
+      grid-template-columns: repeat(16, 1fr);
+      align-items: end;
+      gap: 5px;
+      min-height: 96px;
+      padding: 10px 0 2px;
+      border-bottom: 1px solid var(--line);
+    }
+    .bar {
+      min-height: 12px;
+      border-radius: 4px 4px 0 0;
+      background: var(--green);
+    }
+    .bar.alt { background: var(--blue); }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: auto;
+    }
+    a.button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 42px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      color: #fff;
+      background: var(--green);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    a.secondary {
+      color: var(--ink);
+      background: #eef4ef;
+      border: 1px solid var(--line);
+    }
+    .note {
+      margin-top: 16px;
+      padding: 14px 16px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    @media (max-width: 900px) {
+      .summary,
+      .entries { grid-template-columns: 1fr; }
+      .entry { min-height: auto; }
+      .mini-chart { grid-template-columns: repeat(8, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>初一食午營運分析 Dashboard</h1>
+    <p class="sub">整理營收、薪資、成本結構與收入來源，提供可直接發布到 GitHub Pages 的靜態網站入口。</p>
+  </header>
+
+  <main>
+    <section class="summary" aria-label="網站摘要">
+      <div class="metric">
+        <span>成本分析範圍</span>
+        <strong>2025-01 至 2026-04</strong>
+        <em>16 個月份</em>
+      </div>
+      <div class="metric">
+        <span>成本分析總收入</span>
+        <strong>16,139,621 元</strong>
+        <em>收入明細已分類</em>
+      </div>
+      <div class="metric">
+        <span>平均成本率</span>
+        <strong>74.3%</strong>
+        <em>總成本 / 總收入</em>
+      </div>
+      <div class="metric">
+        <span>總體分析月份</span>
+        <strong>53 個</strong>
+        <em>2022 至 2026-05 有效月份</em>
+      </div>
+    </section>
+
+    <section class="entries" aria-label="Dashboard 入口">
+      <article class="entry">
+        <div>
+          <h2>成本與收入來源分析</h2>
+          <p>以 2025 到 2026 年 4 月為主軸，分析收入明細、成本群組、成本明細排行、成本率、淨收入與每月成本狀態。</p>
+        </div>
+        <div class="mini-chart" aria-hidden="true">
+          <i class="bar" style="height:68%"></i><i class="bar" style="height:62%"></i><i class="bar" style="height:71%"></i><i class="bar" style="height:74%"></i>
+          <i class="bar" style="height:70%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:72%"></i><i class="bar" style="height:77%"></i>
+          <i class="bar" style="height:84%"></i><i class="bar" style="height:78%"></i><i class="bar" style="height:69%"></i><i class="bar" style="height:74%"></i>
+          <i class="bar" style="height:69%"></i><i class="bar" style="height:79%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:73%"></i>
+        </div>
+        <div class="actions">
+          <a class="button" href="./dashboard_cost/">開啟成本分析</a>
+          <a class="button secondary" href="./dashboard_cost/cost-dashboard-data.json">查看資料</a>
+        </div>
+      </article>
+
+      <article class="entry">
+        <div>
+          <h2>總體營收與薪資分析</h2>
+          <p>彙整每年每月營收、薪資、月對月差異、薪資占比與每月營收狀態報告，適合快速查看長期趨勢。</p>
+        </div>
+        <div class="mini-chart" aria-hidden="true">
+          <i class="bar alt" style="height:48%"></i><i class="bar alt" style="height:42%"></i><i class="bar alt" style="height:46%"></i><i class="bar alt" style="height:53%"></i>
+          <i class="bar alt" style="height:58%"></i><i class="bar alt" style="height:58%"></i><i class="bar alt" style="height:62%"></i><i class="bar alt" style="height:61%"></i>
+          <i class="bar alt" style="height:56%"></i><i class="bar alt" style="height:62%"></i><i class="bar alt" style="height:57%"></i><i class="bar alt" style="height:63%"></i>
+          <i class="bar alt" style="height:76%"></i><i class="bar alt" style="height:51%"></i><i class="bar alt" style="height:73%"></i><i class="bar alt" style="height:70%"></i>
+        </div>
+        <div class="actions">
+          <a class="button" href="./dashboard/">開啟總體分析</a>
+          <a class="button secondary" href="./dashboard/dashboard-data.json">查看資料</a>
+        </div>
+      </article>
+    </section>
+
+    <section class="note">
+      GitHub Pages 發布時，請把這個資料夾中的所有檔案放在網站根目錄。若使用 repo 根目錄發布，`index.html` 要放在 repo 最外層。
+    </section>
+  </main>
+</body>
+</html>
