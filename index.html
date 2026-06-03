@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>初一食午營運分析 Dashboard</title>
+  <title>初一食午成本分析 Dashboard</title>
   <style>
     :root {
       --ink: #17211c;
@@ -72,23 +72,19 @@
       font-style: normal;
       font-size: 13px;
     }
-    .entries {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px;
-    }
     .entry {
       display: grid;
-      gap: 14px;
-      padding: 18px;
-      min-height: 280px;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, .7fr);
+      gap: 18px;
+      padding: 20px;
+      align-items: center;
     }
     h2 {
       margin: 0;
-      font-size: 21px;
+      font-size: 23px;
     }
     .entry p {
-      margin: 0;
+      margin: 10px 0 0;
       color: var(--muted);
     }
     .mini-chart {
@@ -96,7 +92,7 @@
       grid-template-columns: repeat(16, 1fr);
       align-items: end;
       gap: 5px;
-      min-height: 96px;
+      min-height: 116px;
       padding: 10px 0 2px;
       border-bottom: 1px solid var(--line);
     }
@@ -105,12 +101,11 @@
       border-radius: 4px 4px 0 0;
       background: var(--green);
     }
-    .bar.alt { background: var(--blue); }
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin-top: auto;
+      margin-top: 18px;
     }
     a.button {
       display: inline-flex;
@@ -137,80 +132,60 @@
     }
     @media (max-width: 900px) {
       .summary,
-      .entries { grid-template-columns: 1fr; }
-      .entry { min-height: auto; }
+      .entry { grid-template-columns: 1fr; }
       .mini-chart { grid-template-columns: repeat(8, 1fr); }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>初一食午營運分析 Dashboard</h1>
-    <p class="sub">整理營收、薪資、成本結構與收入來源，提供可直接發布到 GitHub Pages 的靜態網站入口。</p>
+    <h1>初一食午成本分析 Dashboard</h1>
+    <p class="sub">整理 2025-01 至 2026-04 的收入來源、成本群組、成本明細排行、成本率與淨收入狀態，作為 GitHub Pages 網站入口。</p>
   </header>
 
   <main>
     <section class="summary" aria-label="網站摘要">
       <div class="metric">
-        <span>成本分析範圍</span>
+        <span>分析範圍</span>
         <strong>2025-01 至 2026-04</strong>
         <em>16 個月份</em>
       </div>
       <div class="metric">
-        <span>成本分析總收入</span>
+        <span>總收入</span>
         <strong>16,139,621 元</strong>
         <em>收入明細已分類</em>
+      </div>
+      <div class="metric">
+        <span>總成本</span>
+        <strong>11,990,828 元</strong>
+        <em>成本群組已分類</em>
       </div>
       <div class="metric">
         <span>平均成本率</span>
         <strong>74.3%</strong>
         <em>總成本 / 總收入</em>
       </div>
-      <div class="metric">
-        <span>總體分析月份</span>
-        <strong>53 個</strong>
-        <em>2022 至 2026-05 有效月份</em>
-      </div>
     </section>
 
-    <section class="entries" aria-label="Dashboard 入口">
-      <article class="entry">
-        <div>
-          <h2>成本與收入來源分析</h2>
-          <p>以 2025 到 2026 年 4 月為主軸，分析收入明細、成本群組、成本明細排行、成本率、淨收入與每月成本狀態。</p>
-        </div>
-        <div class="mini-chart" aria-hidden="true">
-          <i class="bar" style="height:68%"></i><i class="bar" style="height:62%"></i><i class="bar" style="height:71%"></i><i class="bar" style="height:74%"></i>
-          <i class="bar" style="height:70%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:72%"></i><i class="bar" style="height:77%"></i>
-          <i class="bar" style="height:84%"></i><i class="bar" style="height:78%"></i><i class="bar" style="height:69%"></i><i class="bar" style="height:74%"></i>
-          <i class="bar" style="height:69%"></i><i class="bar" style="height:79%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:73%"></i>
-        </div>
+    <section class="entry" aria-label="Dashboard 入口">
+      <div>
+        <h2>成本與收入來源分析</h2>
+        <p>分析收入明細排行、成本群組甜甜圈占比、成本明細排行、成本率與淨收入率。年度與月份篩選會同步影響收入排行、成本群組與成本排行。</p>
         <div class="actions">
           <a class="button" href="./dashboard_cost/">開啟成本分析</a>
           <a class="button secondary" href="./dashboard_cost/cost-dashboard-data.json">查看資料</a>
         </div>
-      </article>
-
-      <article class="entry">
-        <div>
-          <h2>總體營收與薪資分析</h2>
-          <p>彙整每年每月營收、薪資、月對月差異、薪資占比與每月營收狀態報告，適合快速查看長期趨勢。</p>
-        </div>
-        <div class="mini-chart" aria-hidden="true">
-          <i class="bar alt" style="height:48%"></i><i class="bar alt" style="height:42%"></i><i class="bar alt" style="height:46%"></i><i class="bar alt" style="height:53%"></i>
-          <i class="bar alt" style="height:58%"></i><i class="bar alt" style="height:58%"></i><i class="bar alt" style="height:62%"></i><i class="bar alt" style="height:61%"></i>
-          <i class="bar alt" style="height:56%"></i><i class="bar alt" style="height:62%"></i><i class="bar alt" style="height:57%"></i><i class="bar alt" style="height:63%"></i>
-          <i class="bar alt" style="height:76%"></i><i class="bar alt" style="height:51%"></i><i class="bar alt" style="height:73%"></i><i class="bar alt" style="height:70%"></i>
-        </div>
-        <div class="actions">
-          <a class="button" href="./dashboard/">開啟總體分析</a>
-          <a class="button secondary" href="./dashboard/dashboard-data.json">查看資料</a>
-        </div>
-      </article>
+      </div>
+      <div class="mini-chart" aria-hidden="true">
+        <i class="bar" style="height:68%"></i><i class="bar" style="height:62%"></i><i class="bar" style="height:71%"></i><i class="bar" style="height:74%"></i>
+        <i class="bar" style="height:70%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:72%"></i><i class="bar" style="height:77%"></i>
+        <i class="bar" style="height:84%"></i><i class="bar" style="height:78%"></i><i class="bar" style="height:69%"></i><i class="bar" style="height:74%"></i>
+        <i class="bar" style="height:69%"></i><i class="bar" style="height:79%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:73%"></i>
+      </div>
     </section>
 
     <section class="note">
-      GitHub Pages 發布時，請把這個資料夾中的所有檔案放在網站根目錄。若使用 repo 根目錄發布，`index.html` 要放在 repo 最外層。
+      這個網站目前只保留成本分析 Dashboard。GitHub Pages 發布時，請把此資料夾內容放在 repo 根目錄。
     </section>
   </main>
 </body>
