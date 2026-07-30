@@ -3,190 +3,256 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>初一食午成本分析 Dashboard</title>
+  <meta name="theme-color" content="#1f5b45" />
+  <meta name="description" content="初一食午營運管理入口" />
+  <title>初一食午｜營運管理</title>
   <style>
     :root {
-      --ink: #17211c;
-      --muted: #66736d;
-      --line: #d9e1dc;
-      --paper: #fbfcf8;
-      --panel: #ffffff;
-      --green: #2f7d5a;
-      --blue: #3b78a3;
-      --gold: #c17a2c;
-      --red: #b24b51;
+      --ink: #19251f;
+      --muted: #6c7972;
+      --paper: #f4efe3;
+      --panel: #fffdf8;
+      --green: #1f5b45;
+      --green-2: #347b5e;
+      --gold: #d29a45;
+      --line: #dad5c9;
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      min-height: 100vh;
       color: var(--ink);
-      background: var(--paper);
-      font-family: "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
-      line-height: 1.55;
+      background:
+        radial-gradient(circle at 86% 10%, rgba(210,154,69,.17), transparent 24rem),
+        var(--paper);
+      font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+    }
+    a { color: inherit; }
+    header, main, footer {
+      width: min(1120px, calc(100% - 34px));
+      margin-inline: auto;
     }
     header {
-      padding: 32px clamp(16px, 4vw, 52px) 20px;
-      background: #f3f7f1;
-      border-bottom: 1px solid var(--line);
-    }
-    main { padding: 24px clamp(16px, 4vw, 52px) 44px; }
-    h1 {
-      margin: 0;
-      font-size: clamp(26px, 3.4vw, 42px);
-      letter-spacing: 0;
-    }
-    .sub {
-      margin: 8px 0 0;
-      color: var(--muted);
-      max-width: 860px;
-    }
-    .summary {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 12px;
-      margin-bottom: 18px;
-    }
-    .metric,
-    .entry,
-    .note {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(23, 33, 28, 0.06);
-    }
-    .metric { padding: 16px; min-height: 112px; }
-    .metric span {
-      display: block;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .metric strong {
-      display: block;
-      margin-top: 8px;
-      font-size: clamp(22px, 3vw, 31px);
-    }
-    .metric em {
-      display: block;
-      margin-top: 5px;
-      color: var(--muted);
-      font-style: normal;
-      font-size: 13px;
-    }
-    .entry {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(280px, .7fr);
-      gap: 18px;
-      padding: 20px;
-      align-items: center;
-    }
-    h2 {
-      margin: 0;
-      font-size: 23px;
-    }
-    .entry p {
-      margin: 10px 0 0;
-      color: var(--muted);
-    }
-    .mini-chart {
-      display: grid;
-      grid-template-columns: repeat(16, 1fr);
-      align-items: end;
-      gap: 5px;
-      min-height: 116px;
-      padding: 10px 0 2px;
-      border-bottom: 1px solid var(--line);
-    }
-    .bar {
-      min-height: 12px;
-      border-radius: 4px 4px 0 0;
-      background: var(--green);
-    }
-    .actions {
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 18px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0;
     }
-    a.button {
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+    }
+    .mark {
+      display: grid;
+      width: 46px;
+      height: 46px;
+      place-items: center;
+      border-radius: 14px;
+      color: var(--green);
+      background: #f3dca7;
+      font-family: "PMingLiU", serif;
+      font-size: 26px;
+      font-weight: 900;
+    }
+    .brand strong, .brand small { display: block; }
+    .brand strong { letter-spacing: .08em; }
+    .brand small { margin-top: 2px; color: var(--muted); font-size: 11px; letter-spacing: .14em; }
+    .status {
+      padding: 7px 11px;
+      border: 1px solid #cdd8cf;
+      border-radius: 999px;
+      color: var(--green);
+      background: #e5efe8;
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.3fr) minmax(280px, .7fr);
+      gap: 22px;
+      align-items: end;
+      padding: clamp(42px, 8vw, 90px) 0 54px;
+    }
+    .eyebrow {
+      margin: 0;
+      color: var(--green-2);
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: .2em;
+    }
+    h1 {
+      max-width: 760px;
+      margin: 10px 0 0;
+      font-family: "PMingLiU", serif;
+      font-size: clamp(42px, 7vw, 78px);
+      line-height: 1.08;
+      letter-spacing: -.035em;
+    }
+    .hero p:not(.eyebrow) {
+      max-width: 610px;
+      margin: 20px 0 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    .hero-note {
+      padding: 22px;
+      border-left: 3px solid var(--gold);
+      color: var(--muted);
+      background: rgba(255,253,248,.62);
+      line-height: 1.75;
+    }
+    .hero-note strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .tools {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      padding-bottom: 70px;
+    }
+    .tool-card {
+      position: relative;
+      overflow: hidden;
+      min-height: 285px;
+      padding: clamp(24px, 4vw, 38px);
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: 0 18px 50px rgba(45,50,45,.07);
+    }
+    .tool-card.primary {
+      color: #fff;
+      border-color: var(--green);
+      background: linear-gradient(135deg, #1d503e, #2c7357);
+    }
+    .tool-card::after {
+      content: attr(data-mark);
+      position: absolute;
+      right: -14px;
+      bottom: -46px;
+      color: rgba(31,91,69,.055);
+      font-family: "PMingLiU", serif;
+      font-size: 180px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .tool-card.primary::after { color: rgba(255,255,255,.055); }
+    .tool-card h2 {
+      position: relative;
+      z-index: 1;
+      margin: 36px 0 0;
+      font-family: "PMingLiU", serif;
+      font-size: clamp(28px, 4vw, 40px);
+    }
+    .tool-card p {
+      position: relative;
+      z-index: 1;
+      max-width: 520px;
+      color: var(--muted);
+      line-height: 1.75;
+    }
+    .tool-card.primary p { color: rgba(255,255,255,.7); }
+    .tag {
       display: inline-flex;
+      position: relative;
+      z-index: 1;
+      padding: 6px 9px;
+      border-radius: 999px;
+      color: var(--green);
+      background: #e5efe8;
+      font-size: 10px;
+      font-weight: 900;
+    }
+    .primary .tag {
+      color: #153e2f;
+      background: #f2d79d;
+    }
+    .button {
+      display: inline-flex;
+      position: relative;
+      z-index: 1;
+      min-height: 43px;
       align-items: center;
       justify-content: center;
-      min-height: 42px;
-      padding: 9px 14px;
-      border-radius: 8px;
+      margin-top: 18px;
+      padding: 9px 15px;
+      border-radius: 11px;
       color: #fff;
       background: var(--green);
       text-decoration: none;
-      font-weight: 700;
+      font-size: 13px;
+      font-weight: 900;
     }
-    a.secondary {
-      color: var(--ink);
-      background: #eef4ef;
-      border: 1px solid var(--line);
+    .primary .button {
+      color: var(--green);
+      background: #fff6df;
     }
-    .note {
-      margin-top: 16px;
-      padding: 14px 16px;
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 0 36px;
+      border-top: 1px solid var(--line);
       color: var(--muted);
-      font-size: 14px;
+      font-size: 11px;
     }
-    @media (max-width: 900px) {
-      .summary,
-      .entry { grid-template-columns: 1fr; }
-      .mini-chart { grid-template-columns: repeat(8, 1fr); }
+    @media (max-width: 760px) {
+      .hero, .tools { grid-template-columns: 1fr; }
+      .hero { padding-top: 38px; }
+      h1 { font-size: 48px; }
+      .tool-card { min-height: 250px; }
+      footer { flex-direction: column; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>初一食午成本分析 Dashboard</h1>
-    <p class="sub">整理 2025-01 至 2026-04 的收入來源、成本群組、成本明細排行、成本率與淨收入狀態，作為 GitHub Pages 網站入口。</p>
+    <a class="brand" href="./">
+      <span class="mark">初</span>
+      <span><strong>初一食午</strong><small>OPERATIONS</small></span>
+    </a>
+    <span class="status">營運工具入口</span>
   </header>
 
   <main>
-    <section class="summary" aria-label="網站摘要">
-      <div class="metric">
-        <span>分析範圍</span>
-        <strong>2025-01 至 2026-04</strong>
-        <em>16 個月份</em>
-      </div>
-      <div class="metric">
-        <span>總收入</span>
-        <strong>16,139,621 元</strong>
-        <em>收入明細已分類</em>
-      </div>
-      <div class="metric">
-        <span>總成本</span>
-        <strong>11,990,828 元</strong>
-        <em>成本群組已分類</em>
-      </div>
-      <div class="metric">
-        <span>平均成本率</span>
-        <strong>74.3%</strong>
-        <em>總成本 / 總收入</em>
-      </div>
-    </section>
-
-    <section class="entry" aria-label="Dashboard 入口">
+    <section class="hero">
       <div>
-        <h2>成本與收入來源分析</h2>
-        <p>分析收入明細排行、成本群組甜甜圈占比、成本明細排行、成本率與淨收入率。年度與月份篩選會同步影響收入排行、成本群組與成本排行。</p>
-        <div class="actions">
-          <a class="button" href="./dashboard_cost/">開啟成本分析</a>
-          <a class="button secondary" href="./dashboard_cost/cost-dashboard-data.json">查看資料</a>
-        </div>
+        <p class="eyebrow">BREAKFAST OPERATIONS</p>
+        <h1>把每天的數字，整理成更好的決定。</h1>
+        <p>營業成本、員工打卡與薪資計算集中管理，保留原始資料，也讓每一筆結果都能回頭查核。</p>
       </div>
-      <div class="mini-chart" aria-hidden="true">
-        <i class="bar" style="height:68%"></i><i class="bar" style="height:62%"></i><i class="bar" style="height:71%"></i><i class="bar" style="height:74%"></i>
-        <i class="bar" style="height:70%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:72%"></i><i class="bar" style="height:77%"></i>
-        <i class="bar" style="height:84%"></i><i class="bar" style="height:78%"></i><i class="bar" style="height:69%"></i><i class="bar" style="height:74%"></i>
-        <i class="bar" style="height:69%"></i><i class="bar" style="height:79%"></i><i class="bar" style="height:73%"></i><i class="bar" style="height:73%"></i>
-      </div>
+      <aside class="hero-note">
+        <strong>適用於電腦與手機</strong>
+        這個網站可以直接放在 GitHub Pages。薪資 APP 的資料預設只留在使用者自己的瀏覽器。
+      </aside>
     </section>
 
-    <section class="note">
-      這個網站目前只保留成本分析 Dashboard。GitHub Pages 發布時，請把此資料夾內容放在 repo 根目錄。
+    <section class="tools" aria-label="管理工具">
+      <article class="tool-card primary" data-mark="薪">
+        <span class="tag">NEW・薪資與打卡</span>
+        <h2>員工薪資管理</h2>
+        <p>上傳打卡照片、複核不清楚的時間，依分鐘計算時薪、月薪加班、國定假日及各類獎金扣款。</p>
+        <a class="button" href="./salary_app/">開啟薪資管理 →</a>
+      </article>
+
+      <article class="tool-card" data-mark="本">
+        <span class="tag">營業與成本</span>
+        <h2>成本分析儀表板</h2>
+        <p>檢視營業收入、食材成本、人事支出與趨勢，快速掌握每月營運狀況。</p>
+        <a class="button" href="./dashboard_cost/">開啟成本儀表板 →</a>
+      </article>
     </section>
   </main>
+
+  <footer>
+    <span>初一食午營運管理</span>
+    <span>靜態網站・可部署至 GitHub Pages</span>
+  </footer>
 </body>
 </html>

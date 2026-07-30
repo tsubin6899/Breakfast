@@ -1,0 +1,10 @@
+{
+  "name": "初一食午薪資管理",
+  "short_name": "薪資管理",
+  "description": "員工打卡、工時與薪資計算工具",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f1e7",
+  "theme_color": "#1f5b45",
+  "lang": "zh-Hant"
+}

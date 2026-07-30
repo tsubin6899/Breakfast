@@ -1,13 +1,26 @@
-# 初一食午成本分析 Dashboard
+# 初一食午營運管理網站
 
-這個資料夾可以直接作為 GitHub Pages 靜態網站根目錄。
+本資料夾可直接部署至 GitHub Pages。
 
-## 內容
+## 網站入口
 
-- `index.html`：網站首頁，只保留成本分析入口
-- `dashboard_cost/`：成本與收入來源分析 Dashboard
-- `.nojekyll`：避免 GitHub Pages 對靜態檔案做 Jekyll 處理
+- `index.html`：營運管理首頁
+- `salary_app/`：員工打卡與薪資計算 APP
+- `dashboard_cost/`：成本分析儀表板
+- `.nojekyll`：讓 GitHub Pages 直接提供靜態檔案
 
-## 發布方式
+## 薪資 APP 功能
 
-把本資料夾內的所有檔案上傳到 GitHub repo 根目錄，然後在 GitHub Pages 設定中選擇從 `main` 分支根目錄發布。
+- 員工時薪／月薪與班別設定
+- 平日、週末、國定假日和颱風日規則
+- 打卡照片上傳及 OCR 輔助辨識
+- 無法判斷時間的人工複核流程
+- 精確至分鐘的時薪計算
+- 月薪員工提早上班加班費
+- 獎金、禮金、加給與扣款
+- 年假、月休與無薪假紀錄
+- CSV、Excel 及 JSON 備份匯出
+
+薪資資料預設保存在使用者瀏覽器的 `localStorage`，不會寫回網站檔案。打卡照片只用於當次瀏覽器辨識，不會存入 GitHub。
+
+OCR 與 Excel 匯出元件由固定版本的 CDN 載入；沒有網路或元件載入失敗時，仍可人工輸入打卡並匯出 CSV。

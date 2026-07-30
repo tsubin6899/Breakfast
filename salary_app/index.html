@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#1f5b45" />
+  <meta name="description" content="初一食午員工打卡、工時與薪資計算管理工具" />
+  <title>初一食午｜薪資管理</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主要選單">
+      <a class="brand" href="../" aria-label="回到初一食午首頁">
+        <span class="brand-mark">初</span>
+        <span>
+          <strong>初一食午</strong>
+          <small>薪資管理</small>
+        </span>
+      </a>
+
+      <nav class="nav-list">
+        <button class="nav-item is-active" type="button" data-view="dashboard">
+          <span aria-hidden="true">總</span>總覽
+        </button>
+        <button class="nav-item" type="button" data-view="attendance">
+          <span aria-hidden="true">卡</span>打卡與工時
+        </button>
+        <button class="nav-item" type="button" data-view="payroll">
+          <span aria-hidden="true">薪</span>薪資試算
+        </button>
+        <button class="nav-item" type="button" data-view="employees">
+          <span aria-hidden="true">人</span>員工設定
+        </button>
+        <button class="nav-item" type="button" data-view="settings">
+          <span aria-hidden="true">設</span>規則與備份
+        </button>
+      </nav>
+
+      <div class="sidebar-note">
+        <strong>資料留在此裝置</strong>
+        <p>薪資與打卡資料預設只存於本機瀏覽器。</p>
+      </div>
+    </aside>
+
+    <div class="workspace">
+      <header class="topbar">
+        <button class="mobile-menu" type="button" aria-label="開啟選單">☰</button>
+        <div>
+          <p class="eyebrow">PAYROLL CONTROL</p>
+          <h1 id="page-title">本月薪資總覽</h1>
+        </div>
+        <div class="topbar-actions">
+          <label class="month-control">
+            <span>計薪月份</span>
+            <input id="global-month" type="month" value="2026-07" />
+          </label>
+          <span class="save-state" id="save-state">已儲存於本機</span>
+        </div>
+      </header>
+
+      <main>
+        <section class="view is-active" id="view-dashboard" data-title="本月薪資總覽">
+          <div class="hero-strip">
+            <div>
+              <p class="eyebrow">MONTHLY CLOSE</p>
+              <h2><span id="dashboard-month-label">2026 年 7 月</span>，薪資先核對再結算。</h2>
+              <p>從打卡照片、每日工時到加給與扣款，每一筆都保留來源與狀態。</p>
+            </div>
+            <button class="primary-btn" type="button" data-go="attendance">上傳打卡卡片</button>
+          </div>
+
+          <div class="metric-grid">
+            <article class="metric-card accent-green">
+              <span>預估薪資總額</span>
+              <strong id="metric-payroll">NT$ 0</strong>
+              <small>包含固定與額外薪資項目</small>
+            </article>
+            <article class="metric-card">
+              <span>在職員工</span>
+              <strong id="metric-employees">0 人</strong>
+              <small>本月參與計薪</small>
+            </article>
+            <article class="metric-card accent-gold">
+              <span>總工作時間</span>
+              <strong id="metric-hours">0 小時</strong>
+              <small>依確認完成的打卡計算</small>
+            </article>
+            <article class="metric-card accent-red">
+              <span>待確認項目</span>
+              <strong id="metric-issues">0 筆</strong>
+              <small>辨識不清或資料不完整</small>
+            </article>
+          </div>
+
+          <div class="content-grid dashboard-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">PAYROLL PREVIEW</p>
+                  <h3>員工薪資預覽</h3>
+                </div>
+                <button class="text-btn" type="button" data-go="payroll">查看完整試算 →</button>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>員工</th><th>薪制</th><th>工時</th><th class="number">預估實領</th></tr>
+                  </thead>
+                  <tbody id="dashboard-payroll-body"></tbody>
+                </table>
+              </div>
+            </article>
+
+            <aside class="panel action-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">ACTION QUEUE</p>
+                  <h3>本月待辦</h3>
+                </div>
+              </div>
+              <div id="dashboard-actions" class="action-list"></div>
+            </aside>
+          </div>
+        </section>
+
+        <section class="view" id="view-attendance" data-title="打卡與工時">
+          <div class="section-intro">
+            <div>
+              <p class="eyebrow">TIME CARD REVIEW</p>
+              <h2>上傳打卡卡片，逐筆確認辨識結果</h2>
+              <p>卡片日期列固定，系統只辨識時間；看不清楚時會標示「無法判斷」。</p>
+            </div>
+          </div>
+
+          <div class="content-grid upload-grid">
+            <article class="panel upload-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">UPLOAD</p>
+                  <h3>新增打卡照片</h3>
+                </div>
+              </div>
+              <div class="form-grid two-col">
+                <label>
+                  <span>員工</span>
+                  <select id="upload-employee"></select>
+                </label>
+                <label>
+                  <span>卡片日期範圍</span>
+                  <select id="upload-half">
+                    <option value="first">1～15 日</option>
+                    <option value="second">16～31 日</option>
+                  </select>
+                </label>
+              </div>
+              <button class="drop-zone" id="drop-zone" type="button">
+                <strong>拖曳或點選打卡照片</strong>
+                <span>支援 JPG、PNG；一次可選多張</span>
+              </button>
+              <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
+              <div id="ocr-progress" class="progress-box" hidden>
+                <div><span id="ocr-progress-label">準備辨識</span><strong id="ocr-progress-percent">0%</strong></div>
+                <progress id="ocr-progress-bar" max="100" value="0"></progress>
+              </div>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">FILES</p>
+                  <h3>本次上傳</h3>
+                </div>
+              </div>
+              <div id="upload-list" class="upload-list empty-state">
+                <p>尚未選擇照片</p>
+              </div>
+            </article>
+          </div>
+
+          <article class="panel attendance-panel">
+            <div class="panel-heading wrap-heading">
+              <div>
+                <p class="eyebrow">MONTHLY ATTENDANCE</p>
+                <h3>每日工時紀錄</h3>
+              </div>
+              <div class="inline-controls">
+                <label>
+                  <span>檢視員工</span>
+                  <select id="attendance-employee"></select>
+                </label>
+                <button class="secondary-btn" id="add-manual-record" type="button">新增／編輯當日紀錄</button>
+              </div>
+            </div>
+            <div class="legend">
+              <span><i class="dot confirmed"></i>已確認</span>
+              <span><i class="dot review"></i>待確認</span>
+              <span><i class="dot unreadable"></i>無法判斷</span>
+            </div>
+            <div class="table-wrap large-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>日期</th>
+                    <th>日別</th>
+                    <th>打卡時段</th>
+                    <th class="number">分鐘</th>
+                    <th>假別</th>
+                    <th>狀態</th>
+                    <th>來源</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="attendance-body"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <section class="view" id="view-payroll" data-title="薪資試算">
+          <div class="section-intro split-intro">
+            <div>
+              <p class="eyebrow">PAYROLL ENGINE</p>
+              <h2>薪資逐項拆開，所有金額都有依據</h2>
+              <p>時薪精確至分鐘；月薪加班依每日分鐘與倍率分段計算。</p>
+            </div>
+            <div class="button-row">
+              <button class="secondary-btn" id="export-csv" type="button">匯出 CSV</button>
+              <button class="primary-btn" id="export-xlsx" type="button">匯出 Excel</button>
+            </div>
+          </div>
+
+          <div class="alert warning" id="payroll-warning" hidden></div>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">CALCULATION</p>
+                <h3>本月薪資明細</h3>
+              </div>
+              <span class="rule-chip">分鐘計薪・最後總額取整</span>
+            </div>
+            <div class="table-wrap large-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>員工</th>
+                    <th>薪制</th>
+                    <th class="number">一般薪資</th>
+                    <th class="number">加班費</th>
+                    <th class="number">國定／颱風加給</th>
+                    <th class="number">其他加給</th>
+                    <th class="number">扣款</th>
+                    <th class="number">實領</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="payroll-body"></tbody>
+                <tfoot>
+                  <tr>
+                    <th colspan="7">本月人事成本總計</th>
+                    <th class="number" id="payroll-total">NT$ 0</th>
+                    <th></th>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel adjustment-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">ADJUSTMENTS</p>
+                <h3>獎金、禮金與扣款</h3>
+              </div>
+            </div>
+            <form id="adjustment-form" class="inline-form">
+              <label>
+                <span>員工</span>
+                <select id="adjustment-employee" required></select>
+              </label>
+              <label>
+                <span>項目</span>
+                <input id="adjustment-name" type="text" placeholder="例如：生日禮金" required />
+              </label>
+              <label>
+                <span>類型</span>
+                <select id="adjustment-type">
+                  <option value="earning">加給</option>
+                  <option value="deduction">扣款</option>
+                </select>
+              </label>
+              <label>
+                <span>金額</span>
+                <input id="adjustment-amount" type="number" min="0" step="1" required />
+              </label>
+              <label class="checkbox-label">
+                <input id="adjustment-recurring" type="checkbox" />
+                <span>每月固定</span>
+              </label>
+              <button class="primary-btn" type="submit">加入項目</button>
+            </form>
+            <div id="adjustment-list" class="tag-list"></div>
+          </article>
+        </section>
+
+        <section class="view" id="view-employees" data-title="員工設定">
+          <div class="section-intro split-intro">
+            <div>
+              <p class="eyebrow">TEAM & RATES</p>
+              <h2>員工薪制與費率歷史</h2>
+              <p>每位員工可分別設定平日、週末、國定假日與月薪班別。</p>
+            </div>
+            <button class="primary-btn" id="add-employee" type="button">新增員工</button>
+          </div>
+          <div id="employee-grid" class="employee-grid"></div>
+        </section>
+
+        <section class="view" id="view-settings" data-title="規則與備份">
+          <div class="section-intro">
+            <div>
+              <p class="eyebrow">POLICIES & DATA</p>
+              <h2>日別規則、加給倍率與資料備份</h2>
+              <p>國定假日已預載 2026 年資料，也可自行新增颱風日或店內特殊日。</p>
+            </div>
+          </div>
+
+          <div class="content-grid settings-grid">
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">PAY RULES</p>
+                  <h3>薪資規則</h3>
+                </div>
+              </div>
+              <form id="rules-form" class="form-stack">
+                <label>
+                  <span>國定假日出勤倍率</span>
+                  <input id="national-multiplier" type="number" min="1" step="0.1" />
+                  <small>預設 2 倍，會分成一般薪資與國定假日加給。</small>
+                </label>
+                <label>
+                  <span>颱風日出勤倍率</span>
+                  <input id="typhoon-multiplier" type="number" min="1" step="0.1" />
+                  <small>屬店內優於法令的自訂政策，可自行調整。</small>
+                </label>
+                <label>
+                  <span>薪資取整方式</span>
+                  <select id="rounding-mode">
+                    <option value="final">只在實領總額四捨五入</option>
+                    <option value="item">每個薪資項目四捨五入</option>
+                    <option value="none">保留至小數二位</option>
+                  </select>
+                </label>
+                <button class="primary-btn" type="submit">儲存規則</button>
+              </form>
+            </article>
+
+            <article class="panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">SPECIAL DAYS</p>
+                  <h3>國定假日與特殊日</h3>
+                </div>
+              </div>
+              <form id="special-day-form" class="compact-form">
+                <input id="special-day-date" type="date" required />
+                <input id="special-day-label" type="text" placeholder="名稱" required />
+                <select id="special-day-type">
+                  <option value="national">國定假日／補假</option>
+                  <option value="typhoon">颱風日</option>
+                </select>
+                <button class="secondary-btn" type="submit">新增</button>
+              </form>
+              <div id="special-day-list" class="special-day-list"></div>
+            </article>
+
+            <article class="panel backup-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">BACKUP</p>
+                  <h3>備份與還原</h3>
+                </div>
+              </div>
+              <p>更換電腦或瀏覽器前，請先下載完整 JSON 備份。照片本身不會寫入備份。</p>
+              <div class="button-row">
+                <button class="secondary-btn" id="download-backup" type="button">下載備份</button>
+                <button class="secondary-btn" id="restore-backup" type="button">還原備份</button>
+                <input id="backup-file" type="file" accept="application/json" hidden />
+              </div>
+              <button class="danger-text-btn" id="reset-data" type="button">恢復示範資料</button>
+            </article>
+
+            <article class="panel legal-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">REMINDER</p>
+                  <h3>結算前檢查</h3>
+                </div>
+              </div>
+              <ul>
+                <li>無法判斷的打卡時間必須人工確認，不會自動猜測。</li>
+                <li>月休超過 7 天只顯示提醒，不會自動扣除年假。</li>
+                <li>國定假日、例假、休息日與颱風日應分別標記。</li>
+                <li>月薪員工加班基礎依月薪 ÷ 240，再套用法定倍率。</li>
+              </ul>
+              <p class="legal-links">
+                <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT09.aspx?flno=24&id=FL014930" target="_blank" rel="noreferrer">勞基法第 24 條</a>
+                <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT09.aspx?flno=38&id=FL014930" target="_blank" rel="noreferrer">勞基法第 38 條</a>
+              </p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <dialog id="employee-dialog">
+    <form method="dialog" id="employee-form" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">EMPLOYEE PROFILE</p>
+          <h2 id="employee-dialog-title">新增員工</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <input id="employee-id" type="hidden" />
+      <div class="form-grid two-col">
+        <label><span>姓名</span><input id="employee-name" type="text" required /></label>
+        <label>
+          <span>薪制</span>
+          <select id="employee-pay-type">
+            <option value="hourly">時薪制</option>
+            <option value="monthly">月薪制</option>
+          </select>
+        </label>
+        <label class="hourly-field"><span>平日時薪</span><input id="employee-hourly-rate" type="number" min="0" /></label>
+        <label class="hourly-field"><span>週末時薪</span><input id="employee-weekend-rate" type="number" min="0" /></label>
+        <label class="hourly-field"><span>國定假日時薪基礎</span><input id="employee-holiday-rate" type="number" min="0" /></label>
+        <label class="monthly-field"><span>月薪</span><input id="employee-monthly-salary" type="number" min="0" /></label>
+        <label class="monthly-field"><span>固定上班時間</span><input id="employee-schedule-start" type="time" /></label>
+        <label class="monthly-field"><span>固定下班時間</span><input id="employee-schedule-end" type="time" /></label>
+        <label><span>到職日</span><input id="employee-hire-date" type="date" /></label>
+        <label><span>目前年假餘額</span><input id="employee-annual-leave" type="number" min="0" step="0.5" /></label>
+      </div>
+      <label class="checkbox-label">
+        <input id="employee-active" type="checkbox" checked />
+        <span>目前在職並參與計薪</span>
+      </label>
+      <div class="dialog-actions">
+        <button class="secondary-btn" value="cancel" type="button" data-close-dialog>取消</button>
+        <button class="primary-btn" value="default" type="submit">儲存員工</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="attendance-dialog">
+    <form method="dialog" id="attendance-form" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">ATTENDANCE DETAIL</p>
+          <h2 id="attendance-dialog-title">編輯打卡紀錄</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <input id="attendance-date" type="date" required />
+      <div id="segment-list" class="segment-list"></div>
+      <button class="text-btn" id="add-segment" type="button">＋ 新增一段工作時間</button>
+      <div class="form-grid two-col">
+        <label>
+          <span>假別／排休日</span>
+          <select id="attendance-leave-type">
+            <option value="">無</option>
+            <option value="monthly_rest">月休</option>
+            <option value="annual_leave">年假</option>
+            <option value="unpaid">事假／無薪假</option>
+            <option value="sick">病假</option>
+            <option value="other">其他</option>
+          </select>
+        </label>
+        <label>
+          <span>紀錄狀態</span>
+          <select id="attendance-status">
+            <option value="confirmed">已確認</option>
+            <option value="review">待確認</option>
+            <option value="unreadable">無法判斷</option>
+          </select>
+        </label>
+      </div>
+      <label>
+        <span>備註</span>
+        <textarea id="attendance-note" rows="3" placeholder="例如：打卡字跡不清，已向員工確認"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button class="danger-text-btn" id="delete-attendance" type="button">刪除紀錄</button>
+        <span class="dialog-spacer"></span>
+        <button class="secondary-btn" type="button" data-close-dialog>取消</button>
+        <button class="primary-btn" type="submit">儲存紀錄</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="payslip-dialog">
+    <div class="dialog-form payslip-dialog-content">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">PAYSLIP</p>
+          <h2 id="payslip-title">薪資明細</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <div id="payslip-content"></div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" data-close-dialog>關閉</button>
+        <button class="primary-btn" id="print-payslip" type="button">列印薪資單</button>
+      </div>
+    </div>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
