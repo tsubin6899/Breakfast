@@ -40,7 +40,7 @@ Excel 與 JPG 匯出元件由固定版本的 CDN 載入；沒有網路或 AI 服
 2. 在 Netlify 的 `Environment variables` 新增：
    - `GEMINI_API_KEY`：Google AI Studio API Key；設定後會優先使用 Gemini 免費方案。
    - `TIME_CARD_API_TOKEN`：自行設定一組店內連線密碼，建議至少 16 個字元。
-   - `GEMINI_VISION_MODEL`：選填，預設為 `gemini-3.6-flash`。
+   - `GEMINI_VISION_MODEL`：選填，預設為 `gemini-2.5-flash`。
    - `OPENAI_API_KEY`、`OPENAI_VISION_MODEL`：選填；未設定 Gemini 時才使用 OpenAI。
 3. 重新部署網站。
 4. 在薪資 APP 的「AI 辨識連線密碼」輸入與 `TIME_CARD_API_TOKEN` 相同的密碼。

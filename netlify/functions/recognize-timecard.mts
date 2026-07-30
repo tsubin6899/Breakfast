@@ -127,7 +127,9 @@ function buildPrompt(month: string, half: string) {
     "若實際倒置日期看不清楚，day 填 0；若正向時間看不清楚，time 填空字串且 readable=false。",
     "只回傳照片中真正看得到的印章，不要為空白日期建立紀錄。",
     `月份：${month || "未提供"}；卡片範圍：${half === "first" ? "1～15 日" : "16～31 日"}。`,
-    "對每個印章提供 0～100 的 confidence；任何不確定都必須降低信心並寫在 note。"
+    "對每個印章提供 0～100 的 confidence；任何不確定都必須降低信心並寫在 note。",
+    "只回傳一個 JSON 物件，不要加 Markdown。最外層包含 cardHalf、punches、overallConfidence、summary。",
+    "cardHalf 只能是 first、second 或 unknown。punches 每筆包含 day、printedRow、time、column、readable、confidence、note。"
   ].join("\n");
 }
 
@@ -187,7 +189,7 @@ async function recognizeWithGemini(
   signal: AbortSignal,
   requestId: string
 ): Promise<ProviderResult> {
-  const model = Netlify.env.get("GEMINI_VISION_MODEL") || "gemini-3.6-flash";
+  const model = Netlify.env.get("GEMINI_VISION_MODEL") || "gemini-2.5-flash";
   const imageParts = images.map(imageUrl => {
     const image = splitImageDataUrl(imageUrl);
     return {
@@ -221,8 +223,7 @@ async function recognizeWithGemini(
         generationConfig: {
           temperature: 0,
           maxOutputTokens: 5000,
-          responseMimeType: "application/json",
-          responseSchema: outputSchema
+          responseMimeType: "application/json"
         }
       }),
       signal
@@ -232,12 +233,13 @@ async function recognizeWithGemini(
   const payload = await response.json() as Record<string, unknown>;
   if (!response.ok) {
     const apiError = payload.error && typeof payload.error === "object"
-      ? payload.error as { status?: unknown; code?: unknown }
+      ? payload.error as { status?: unknown; code?: unknown; message?: unknown }
       : {};
     console.error("Gemini timecard request failed", {
       requestId,
       status: response.status,
-      code: apiError.status || apiError.code
+      code: apiError.status || apiError.code,
+      message: typeof apiError.message === "string" ? apiError.message.slice(0, 500) : ""
     });
     throw new ProviderRequestError(
       "gemini",
