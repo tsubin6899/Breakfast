@@ -3,11 +3,18 @@
   "private": true,
   "scripts": {
     "dev": "netlify dev",
-    "check": "node --check salary_app/app.js"
+    "build": "pnpm run build:identity",
+    "build:identity": "esbuild salary_app/identity-entry.js --bundle --format=iife --global-name=PayrollIdentityBundle --outfile=salary_app/identity-client.js --minify",
+    "check": "node --check salary_app/app.js && tsc --noEmit --target es2022 --module nodenext --moduleResolution nodenext --types node netlify/functions/payroll-state.mts netlify/functions/recognize-timecard.mts"
   },
   "devDependencies": {
     "@netlify/functions": "5.3.0",
     "@types/node": "^26.1.2",
+    "esbuild": "^0.28.1",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^10.7.10",
+    "@netlify/identity": "^1.2.0"
   }
 }

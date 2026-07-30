@@ -1,8 +1,9 @@
-const CACHE_NAME = "breakfast-payroll-shell-v13";
+const CACHE_NAME = "breakfast-payroll-shell-v15";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
+  "./identity-client.js",
   "./app.js",
   "./manifest.webmanifest",
   "./assets/app-icon-192.png",
@@ -26,6 +27,12 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
+  const url = new URL(event.request.url);
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith("/api/") ||
+    url.pathname.startsWith("/.netlify/identity")
+  ) return;
   event.respondWith(
     caches.match(event.request).then(cached => {
       if (cached) return cached;

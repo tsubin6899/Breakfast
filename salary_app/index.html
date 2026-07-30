@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script defer src="./identity-client.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -57,10 +58,12 @@
           <h1 id="page-title">本月薪資總覽</h1>
         </div>
         <div class="topbar-actions">
+          <span id="cloud-sync-status" class="cloud-sync-status is-local"><i></i><span>僅存此裝置</span></span>
           <label class="month-control">
             <span>計薪月份</span>
             <input id="global-month" type="month" value="2026-07" />
           </label>
+          <button id="cloud-auth-button" class="cloud-auth-button" type="button">管理者登入</button>
           <span class="save-state" id="save-state">已儲存於本機</span>
         </div>
       </header>
@@ -414,6 +417,31 @@
           </div>
 
           <div class="content-grid settings-grid">
+            <article class="panel cloud-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">SECURE CLOUD</p>
+                  <h3>管理者登入與雲端資料</h3>
+                </div>
+                <span id="cloud-panel-status" class="cloud-sync-status is-local"><i></i><span>僅存此裝置</span></span>
+              </div>
+              <div class="cloud-account">
+                <span>目前帳號</span>
+                <strong id="cloud-account-email">尚未登入</strong>
+                <p id="cloud-panel-detail">登入後才會將薪資資料同步到網站。</p>
+              </div>
+              <div id="cloud-account-actions" class="button-row" hidden>
+                <button class="secondary-btn" id="cloud-download-latest" type="button">下載雲端最新資料</button>
+                <button class="secondary-btn" id="cloud-upload-current" type="button">以上傳本機資料為準</button>
+                <button class="secondary-btn" id="cloud-download-local-backup" type="button">下載同步前備份</button>
+                <button class="danger-text-btn" id="cloud-logout" type="button">登出</button>
+              </div>
+              <div class="cloud-safety-note">
+                <strong>安全設定</strong>
+                <span>僅受邀的管理者可登入。原始打卡照片不會永久上傳，只同步薪資、工時、休假與規則資料。</span>
+              </div>
+            </article>
+
             <article class="panel">
               <div class="panel-heading">
                 <div>
@@ -502,6 +530,58 @@
       </main>
     </div>
   </div>
+
+  <dialog id="cloud-auth-dialog" class="cloud-dialog">
+    <form id="cloud-login-form" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">ADMIN SIGN IN</p>
+          <h2>管理者登入</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <p class="dialog-copy">登入後會自動同步網站上的員工、打卡、休假與薪資資料。</p>
+      <label>
+        <span>Email</span>
+        <input id="cloud-login-email" type="email" autocomplete="username" required />
+      </label>
+      <label>
+        <span>密碼</span>
+        <input id="cloud-login-password" type="password" autocomplete="current-password" required />
+      </label>
+      <p id="cloud-login-error" class="form-error" hidden></p>
+      <div class="dialog-actions">
+        <button class="text-btn" id="cloud-forgot-password" type="button">忘記密碼</button>
+        <span class="dialog-spacer"></span>
+        <button class="secondary-btn" type="button" data-close-dialog>取消</button>
+        <button class="primary-btn" id="cloud-login-submit" type="submit">登入並同步</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cloud-password-dialog" class="cloud-dialog">
+    <form id="cloud-password-form" class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">SECURE PASSWORD</p>
+          <h2 id="cloud-password-title">設定管理者密碼</h2>
+        </div>
+      </div>
+      <p id="cloud-password-description" class="dialog-copy">請設定至少 10 個字元的密碼。</p>
+      <label>
+        <span>新密碼</span>
+        <input id="cloud-new-password" type="password" minlength="10" autocomplete="new-password" required />
+      </label>
+      <label>
+        <span>再次輸入新密碼</span>
+        <input id="cloud-confirm-password" type="password" minlength="10" autocomplete="new-password" required />
+      </label>
+      <p id="cloud-password-error" class="form-error" hidden></p>
+      <div class="dialog-actions">
+        <button class="primary-btn" id="cloud-password-submit" type="submit">儲存密碼並登入</button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="employee-dialog">
     <form method="dialog" id="employee-form" class="dialog-form">

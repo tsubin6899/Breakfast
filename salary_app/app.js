@@ -3,6 +3,8 @@
 
   const STORAGE_KEY = "breakfast-payroll-v1";
   const AI_TOKEN_STORAGE_KEY = "breakfast-payroll-ai-token";
+  const CLOUD_LOCAL_BACKUP_KEY = "breakfast-payroll-before-cloud";
+  const CLOUD_SAVE_DELAY = 900;
   const APP_VERSION = 1;
   const MINIMUM_HOURLY_WAGE_2026 = 196;
   const MINIMUM_MONTHLY_WAGE_2026 = 29500;
@@ -73,27 +75,30 @@
     };
   }
 
-  function loadState() {
+  function normalizeState(saved) {
     const defaults = createDefaultState();
+    return {
+      ...defaults,
+      ...(saved || {}),
+      settings: { ...defaults.settings, ...(saved?.settings || {}) },
+      employees: Array.isArray(saved?.employees) ? saved.employees : defaults.employees,
+      attendance: saved?.attendance || {},
+      leaveRecords: saved?.leaveRecords || {},
+      adjustments: Array.isArray(saved?.adjustments) ? saved.adjustments : defaults.adjustments,
+      specialDays: Array.isArray(saved?.specialDays) ? saved.specialDays : defaults.specialDays,
+      closedMonths: saved?.closedMonths || {},
+      auditLog: Array.isArray(saved?.auditLog) ? saved.auditLog : []
+    };
+  }
+
+  function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return defaults;
-      const saved = JSON.parse(raw);
-      return {
-        ...defaults,
-        ...saved,
-        settings: { ...defaults.settings, ...(saved.settings || {}) },
-        employees: Array.isArray(saved.employees) ? saved.employees : defaults.employees,
-        attendance: saved.attendance || {},
-        leaveRecords: saved.leaveRecords || {},
-        adjustments: Array.isArray(saved.adjustments) ? saved.adjustments : defaults.adjustments,
-        specialDays: Array.isArray(saved.specialDays) ? saved.specialDays : defaults.specialDays,
-        closedMonths: saved.closedMonths || {},
-        auditLog: Array.isArray(saved.auditLog) ? saved.auditLog : []
-      };
+      if (!raw) return createDefaultState();
+      return normalizeState(JSON.parse(raw));
     } catch (error) {
       console.warn("Unable to load saved payroll data", error);
-      return defaults;
+      return createDefaultState();
     }
   }
 
@@ -106,6 +111,14 @@
   let attendanceDialogOriginalDate = "";
   let saveAndAdvanceAttendance = false;
   let ocrReviewUploadId = "";
+  let cloudUser = null;
+  let cloudRevision = "";
+  let cloudReady = false;
+  let cloudSaving = false;
+  let cloudSavePending = false;
+  let cloudSaveTimer = null;
+  let cloudCallbackMode = "";
+  let cloudCallbackToken = "";
 
   function saveState(message = "已儲存於本機") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -114,6 +127,7 @@
       indicator.textContent = message;
       window.setTimeout(() => { indicator.textContent = "已儲存於本機"; }, 1200);
     }
+    scheduleCloudSave();
   }
 
   function uid(prefix = "id") {
@@ -140,6 +154,211 @@
     }[adjustmentCategory(adjustment)];
   }
 
+  function setCloudStatus(label, tone = "local", detail = "") {
+    const topStatus = $("#cloud-sync-status");
+    const panelStatus = $("#cloud-panel-status");
+    const panelDetail = $("#cloud-panel-detail");
+    [topStatus, panelStatus].forEach(element => {
+      if (!element) return;
+      element.className = `cloud-sync-status is-${tone}`;
+      const text = element.querySelector("span");
+      if (text) text.textContent = label;
+    });
+    if (panelDetail) panelDetail.textContent = detail;
+  }
+
+  function updateCloudUi() {
+    const accountButton = $("#cloud-auth-button");
+    const accountEmail = $("#cloud-account-email");
+    const cloudActions = $("#cloud-account-actions");
+    const localBackupButton = $("#cloud-download-local-backup");
+    if (accountButton) {
+      accountButton.textContent = cloudUser ? "雲端同步設定" : "管理者登入";
+      accountButton.classList.toggle("is-connected", Boolean(cloudUser));
+    }
+    if (accountEmail) accountEmail.textContent = cloudUser?.email || "尚未登入";
+    if (cloudActions) cloudActions.hidden = !cloudUser;
+    if (localBackupButton) {
+      localBackupButton.disabled = !localStorage.getItem(CLOUD_LOCAL_BACKUP_KEY);
+      localBackupButton.title = localBackupButton.disabled ? "目前沒有同步前備份" : "";
+    }
+    if (!cloudUser) {
+      setCloudStatus("僅存此裝置", "local", "登入後才會將薪資資料同步到網站。");
+    }
+  }
+
+  function cloudErrorMessage(error) {
+    if (error?.name === "MissingIdentityError") {
+      return "Netlify 尚未啟用管理者登入功能。";
+    }
+    if (Number(error?.status) === 401) return "Email 或密碼不正確。";
+    if (Number(error?.status) === 403) return "此帳號沒有登入權限。";
+    return error instanceof Error ? error.message : "雲端服務暫時無法使用。";
+  }
+
+  async function cloudRequest(method, body) {
+    const response = await fetch("/api/payroll-state", {
+      method,
+      credentials: "same-origin",
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(payload.message || "雲端資料讀寫失敗。");
+      error.status = response.status;
+      error.code = payload.error || "";
+      error.payload = payload;
+      throw error;
+    }
+    return payload;
+  }
+
+  function scheduleCloudSave() {
+    if (!cloudUser || !cloudReady) return;
+    window.clearTimeout(cloudSaveTimer);
+    cloudSaveTimer = window.setTimeout(() => {
+      pushCloudState().catch(error => console.warn("Cloud save failed", error));
+    }, CLOUD_SAVE_DELAY);
+  }
+
+  async function pushCloudState({ force = false, notify = false } = {}) {
+    if (!cloudUser || (!cloudReady && !force)) return;
+    if (cloudSaving) {
+      cloudSavePending = true;
+      return;
+    }
+    cloudSaving = true;
+    setCloudStatus("正在同步…", "syncing", `由 ${cloudUser.email || "管理者"} 寫入雲端。`);
+    try {
+      const result = await cloudRequest("PUT", {
+        state,
+        baseRevision: cloudRevision,
+        force
+      });
+      cloudRevision = result.revision || "";
+      cloudReady = true;
+      setCloudStatus(
+        "已同步雲端",
+        "ready",
+        `${result.updatedBy || cloudUser.email || "管理者"}・${new Date(result.updatedAt || Date.now()).toLocaleString("zh-TW")}`
+      );
+      if (notify) toast("目前資料已安全上傳到雲端。");
+    } catch (error) {
+      if (error.code === "REVISION_CONFLICT") {
+        cloudReady = false;
+        cloudRevision = error.payload?.revision || cloudRevision;
+        setCloudStatus(
+          "發現雲端新版",
+          "conflict",
+          "另一台裝置已更新資料。請選擇下載雲端版本，或確認後以本機版本覆蓋。"
+        );
+        toast("雲端已有較新資料，已停止自動覆蓋。");
+        showView("settings");
+      } else if (error.status === 401) {
+        cloudUser = null;
+        cloudReady = false;
+        updateCloudUi();
+        toast("登入已過期，請重新登入。");
+      } else {
+        setCloudStatus("同步失敗", "error", cloudErrorMessage(error));
+        if (notify) toast(cloudErrorMessage(error));
+      }
+      throw error;
+    } finally {
+      cloudSaving = false;
+      if (cloudSavePending && cloudReady) {
+        cloudSavePending = false;
+        scheduleCloudSave();
+      }
+    }
+  }
+
+  async function pullCloudState({ notify = false } = {}) {
+    if (!cloudUser) return;
+    window.clearTimeout(cloudSaveTimer);
+    cloudReady = false;
+    setCloudStatus("正在下載…", "syncing", "正在讀取網站上的最新薪資資料。");
+    try {
+      const result = await cloudRequest("GET");
+      if (!result.state) {
+        cloudRevision = "";
+        cloudReady = true;
+        await pushCloudState({ notify: true });
+        return;
+      }
+      const normalized = normalizeState(result.state);
+      const currentText = JSON.stringify(state);
+      const cloudText = JSON.stringify(normalized);
+      if (currentText !== cloudText) {
+        localStorage.setItem(CLOUD_LOCAL_BACKUP_KEY, currentText);
+      }
+      state = normalized;
+      cloudRevision = result.revision || "";
+      cloudReady = true;
+      localStorage.setItem(STORAGE_KEY, cloudText);
+      renderAll();
+      updateCloudUi();
+      setCloudStatus(
+        "已同步雲端",
+        "ready",
+        `${result.updatedBy || "管理者"}・${result.updatedAt ? new Date(result.updatedAt).toLocaleString("zh-TW") : "已載入"}`
+      );
+      if (notify) toast("已下載雲端最新資料；原本本機內容已保留備份。");
+    } catch (error) {
+      cloudReady = false;
+      if (error.status === 401) {
+        cloudUser = null;
+        cloudRevision = "";
+        updateCloudUi();
+      }
+      setCloudStatus("無法讀取雲端", "error", cloudErrorMessage(error));
+      if (notify) toast(cloudErrorMessage(error));
+      throw error;
+    }
+  }
+
+  async function connectCloudUser(user) {
+    if (!user) return;
+    cloudUser = user;
+    updateCloudUi();
+    await pullCloudState().catch(error => console.warn("Cloud initialization failed", error));
+  }
+
+  async function initializeCloudIdentity() {
+    const identity = window.PayrollIdentity;
+    if (!identity) {
+      setCloudStatus("登入元件未載入", "error", "請重新整理網頁後再試。");
+      return;
+    }
+    try {
+      const callback = await identity.handleAuthCallback();
+      if (callback?.type === "invite" && callback.token) {
+        cloudCallbackMode = "invite";
+        cloudCallbackToken = callback.token;
+        $("#cloud-password-title").textContent = "設定管理者密碼";
+        $("#cloud-password-description").textContent = "請設定至少 10 個字元的密碼，完成初一食午管理者帳號啟用。";
+        $("#cloud-password-dialog").showModal();
+        return;
+      }
+      if (callback?.type === "recovery") {
+        cloudCallbackMode = "recovery";
+        cloudUser = callback.user;
+        updateCloudUi();
+        $("#cloud-password-title").textContent = "設定新密碼";
+        $("#cloud-password-description").textContent = "請輸入至少 10 個字元的新密碼。";
+        $("#cloud-password-dialog").showModal();
+        return;
+      }
+      const user = callback?.user || await identity.getUser();
+      if (user) await connectCloudUser(user);
+      else updateCloudUi();
+    } catch (error) {
+      updateCloudUi();
+      setCloudStatus("登入尚未設定", "error", cloudErrorMessage(error));
+    }
+  }
+
   function isMonthLocked(month = state.settings.month) {
     return Boolean(state.closedMonths?.[month]?.locked);
   }
@@ -150,7 +369,7 @@
       month,
       action,
       detail,
-      actor: "本機使用者",
+      actor: cloudUser?.email || "本機使用者",
       timestamp: new Date().toISOString()
     });
     state.auditLog = state.auditLog.slice(0, 250);
@@ -2227,6 +2446,141 @@
     $$("[data-go]").forEach(button => button.addEventListener("click", () => showView(button.dataset.go)));
     $(".mobile-menu").addEventListener("click", () => document.body.classList.toggle("menu-open"));
 
+    $("#cloud-auth-button").addEventListener("click", () => {
+      if (cloudUser) {
+        showView("settings");
+        return;
+      }
+      $("#cloud-login-error").hidden = true;
+      $("#cloud-login-password").value = "";
+      $("#cloud-auth-dialog").showModal();
+      window.setTimeout(() => $("#cloud-login-email").focus(), 0);
+    });
+    $("#cloud-login-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const identity = window.PayrollIdentity;
+      const submit = $("#cloud-login-submit");
+      const errorElement = $("#cloud-login-error");
+      errorElement.hidden = true;
+      submit.disabled = true;
+      submit.textContent = "登入中…";
+      try {
+        if (!identity) throw new Error("登入元件尚未載入，請重新整理網頁。");
+        const user = await identity.login(
+          $("#cloud-login-email").value.trim(),
+          $("#cloud-login-password").value
+        );
+        $("#cloud-auth-dialog").close();
+        await connectCloudUser(user);
+        toast("管理者登入成功，已開始同步。");
+      } catch (error) {
+        errorElement.textContent = cloudErrorMessage(error);
+        errorElement.hidden = false;
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "登入並同步";
+      }
+    });
+    $("#cloud-forgot-password").addEventListener("click", async () => {
+      const email = $("#cloud-login-email").value.trim();
+      const errorElement = $("#cloud-login-error");
+      errorElement.hidden = true;
+      if (!email) {
+        errorElement.textContent = "請先輸入管理者 Email。";
+        errorElement.hidden = false;
+        $("#cloud-login-email").focus();
+        return;
+      }
+      try {
+        if (!window.PayrollIdentity) throw new Error("登入元件尚未載入，請重新整理網頁。");
+        await window.PayrollIdentity.requestPasswordRecovery(email);
+        $("#cloud-auth-dialog").close();
+        toast("重設密碼信已寄出，請到信箱開啟連結。");
+      } catch (error) {
+        errorElement.textContent = cloudErrorMessage(error);
+        errorElement.hidden = false;
+      }
+    });
+    $("#cloud-password-form").addEventListener("submit", async event => {
+      event.preventDefault();
+      const password = $("#cloud-new-password").value;
+      const confirmation = $("#cloud-confirm-password").value;
+      const errorElement = $("#cloud-password-error");
+      const submit = $("#cloud-password-submit");
+      errorElement.hidden = true;
+      if (password.length < 10) {
+        errorElement.textContent = "密碼至少需要 10 個字元。";
+        errorElement.hidden = false;
+        return;
+      }
+      if (password !== confirmation) {
+        errorElement.textContent = "兩次輸入的密碼不一致。";
+        errorElement.hidden = false;
+        return;
+      }
+      submit.disabled = true;
+      submit.textContent = "設定中…";
+      try {
+        const identity = window.PayrollIdentity;
+        if (!identity) throw new Error("登入元件尚未載入，請重新整理網頁。");
+        let user;
+        if (cloudCallbackMode === "invite" && cloudCallbackToken) {
+          user = await identity.acceptInvite(cloudCallbackToken, password);
+        } else if (cloudCallbackMode === "recovery") {
+          user = await identity.updateUser({ password });
+        } else {
+          throw new Error("此密碼設定連結已失效，請重新開啟邀請信或重設密碼信。");
+        }
+        cloudCallbackMode = "";
+        cloudCallbackToken = "";
+        $("#cloud-password-dialog").close();
+        await connectCloudUser(user);
+        toast("密碼已設定，管理者帳號已登入。");
+      } catch (error) {
+        errorElement.textContent = cloudErrorMessage(error);
+        errorElement.hidden = false;
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "儲存密碼並登入";
+      }
+    });
+    $("#cloud-download-latest").addEventListener("click", async () => {
+      if (!window.confirm("確定下載雲端最新資料？目前尚未同步的本機內容會先保留成安全備份，再由雲端版本取代。")) return;
+      await pullCloudState({ notify: true }).catch(() => {});
+    });
+    $("#cloud-upload-current").addEventListener("click", async () => {
+      if (!window.confirm("確定要用目前本機資料覆蓋雲端版本？雲端原版本會保留一份伺服器備份。")) return;
+      await pushCloudState({ force: true, notify: true }).catch(() => {});
+    });
+    $("#cloud-download-local-backup").addEventListener("click", () => {
+      const backup = localStorage.getItem(CLOUD_LOCAL_BACKUP_KEY);
+      if (!backup) {
+        toast("目前沒有同步前備份。");
+        return;
+      }
+      downloadBlob(
+        backup,
+        `初一食午薪資_同步前備份_${new Date().toISOString().slice(0, 10)}.json`,
+        "application/json"
+      );
+      toast("同步前本機備份已下載。");
+    });
+    $("#cloud-logout").addEventListener("click", async () => {
+      window.clearTimeout(cloudSaveTimer);
+      try {
+        await window.PayrollIdentity?.logout();
+      } catch (error) {
+        console.warn("Cloud logout failed", error);
+      }
+      cloudUser = null;
+      cloudRevision = "";
+      cloudReady = false;
+      cloudSaving = false;
+      cloudSavePending = false;
+      updateCloudUi();
+      toast("已登出管理者帳號；本機資料仍保留。");
+    });
+
     $("#global-month").addEventListener("change", event => {
       state.settings.month = event.target.value;
       saveState();
@@ -2553,7 +2907,7 @@
       try {
         const parsed = JSON.parse(await file.text());
         if (!parsed.employees || !parsed.settings) throw new Error("INVALID_BACKUP");
-        state = { ...createDefaultState(), ...parsed, settings: { ...createDefaultState().settings, ...parsed.settings } };
+        state = normalizeState(parsed);
         saveState();
         renderAll();
         toast("備份已還原");
@@ -2576,6 +2930,8 @@
     installEventHandlers();
     $("#ai-access-token").value = localStorage.getItem(AI_TOKEN_STORAGE_KEY) || "";
     renderAll();
+    updateCloudUi();
+    initializeCloudIdentity();
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("./service-worker.js").catch(() => {});
     }

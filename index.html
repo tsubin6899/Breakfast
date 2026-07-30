@@ -6,6 +6,11 @@
   <meta name="theme-color" content="#1f5b45" />
   <meta name="description" content="初一食午營運管理入口" />
   <title>初一食午｜營運管理</title>
+  <script>
+    if (/(invite_token|recovery_token|confirmation_token|access_token)=/.test(window.location.hash)) {
+      window.location.replace(`./salary_app/${window.location.hash}`);
+    }
+  </script>
   <style>
     :root {
       --ink: #19251f;
