@@ -1343,6 +1343,89 @@ dialog::backdrop {
   font-size: 9px;
 }
 
+.ocr-review-dialog {
+  width: min(960px, calc(100vw - 28px));
+}
+
+.ocr-review-list {
+  display: grid;
+  max-height: min(620px, calc(100vh - 235px));
+  gap: 10px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.ocr-review-row {
+  display: grid;
+  grid-template-columns: 92px minmax(300px, 1fr) minmax(330px, .9fr);
+  gap: 12px;
+  align-items: center;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: #fffefa;
+}
+
+.ocr-review-date {
+  display: grid;
+  gap: 3px;
+}
+
+.ocr-review-date strong {
+  font-size: 18px;
+}
+
+.ocr-review-date span,
+.ocr-review-date label {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.ocr-review-date label {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: 5px;
+}
+
+.ocr-review-date input {
+  width: auto;
+  min-height: 0;
+}
+
+.ocr-review-crop {
+  width: 100%;
+  min-height: 72px;
+  border: 1px solid #d7ddd8;
+  border-radius: 9px;
+  object-fit: contain;
+  background: #eef0ed;
+  image-rendering: auto;
+}
+
+.ocr-review-segments {
+  display: grid;
+  gap: 6px;
+}
+
+.ocr-review-segment {
+  display: grid;
+  grid-template-columns: 40px 1fr auto 1fr;
+  gap: 6px;
+  align-items: center;
+}
+
+.ocr-review-segment > span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.ocr-review-segment input {
+  min-height: 34px;
+  padding: 5px 7px;
+  font-size: 12px;
+}
+
 .statement-dialog {
   width: min(760px, calc(100vw - 28px));
 }
@@ -1897,6 +1980,18 @@ dialog::backdrop {
   .source-placeholder {
     width: 78px;
     height: 96px;
+  }
+
+  .ocr-review-row {
+    grid-template-columns: 1fr;
+  }
+
+  .ocr-review-list {
+    max-height: calc(100vh - 260px);
+  }
+
+  .ocr-review-crop {
+    min-height: 90px;
   }
 
   .dialog-actions {

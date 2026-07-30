@@ -182,8 +182,8 @@
               </button>
               <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
               <div class="ocr-reading-tip">
-                <strong>新版點陣字辨識</strong>
-                <span>先用日期欄校正表格，再移除紅／藍格線；每格只讀取正向時間，倒著的日期不會當成上下班時間。檔名結尾為 1／2 時會自動判斷上下半月。</span>
+                <strong>點陣字辨識＋快速人工核對</strong>
+                <span>程式會先定位日期並放大每個打卡格；可辨識的時間會先填入，無法辨識時直接在同一畫面看放大圖輸入。檔名結尾為 1／2 時會自動判斷上下半月。</span>
               </div>
               <div id="ocr-progress" class="progress-box" hidden>
                 <div><span id="ocr-progress-label">準備辨識</span><strong id="ocr-progress-percent">0%</strong></div>
@@ -539,6 +539,26 @@
         <button class="primary-btn" type="submit">儲存紀錄</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="ocr-review-dialog" class="ocr-review-dialog">
+    <div class="dialog-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">DOT-MATRIX QUICK REVIEW</p>
+          <h2 id="ocr-review-title">點陣打卡快速核對</h2>
+        </div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <div class="alert">
+        日期已由表格位置帶入。請忽略倒著的日期，只核對放大圖中的正向時間；已填完整的時段會直接存為「已確認」。
+      </div>
+      <div id="ocr-review-list" class="ocr-review-list"></div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" data-close-dialog>稍後處理</button>
+        <button class="primary-btn" id="save-ocr-review" type="button">儲存全部已填時間</button>
+      </div>
+    </div>
   </dialog>
 
   <dialog id="payslip-dialog" class="statement-dialog">

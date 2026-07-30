@@ -104,6 +104,7 @@
   let attendanceDialogEmployeeId = "";
   let attendanceDialogOriginalDate = "";
   let saveAndAdvanceAttendance = false;
+  let ocrReviewUploadId = "";
 
   function saveState(message = "已儲存於本機") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -788,7 +789,8 @@
           <small>${escapeHtml(getEmployee(upload.employeeId)?.name || "")}・${upload.half === "first" ? "1～15 日" : "16～31 日"}・${escapeHtml(upload.statusText)}</small>
         </div>
         <div class="upload-item-actions">
-          <button type="button" data-upload-action="recognize" data-id="${upload.id}">開始辨識</button>
+          <button type="button" data-upload-action="recognize" data-id="${upload.id}">建立辨識與核對</button>
+          ${upload.reviewRows?.length ? `<button type="button" data-upload-action="quick-review" data-id="${upload.id}">快速核對 ${upload.reviewRows.length} 日</button>` : ""}
           <button type="button" data-upload-action="view" data-id="${upload.id}">查看原圖</button>
           ${upload.ocrPreviewUrl ? `<button type="button" data-upload-action="view-ocr" data-id="${upload.id}">查看辨識影像</button>` : ""}
           <button type="button" data-upload-action="remove" data-id="${upload.id}">移除</button>
@@ -1363,12 +1365,19 @@
     context.fillStyle = "#ffffff";
     context.fillRect(0, 0, canvas.width, canvas.height);
     const density = Array.from({ length: geometry.count }, () => Array(OCR_COLUMN_COUNT).fill(0));
+    const reviewCanvases = [];
 
     for (let rowIndex = 0; rowIndex < geometry.count; rowIndex += 1) {
       const dayOffset = rowIndex;
       const rowCenterY = geometry.yStart + geometry.spacing * dayOffset;
       const dayCenterX = geometry.xStart + geometry.xSlope * dayOffset;
       const columnWidth = geometry.spacing * 2.02;
+      const reviewCanvas = document.createElement("canvas");
+      reviewCanvas.width = 960;
+      reviewCanvas.height = 118;
+      const reviewContext = reviewCanvas.getContext("2d");
+      reviewContext.fillStyle = "#f4f5f2";
+      reviewContext.fillRect(0, 0, reviewCanvas.width, reviewCanvas.height);
       for (let column = 0; column < OCR_COLUMN_COUNT; column += 1) {
         const cellLeft = dayCenterX + geometry.spacing * 0.52 + column * columnWidth;
         const cellCenterX = cellLeft + columnWidth / 2;
@@ -1381,10 +1390,10 @@
           predictedBoundary,
           geometry.spacing
         );
-        const sourceX = cellLeft + columnWidth * 0.21;
-        const sourceY = boundary - geometry.spacing * 0.82;
-        const sourceWidth = columnWidth * 0.75;
-        const sourceHeight = geometry.spacing * 0.66;
+        const sourceX = cellLeft + columnWidth * 0.14;
+        const sourceY = boundary - geometry.spacing * 0.9;
+        const sourceWidth = columnWidth * 0.84;
+        const sourceHeight = geometry.spacing * 0.82;
         const destinationX = column * OCR_CELL_WIDTH + 4;
         const destinationY = rowIndex * OCR_ROW_HEIGHT + 6;
         const destinationWidth = OCR_CELL_WIDTH - 8;
@@ -1404,6 +1413,24 @@
           destinationWidth,
           destinationHeight
         );
+        const reviewX = Math.max(0, cellLeft + columnWidth * 0.02);
+        const reviewY = Math.max(0, boundary - geometry.spacing * 1.08);
+        const reviewWidth = Math.max(1, Math.min(source.width - reviewX, columnWidth * 0.96));
+        const reviewHeight = Math.max(1, Math.min(source.height - reviewY, geometry.spacing * 1.55));
+        reviewContext.save();
+        reviewContext.filter = "grayscale(1) contrast(190%)";
+        reviewContext.drawImage(
+          bitmap,
+          reviewX,
+          reviewY,
+          reviewWidth,
+          reviewHeight,
+          column * 160,
+          0,
+          160,
+          reviewCanvas.height
+        );
+        reviewContext.restore();
         density[rowIndex][column] = preprocessOcrCell(
           context,
           destinationX,
@@ -1412,8 +1439,9 @@
           destinationHeight
         );
       }
+      reviewCanvases.push(reviewCanvas);
     }
-    return { canvas, density, geometry };
+    return { canvas, density, geometry, reviewCanvases };
   }
 
   function extractNormalizedRows(words, sheet) {
@@ -1469,7 +1497,7 @@
         : 0;
       row.rawText = row.cells.map(cell => cell.rawText).filter(Boolean).join("／");
       return row;
-    }).filter(row => row.segments.length || row.hasInk);
+    });
   }
 
   function createLabeledOcrPreview(sheet) {
@@ -1526,6 +1554,113 @@
     }, "image/png");
   }
 
+  function buildUploadReviewRows(sheet, rows) {
+    let selected = rows.filter(row =>
+      row.segments.length ||
+      row.cells.some(cell => cell.time || cell.density > 0.006)
+    );
+    if (!selected.length) selected = rows;
+    return selected.map(row => {
+      const rowIndex = row.day - sheet.geometry.startDay;
+      const suggestedSegments = Array.from({ length: 3 }, (_, segmentIndex) => ({
+        start: row.cells[segmentIndex * 2]?.time || "",
+        end: row.cells[segmentIndex * 2 + 1]?.time || ""
+      }));
+      return {
+        day: row.day,
+        image: sheet.reviewCanvases[rowIndex]?.toDataURL("image/jpeg", 0.9) || "",
+        suggestedSegments,
+        hasGuess: suggestedSegments.some(segment => segment.start || segment.end)
+      };
+    });
+  }
+
+  function openOcrQuickReview(uploadId) {
+    const upload = runtimeUploads.find(item => item.id === uploadId);
+    if (!upload?.reviewRows?.length) {
+      toast("這張照片尚未建立可核對的日期裁切。");
+      return;
+    }
+    ocrReviewUploadId = uploadId;
+    const employee = getEmployee(upload.employeeId);
+    $("#ocr-review-title").textContent = `${employee?.name || "員工"}・${upload.half === "first" ? "1～15 日" : "16～31 日"}快速核對`;
+    $("#ocr-review-list").innerHTML = upload.reviewRows.map(row => {
+      const date = `${state.settings.month}-${String(row.day).padStart(2, "0")}`;
+      return `
+        <article class="ocr-review-row" data-day="${row.day}">
+          <div class="ocr-review-date">
+            <strong>${row.day} 日</strong>
+            <span>星期${weekdayLabel(date)}</span>
+            ${row.hasGuess ? '<span class="status-pill status-review">有初步猜測</span>' : '<span class="status-pill status-unreadable">請人工讀取</span>'}
+            <label><input class="ocr-review-skip" type="checkbox" /> 當日無打卡</label>
+          </div>
+          <a href="${row.image}" target="_blank" rel="noopener" title="開啟放大裁切">
+            <img class="ocr-review-crop" src="${row.image}" alt="${row.day} 日六格打卡放大圖" />
+          </a>
+          <div class="ocr-review-segments">
+            ${row.suggestedSegments.map((segment, index) => `
+              <div class="ocr-review-segment">
+                <span>第 ${index + 1} 段</span>
+                <input class="ocr-review-start" type="time" value="${escapeHtml(segment.start)}" aria-label="${row.day} 日第 ${index + 1} 段上班" />
+                <span>到</span>
+                <input class="ocr-review-end" type="time" value="${escapeHtml(segment.end)}" aria-label="${row.day} 日第 ${index + 1} 段下班" />
+              </div>
+            `).join("")}
+          </div>
+        </article>
+      `;
+    }).join("");
+    $("#ocr-review-dialog").showModal();
+  }
+
+  function saveOcrQuickReview() {
+    const upload = runtimeUploads.find(item => item.id === ocrReviewUploadId);
+    if (!upload || !requireUnlockedMonth()) return;
+    let confirmedCount = 0;
+    let partialCount = 0;
+    $$(".ocr-review-row", $("#ocr-review-list")).forEach(reviewRow => {
+      const day = Number(reviewRow.dataset.day);
+      const date = `${state.settings.month}-${String(day).padStart(2, "0")}`;
+      const key = attendanceKey(upload.employeeId, date);
+      if (state.attendance[key]?.status === "confirmed") return;
+      if ($(".ocr-review-skip", reviewRow).checked) {
+        delete state.attendance[key];
+        delete state.leaveRecords[key];
+        return;
+      }
+      const starts = $$(".ocr-review-start", reviewRow);
+      const ends = $$(".ocr-review-end", reviewRow);
+      const segments = starts.map((input, index) => ({
+        start: input.value,
+        end: ends[index].value
+      })).filter(segment => segment.start || segment.end);
+      if (!segments.length) return;
+      const complete = segments.every(segment => segment.start && segment.end);
+      state.attendance[key] = {
+        employeeId: upload.employeeId,
+        date,
+        segments,
+        status: complete ? "confirmed" : "unreadable",
+        source: `人工核對：${upload.file.name}`,
+        confidence: complete ? 100 : 0,
+        note: complete
+          ? "由打卡格放大圖人工核對完成。"
+          : "快速核對仍有不完整時間，請再次確認。"
+      };
+      if (complete) confirmedCount += 1;
+      else partialCount += 1;
+    });
+    logAudit(
+      "完成打卡快速核對",
+      `${getEmployee(upload.employeeId)?.name || "員工"}・確認 ${confirmedCount} 日${partialCount ? `・未完整 ${partialCount} 日` : ""}`
+    );
+    saveState();
+    $("#ocr-review-dialog").close();
+    renderAll();
+    showView("attendance");
+    toast(`已儲存 ${confirmedCount} 日確認紀錄${partialCount ? `；${partialCount} 日仍需補齊` : ""}。`);
+  }
+
   async function recognizeUpload(uploadId) {
     if (!requireUnlockedMonth()) return;
     const upload = runtimeUploads.find(item => item.id === uploadId);
@@ -1564,7 +1699,9 @@
         tessedit_do_invert: "0"
       });
       const timeResult = await worker.recognize(sheet.canvas);
-      const rows = extractNormalizedRows(timeResult.data.words || [], sheet);
+      const allRows = extractNormalizedRows(timeResult.data.words || [], sheet);
+      upload.reviewRows = buildUploadReviewRows(sheet, allRows);
+      const rows = allRows.filter(row => row.segments.length || row.hasInk);
       let recognizedCount = 0;
       let unreadableCount = 0;
 
@@ -1607,7 +1744,7 @@
       });
 
       upload.status = "done";
-      upload.statusText = `${geometry.method}（日期錨點 ${geometry.anchors}）・辨識 ${recognizedCount} 日${unreadableCount ? `・${unreadableCount} 日需人工判斷` : ""}`;
+      upload.statusText = `${geometry.method}（日期錨點 ${geometry.anchors}）・自動辨識 ${recognizedCount} 日・可快速核對 ${upload.reviewRows.length} 日`;
       $("#attendance-employee").value = upload.employeeId;
       logAudit("匯入 OCR 打卡", `${getEmployee(upload.employeeId)?.name || "員工"}・${upload.file.name}・共 ${recognizedCount + unreadableCount} 日`);
       saveState("OCR 結果已儲存");
@@ -1619,6 +1756,7 @@
       toast(recognizedCount || unreadableCount
         ? `辨識完成；已忽略倒置日期，請核對 ${recognizedCount + unreadableCount} 日結果。`
         : "沒有偵測到正向時間；可查看辨識影像確認裁切範圍。");
+      if (upload.reviewRows.length) openOcrQuickReview(upload.id);
     } catch (error) {
       console.warn("OCR failed", error);
       upload.status = "error";
@@ -1989,6 +2127,7 @@
       const upload = runtimeUploads.find(item => item.id === button.dataset.id);
       if (!upload) return;
       if (button.dataset.uploadAction === "recognize") recognizeUpload(upload.id);
+      if (button.dataset.uploadAction === "quick-review") openOcrQuickReview(upload.id);
       if (button.dataset.uploadAction === "view") window.open(upload.url, "_blank", "noopener");
       if (button.dataset.uploadAction === "view-ocr" && upload.ocrPreviewUrl) {
         window.open(upload.ocrPreviewUrl, "_blank", "noopener");
@@ -2000,6 +2139,7 @@
         renderUploads();
       }
     });
+    $("#save-ocr-review").addEventListener("click", saveOcrQuickReview);
 
     $("#payroll-body").addEventListener("click", event => {
       const button = event.target.closest(".view-payslip");
