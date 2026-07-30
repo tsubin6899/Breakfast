@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -548,7 +549,7 @@
       <div id="payslip-content"></div>
       <div class="dialog-actions">
         <button class="secondary-btn" type="button" data-close-dialog>關閉</button>
-        <button class="primary-btn" id="print-payslip" type="button">列印 9:16 明細</button>
+        <button class="primary-btn" id="download-statement-jpg" type="button">儲存為 JPG</button>
       </div>
     </div>
   </dialog>

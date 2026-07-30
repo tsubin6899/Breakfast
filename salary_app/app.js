@@ -938,7 +938,7 @@
 
     $("#payslip-title").textContent = `${employee.name}・${monthLabel(month)}出席與薪資明細`;
     $("#payslip-content").innerHTML = `
-      <article class="employee-statement">
+      <article class="employee-statement" data-employee-id="${escapeHtml(employee.id)}" data-employee-name="${escapeHtml(employee.name)}" data-month="${escapeHtml(month)}">
         <header class="statement-name">
           <strong>${escapeHtml(employee.name)}</strong>
           <span>${monthLabel(month)}・${employee.payType === "monthly" ? "月薪制" : "時薪制"}</span>
@@ -997,6 +997,54 @@
       </article>
     `;
     $("#payslip-dialog").showModal();
+  }
+
+  async function downloadStatementJpg() {
+    const statement = $(".employee-statement", $("#payslip-content"));
+    const button = $("#download-statement-jpg");
+    if (!statement) return;
+    if (!window.html2canvas) {
+      toast("JPG 元件尚未載入，請確認網路後再試一次。");
+      return;
+    }
+
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "正在產生圖片…";
+    try {
+      const captured = await window.html2canvas(statement, {
+        scale: 3,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false
+      });
+      const output = document.createElement("canvas");
+      output.width = 1080;
+      output.height = 1920;
+      const context = output.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, output.width, output.height);
+      const scale = Math.min(output.width / captured.width, output.height / captured.height);
+      const width = captured.width * scale;
+      const height = captured.height * scale;
+      context.drawImage(captured, (output.width - width) / 2, (output.height - height) / 2, width, height);
+
+      const blob = await new Promise(resolve => output.toBlob(resolve, "image/jpeg", 0.95));
+      if (!blob) throw new Error("JPG_EXPORT_FAILED");
+      const employeeName = statement.dataset.employeeName || "員工";
+      const safeName = employeeName.replace(/[\\/:*?"<>|]/g, "_");
+      downloadBlob(blob, `${safeName}_${statement.dataset.month}_出席薪資明細.jpg`, "image/jpeg");
+      logAudit("下載員工出席明細", `${employeeName}・JPG 1080 × 1920`);
+      saveState();
+      renderAll();
+      toast("9:16 JPG 明細已儲存。");
+    } catch (error) {
+      console.warn("Unable to export statement JPG", error);
+      toast("圖片產生失敗，請重新開啟明細後再試一次。");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 
   function addUploadFiles(files) {
@@ -1542,7 +1590,7 @@
       const button = event.target.closest(".view-payslip");
       if (button) openPayslip(button.dataset.employeeId);
     });
-    $("#print-payslip").addEventListener("click", () => window.print());
+    $("#download-statement-jpg").addEventListener("click", downloadStatementJpg);
     $("#toggle-month-lock").addEventListener("click", () => {
       const month = state.settings.month;
       const current = state.closedMonths[month] || {};
