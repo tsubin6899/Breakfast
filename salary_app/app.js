@@ -1763,17 +1763,17 @@
   }
 
   function prepareAiImages(bitmap) {
-    const original = createScaledCanvas(bitmap, {
-      x: 0,
-      y: 0,
-      width: bitmap.width,
-      height: bitmap.height,
-      allowUpscale: false
-    }, 1700, 2100);
     const cropX = Math.round(bitmap.width * 0.1);
     const cropY = Math.round(bitmap.height * 0.28);
     const cropWidth = Math.round(bitmap.width * 0.7);
     const cropHeight = Math.round(bitmap.height * 0.62);
+    const tableCrop = createScaledCanvas(bitmap, {
+      x: cropX,
+      y: cropY,
+      width: cropWidth,
+      height: cropHeight,
+      allowUpscale: true
+    }, 1700, 2100);
     const enhanced = createScaledCanvas(bitmap, {
       x: cropX,
       y: cropY,
@@ -1782,7 +1782,7 @@
       allowUpscale: true
     }, 1700, 2100, "grayscale(1) contrast(175%) brightness(110%)");
     return [
-      original.toDataURL("image/jpeg", 0.9),
+      tableCrop.toDataURL("image/jpeg", 0.9),
       enhanced.toDataURL("image/jpeg", 0.9)
     ];
   }
@@ -1900,10 +1900,8 @@
         },
         body: JSON.stringify({
           images,
-          employeeName: getEmployee(upload.employeeId)?.name || "",
           month: state.settings.month,
-          half: upload.half,
-          fileName: upload.file.name
+          half: upload.half
         }),
         signal: controller.signal
       });

@@ -178,7 +178,7 @@
               <label class="ai-access-field">
                 <span>AI 辨識連線密碼</span>
                 <input id="ai-access-token" type="password" autocomplete="current-password" placeholder="輸入 Netlify 設定的連線密碼" />
-                <small>這不是 OpenAI API Key，只是保護辨識服務的店內密碼；僅儲存在這台裝置。</small>
+                <small>這不是 Gemini／OpenAI API Key，只是保護辨識服務的店內密碼；僅儲存在這台裝置。</small>
               </label>
               <button class="drop-zone" id="drop-zone" type="button">
                 <strong>拖曳或點選打卡照片</strong>
@@ -187,7 +187,7 @@
               <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
               <div class="ocr-reading-tip">
                 <strong>雲端 AI 辨識＋快速人工核對</strong>
-                <span>照片會傳送至 OpenAI 進行辨識，不會寫入 GitHub；AI 先填入可讀取的日期與時間，低信心或模糊內容仍需人工確認。檔名結尾為 1／2 時會自動判斷上下半月。</span>
+                <span>APP 會先裁掉卡片上方的姓名區，只將打卡表格傳送至 Gemini 免費方案辨識，不會寫入 GitHub；低信心或模糊內容仍需人工確認。檔名結尾為 1／2 時會自動判斷上下半月。</span>
               </div>
               <div id="ocr-progress" class="progress-box" hidden>
                 <div><span id="ocr-progress-label">準備辨識</span><strong id="ocr-progress-percent">0%</strong></div>

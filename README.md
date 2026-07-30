@@ -13,7 +13,7 @@
 
 - 員工時薪／月薪與班別設定
 - 平日、週末、國定假日和颱風日規則
-- 打卡照片上傳及 OpenAI 雲端視覺辨識
+- 打卡照片上傳及 Gemini 免費雲端視覺辨識
 - 無法判斷時間的人工複核流程
 - AI 分別讀取每個印章的倒置日期、正向時間、所在欄位與信心值
 - 同時比對原始照片與高對比表格副本，不依表格列位置猜測日期
@@ -38,10 +38,11 @@ Excel 與 JPG 匯出元件由固定版本的 CDN 載入；沒有網路或 AI 服
 
 1. 將本資料夾上傳至 GitHub，再由 Netlify 連接該 GitHub 專案部署。
 2. 在 Netlify 的 `Environment variables` 新增：
-   - `OPENAI_API_KEY`：OpenAI Platform API Key。
+   - `GEMINI_API_KEY`：Google AI Studio API Key；設定後會優先使用 Gemini 免費方案。
    - `TIME_CARD_API_TOKEN`：自行設定一組店內連線密碼，建議至少 16 個字元。
-   - `OPENAI_VISION_MODEL`：預設可填 `gpt-5.6-sol`。
+   - `GEMINI_VISION_MODEL`：選填，預設為 `gemini-3.6-flash`。
+   - `OPENAI_API_KEY`、`OPENAI_VISION_MODEL`：選填；未設定 Gemini 時才使用 OpenAI。
 3. 重新部署網站。
 4. 在薪資 APP 的「AI 辨識連線密碼」輸入與 `TIME_CARD_API_TOKEN` 相同的密碼。
 
-`OPENAI_API_KEY` 只存在 Netlify 後端，不會出現在 GitHub 或瀏覽器中。店內連線密碼只儲存在目前瀏覽器，不會納入薪資 JSON 備份。打卡照片在辨識時會傳送至 OpenAI，API 請求設定為不儲存回應狀態；仍應由店內依個資管理規範限制網站與照片存取。
+API Key 只存在 Netlify 後端，不會出現在 GitHub 或瀏覽器中。店內連線密碼只儲存在目前瀏覽器，不會納入薪資 JSON 備份。APP 會先裁掉卡片上方姓名區，再將打卡表格裁切與高對比副本傳送至 Gemini；員工姓名不會放入 AI 請求。Gemini 免費層內容可能由 Google 用於改善產品，仍應由店內依個資管理規範限制網站與照片存取。
