@@ -118,13 +118,22 @@ function normalizeResult(value: unknown): AiResult {
 
 function buildPrompt(month: string, half: string) {
   return [
-    "你是台灣餐飲店打卡卡片的影像稽核員。請逐一讀取照片中的實體點陣印章。",
+    "你是台灣餐飲店打卡卡片的影像稽核員。這不是一般 OCR，請逐一定位照片中的「實體點陣印章」。",
+    "你會依序收到三張同一裁切區域的影像：A 正向彩色原圖、B 正向溫和點陣強化圖、C 為 B 整張旋轉 180° 的日期輔助圖。",
+    "A/B 只用來讀正向時間；C 只用來讓原本倒置的日期變正。C 中的時間會倒置，絕對不可拿 C 的倒置時間當答案。",
     "每一個印章包含兩組資訊：正向數字是 HH:MM 上下班時間；倒置（上下顛倒）的數字是該次打卡的實際日期日數。",
     "印章可能跨越水平格線或蓋在錯誤日期列，所以絕對不可只用表格列號推測實際日期。",
-    "請先在腦中旋轉倒置數字以讀取 day，再讀正向時間。printedRow 是印章視覺上最接近的表格日期列，只用於回看裁切。",
+    "請分兩階段處理：先在 A/B 找出完整印章的位置並讀正向時間，再到 C 找同一個印章的倒置日期；不可逐列猜時間。",
+    "printedRow 是印章視覺中心最接近的表格日期列，只用於回看裁切，不等於實際日期。",
     "column 依卡片由左至右固定為 0 上午上班、1 上午下班、2 下午上班、3 下午下班、4 加班上班、5 加班下班。",
-    "同一格可能有淡色、斷點或格線穿過。請交叉比對原圖與增強圖，但不要補猜看不清楚的數字。",
+    "藍色或紅色的連續水平線、垂直線與交叉點都是表格格線，不是 1、4、7、冒號或數字的一部分。",
+    "原子筆刪除線、手寫日期、欄位標題與印刷列號都不是打卡時間。只有由密集小圓點構成、同時帶正向時間與倒置日期的圖樣才算印章。",
+    "時間必須能從同一個實體印章看見 3～4 個數字與分隔點，並能合理組成 00:00～23:59；不能因格線或殘缺點陣補成整點，例如不可憑空補出 08:00、14:00。",
+    "同一格可能有淡色、斷點或格線穿過。請交叉比對 A 與 B，但任何一位數無法辨認就不要補猜。",
     "若實際倒置日期看不清楚，day 填 0；若正向時間看不清楚，time 填空字串且 readable=false。",
+    "若只能確定這裡有印章但日期或時間不完整，仍可回傳該印章，但 readable=false、缺失欄位留空或 day=0，confidence 不得超過 45。",
+    "印章跨列、與格線重疊、被刪除線劃過或 A/B 判讀不一致時，confidence 不得超過 60，note 必須明確說明。",
+    "不要使用員工常見班別、相鄰日期時間、上下班配對或表格列號推測缺失內容。寧可留白，也不要產生看似合理的時間。",
     "只回傳照片中真正看得到的印章，不要為空白日期建立紀錄。",
     `月份：${month || "未提供"}；卡片範圍：${half === "first" ? "1～15 日" : "16～31 日"}。`,
     "對每個印章提供 0～100 的 confidence；任何不確定都必須降低信心並寫在 note。",
@@ -189,15 +198,23 @@ async function recognizeWithGemini(
   signal: AbortSignal,
   requestId: string
 ): Promise<ProviderResult> {
-  const model = Netlify.env.get("GEMINI_VISION_MODEL") || "gemini-2.5-flash";
-  const imageParts = images.map(imageUrl => {
+  const model = Netlify.env.get("GEMINI_VISION_MODEL") || "gemini-3.6-flash";
+  const imageLabels = [
+    "影像 A｜正向彩色原圖：只從這張或 B 讀取正向時間。",
+    "影像 B｜正向溫和點陣強化圖：只輔助確認 A 中的正向時間。",
+    "影像 C｜B 整張旋轉 180°：只讀原本倒置的實際日期；不要從這張讀時間。"
+  ];
+  const imageParts = images.flatMap((imageUrl, index) => {
     const image = splitImageDataUrl(imageUrl);
-    return {
-      inlineData: {
-        mimeType: image.mimeType,
-        data: image.data
+    return [
+      { text: imageLabels[index] || `影像 ${index + 1}` },
+      {
+        inlineData: {
+          mimeType: image.mimeType,
+          data: image.data
+        }
       }
-    };
+    ];
   });
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
@@ -210,7 +227,7 @@ async function recognizeWithGemini(
       body: JSON.stringify({
         systemInstruction: {
           parts: [{
-            text: "精確讀取打卡卡片影像並依 JSON Schema 回傳。看不清楚時不可猜測。"
+            text: "精確定位點陣打卡印章並回傳 JSON。格線不是數字；看不清楚必須留白，禁止依班別或表格位置猜測。"
           }]
         },
         contents: [{
@@ -266,6 +283,11 @@ async function recognizeWithOpenAi(
   requestId: string
 ): Promise<ProviderResult> {
   const model = Netlify.env.get("OPENAI_VISION_MODEL") || "gpt-5.6-sol";
+  const imageLabels = [
+    "影像 A｜正向彩色原圖：只從這張或 B 讀取正向時間。",
+    "影像 B｜正向溫和點陣強化圖：只輔助確認 A 中的正向時間。",
+    "影像 C｜B 整張旋轉 180°：只讀原本倒置的實際日期；不要從這張讀時間。"
+  ];
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -280,17 +302,20 @@ async function recognizeWithOpenAi(
       input: [
         {
           role: "system",
-          content: "精確讀取打卡卡片影像並依 JSON Schema 回傳。看不清楚時不可猜測。"
+          content: "精確定位點陣打卡印章並依 JSON Schema 回傳。格線不是數字；看不清楚必須留白，禁止依班別或表格位置猜測。"
         },
         {
           role: "user",
           content: [
             { type: "input_text", text: buildPrompt(month, half) },
-            ...images.map(imageUrl => ({
-              type: "input_image",
-              image_url: imageUrl,
-              detail: "original"
-            }))
+            ...images.flatMap((imageUrl, index) => ([
+              { type: "input_text", text: imageLabels[index] || `影像 ${index + 1}` },
+              {
+                type: "input_image",
+                image_url: imageUrl,
+                detail: "original"
+              }
+            ]))
           ]
         }
       ],
@@ -377,7 +402,7 @@ export default async (req: Request, context: Context) => {
       typeof image === "string" &&
       image.length <= MAX_IMAGE_DATA_URL_LENGTH &&
       ALLOWED_IMAGE_PREFIX.test(image)
-    )).slice(0, 2)
+    )).slice(0, 3)
     : [];
   if (!images.length) {
     return jsonResponse({ error: "INVALID_IMAGE", message: "未收到可辨識的 JPG、PNG 或 WebP 圖片。" }, 400);

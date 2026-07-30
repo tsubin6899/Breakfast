@@ -1374,11 +1374,35 @@
       const dayCenterX = geometry.xStart + geometry.xSlope * dayOffset;
       const columnWidth = geometry.spacing * 2.02;
       const reviewCanvas = document.createElement("canvas");
-      reviewCanvas.width = 960;
-      reviewCanvas.height = 180;
+      reviewCanvas.width = 1100;
+      reviewCanvas.height = 260;
       const reviewContext = reviewCanvas.getContext("2d");
       reviewContext.fillStyle = "#f4f5f2";
       reviewContext.fillRect(0, 0, reviewCanvas.width, reviewCanvas.height);
+      const reviewX = Math.max(0, dayCenterX + geometry.spacing * 0.48);
+      const reviewY = Math.max(0, rowCenterY - geometry.spacing * 0.92);
+      const reviewWidth = Math.max(
+        1,
+        Math.min(source.width - reviewX, columnWidth * OCR_COLUMN_COUNT)
+      );
+      const reviewHeight = Math.max(
+        1,
+        Math.min(source.height - reviewY, geometry.spacing * 3.35)
+      );
+      reviewContext.save();
+      reviewContext.filter = "contrast(135%) brightness(108%) saturate(65%)";
+      reviewContext.drawImage(
+        bitmap,
+        reviewX,
+        reviewY,
+        reviewWidth,
+        reviewHeight,
+        0,
+        0,
+        reviewCanvas.width,
+        reviewCanvas.height
+      );
+      reviewContext.restore();
       for (let column = 0; column < OCR_COLUMN_COUNT; column += 1) {
         const cellLeft = dayCenterX + geometry.spacing * 0.52 + column * columnWidth;
         const cellCenterX = cellLeft + columnWidth / 2;
@@ -1414,24 +1438,6 @@
           destinationWidth,
           destinationHeight
         );
-        const reviewX = Math.max(0, cellLeft + columnWidth * 0.02);
-        const reviewY = Math.max(0, boundary - geometry.spacing * 1.3);
-        const reviewWidth = Math.max(1, Math.min(source.width - reviewX, columnWidth * 0.96));
-        const reviewHeight = Math.max(1, Math.min(source.height - reviewY, geometry.spacing * 2.1));
-        reviewContext.save();
-        reviewContext.filter = "grayscale(1) contrast(190%)";
-        reviewContext.drawImage(
-          bitmap,
-          reviewX,
-          reviewY,
-          reviewWidth,
-          reviewHeight,
-          column * 160,
-          0,
-          160,
-          reviewCanvas.height
-        );
-        reviewContext.restore();
         density[rowIndex][column] = preprocessOcrCell(
           context,
           destinationX,
@@ -1763,27 +1769,37 @@
   }
 
   function prepareAiImages(bitmap) {
-    const cropX = Math.round(bitmap.width * 0.1);
-    const cropY = Math.round(bitmap.height * 0.28);
-    const cropWidth = Math.round(bitmap.width * 0.7);
-    const cropHeight = Math.round(bitmap.height * 0.62);
+    const cropX = Math.round(bitmap.width * 0.08);
+    const cropY = Math.round(bitmap.height * 0.27);
+    const cropWidth = Math.round(bitmap.width * 0.74);
+    const cropHeight = Math.round(bitmap.height * 0.64);
     const tableCrop = createScaledCanvas(bitmap, {
       x: cropX,
       y: cropY,
       width: cropWidth,
       height: cropHeight,
       allowUpscale: true
-    }, 1700, 2100);
+    }, 1550, 1950);
     const enhanced = createScaledCanvas(bitmap, {
       x: cropX,
       y: cropY,
       width: cropWidth,
       height: cropHeight,
       allowUpscale: true
-    }, 1700, 2100, "grayscale(1) contrast(175%) brightness(110%)");
+    }, 1550, 1950, "grayscale(1) contrast(138%) brightness(106%)");
+    const rotated = document.createElement("canvas");
+    rotated.width = enhanced.width;
+    rotated.height = enhanced.height;
+    const rotatedContext = rotated.getContext("2d");
+    rotatedContext.fillStyle = "#ffffff";
+    rotatedContext.fillRect(0, 0, rotated.width, rotated.height);
+    rotatedContext.translate(rotated.width, rotated.height);
+    rotatedContext.rotate(Math.PI);
+    rotatedContext.drawImage(enhanced, 0, 0);
     return [
-      tableCrop.toDataURL("image/jpeg", 0.9),
-      enhanced.toDataURL("image/jpeg", 0.9)
+      tableCrop.toDataURL("image/jpeg", 0.84),
+      enhanced.toDataURL("image/jpeg", 0.84),
+      rotated.toDataURL("image/jpeg", 0.84)
     ];
   }
 
@@ -1943,11 +1959,11 @@
     renderUploads();
 
     try {
-      setOcrPhase("準備原圖與高對比副本", 5, 30);
+      setOcrPhase("準備正向、點陣強化與倒置日期三視圖", 5, 30);
       bitmap = await createImageBitmap(upload.file, { imageOrientation: "from-image" });
       const images = prepareAiImages(bitmap);
 
-      setOcrPhase("AI 正在逐一讀取倒置日期與正向時間", 38, 52);
+      setOcrPhase("AI 正在先找印章，再分開讀取日期與時間", 38, 52);
       const response = await requestAiTimecard(upload, images, accessToken);
       const result = response.result;
       if (result.cardHalf === "first" || result.cardHalf === "second") {
@@ -1984,7 +2000,7 @@
           source: `AI：${upload.file.name}`,
           confidence: Math.round(row.confidence),
           note: [
-            "雲端 AI 已分別判讀倒置日期與正向時間，尚待人工確認。",
+            "雲端 AI 已用三視圖分別判讀倒置日期與正向時間，尚待人工確認。",
             row.dateUncertain ? "倒置日期不清楚，目前暫用最接近的表格列。" : "",
             row.hasPartial ? "至少一個印章或成對時間不完整。" : "",
             row.aiNote

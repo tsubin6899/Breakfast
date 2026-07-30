@@ -1356,7 +1356,7 @@ dialog::backdrop {
 }
 
 .ocr-review-dialog {
-  width: min(960px, calc(100vw - 28px));
+  width: min(1180px, calc(100vw - 28px));
 }
 
 .ocr-review-list {
@@ -1369,7 +1369,7 @@ dialog::backdrop {
 
 .ocr-review-row {
   display: grid;
-  grid-template-columns: 92px minmax(300px, 1fr) minmax(330px, .9fr);
+  grid-template-columns: 98px minmax(430px, 1.35fr) minmax(350px, .9fr);
   gap: 12px;
   align-items: center;
   padding: 11px;
@@ -1424,7 +1424,7 @@ dialog::backdrop {
 
 .ocr-review-crop {
   width: 100%;
-  min-height: 120px;
+  min-height: 168px;
   border: 1px solid #d7ddd8;
   border-radius: 9px;
   object-fit: contain;
@@ -2149,7 +2149,7 @@ tfoot th {
   }
 
   .ocr-review-crop {
-    min-height: 140px;
+    min-height: 190px;
   }
 
   .dialog-actions {
