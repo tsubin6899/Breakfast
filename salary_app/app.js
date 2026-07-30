@@ -66,7 +66,9 @@
         { id: "adj-jun-base", employeeId: "lin-jun", name: "底薪加給", amount: 1000, type: "earning", recurring: true, month: "" },
         { id: "adj-he-insurance", employeeId: "he", name: "勞保／健保員工自負額", amount: 872, type: "deduction", recurring: true, month: "" }
       ],
-      specialDays: OFFICIAL_DAYS_2026
+      specialDays: OFFICIAL_DAYS_2026,
+      closedMonths: {},
+      auditLog: []
     };
   }
 
@@ -84,7 +86,9 @@
         attendance: saved.attendance || {},
         leaveRecords: saved.leaveRecords || {},
         adjustments: Array.isArray(saved.adjustments) ? saved.adjustments : defaults.adjustments,
-        specialDays: Array.isArray(saved.specialDays) ? saved.specialDays : defaults.specialDays
+        specialDays: Array.isArray(saved.specialDays) ? saved.specialDays : defaults.specialDays,
+        closedMonths: saved.closedMonths || {},
+        auditLog: Array.isArray(saved.auditLog) ? saved.auditLog : []
       };
     } catch (error) {
       console.warn("Unable to load saved payroll data", error);
@@ -98,6 +102,7 @@
   let toastTimer = null;
   let attendanceDialogEmployeeId = "";
   let attendanceDialogOriginalDate = "";
+  let saveAndAdvanceAttendance = false;
 
   function saveState(message = "已儲存於本機") {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -110,6 +115,28 @@
 
   function uid(prefix = "id") {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function isMonthLocked(month = state.settings.month) {
+    return Boolean(state.closedMonths?.[month]?.locked);
+  }
+
+  function logAudit(action, detail = "", month = state.settings.month) {
+    state.auditLog.unshift({
+      id: uid("audit"),
+      month,
+      action,
+      detail,
+      actor: "本機使用者",
+      timestamp: new Date().toISOString()
+    });
+    state.auditLog = state.auditLog.slice(0, 250);
+  }
+
+  function requireUnlockedMonth(month = state.settings.month) {
+    if (!isMonthLocked(month)) return true;
+    toast(`${monthLabel(month)}已鎖定，請先解除鎖定再修改。`);
+    return false;
   }
 
   function escapeHtml(value) {
@@ -231,6 +258,52 @@
     ).join("")}</div>`;
   }
 
+  function minutesAsClock(minutes) {
+    const value = Math.max(0, Number(minutes) || 0);
+    return `${Math.floor(value / 60)}:${String(Math.round(value % 60)).padStart(2, "0")}`;
+  }
+
+  function statementTimes(record) {
+    const segments = record?.segments || [];
+    if (!segments.length) return { start: "—", end: "—" };
+    return {
+      start: segments.map(segment => segment.start || "??:??").join("／"),
+      end: segments.map(segment => segment.end || "??:??").join("／")
+    };
+  }
+
+  function dailyStatementPay(employee, record) {
+    if (!record || record.status !== "confirmed") return 0;
+    const minutes = recordMinutes(record);
+    if (!minutes) return 0;
+    const day = getDayInfo(record.date);
+
+    if (employee.payType === "hourly") {
+      let rate = Number(employee.hourlyRate) || 0;
+      if (day.type === "weekend") rate = Number(employee.weekendRate) || rate;
+      if (day.type === "national") rate = Number(employee.holidayRate) || rate;
+      let multiplier = 1;
+      if (day.type === "national") multiplier = Number(state.settings.nationalMultiplier) || 1;
+      if (day.type === "typhoon") multiplier = Number(state.settings.typhoonMultiplier) || 1;
+      return applyRounding(minutes / 60 * rate * multiplier, state.settings.roundingMode, "item");
+    }
+
+    const hourlyBase = Number(employee.monthlySalary || 0) / 240;
+    const earlyMinutes = dailyEarlyOvertime(employee, record);
+    const firstBand = Math.min(120, earlyMinutes);
+    const secondBand = Math.min(120, Math.max(0, earlyMinutes - 120));
+    const beyond = Math.max(0, earlyMinutes - 240);
+    let amount =
+      firstBand / 60 * hourlyBase * (4 / 3) +
+      secondBand / 60 * hourlyBase * (5 / 3) +
+      beyond / 60 * hourlyBase * 2;
+    if (day.type === "national") amount += Number(employee.monthlySalary || 0) / 30;
+    if (day.type === "typhoon") {
+      amount += minutes / 60 * hourlyBase * Math.max(0, Number(state.settings.typhoonMultiplier) - 1);
+    }
+    return applyRounding(amount, state.settings.roundingMode, "item");
+  }
+
   function getMonthAttendance(employeeId, month) {
     return Object.values(state.attendance)
       .filter(record => record.employeeId === employeeId && record.date.startsWith(month))
@@ -241,6 +314,25 @@
     return Object.values(state.leaveRecords)
       .filter(record => record.employeeId === employeeId && record.date.startsWith(month))
       .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function employeeLeaveSummary(employee, month) {
+    const leaves = getMonthLeaves(employee.id, month);
+    const restDays = leaves
+      .filter(leave => leave.type === "monthly_rest")
+      .reduce((sum, leave) => sum + Number(leave.days || 1), 0);
+    const recordedAnnualDays = leaves
+      .filter(leave => leave.type === "annual_leave")
+      .reduce((sum, leave) => sum + Number(leave.days || 1), 0);
+    const convertedAnnualDays = Math.max(0, restDays - 7);
+    const annualUsed = recordedAnnualDays + convertedAnnualDays;
+    return {
+      restDays,
+      recordedAnnualDays,
+      convertedAnnualDays,
+      annualUsed,
+      annualRemaining: Number(employee.annualLeave || 0) - annualUsed
+    };
   }
 
   function applyRounding(value, mode, stage = "item") {
@@ -369,6 +461,7 @@
     const rawTotal = regularPay + overtimePay + specialPay + earnings - deductions;
     const total = applyRounding(rawTotal, mode, "final");
     const issues = records.filter(record => record.status !== "confirmed").length;
+    const leaveSummary = employeeLeaveSummary(employee, month);
 
     return {
       employee,
@@ -382,7 +475,8 @@
       overtimeMinutes,
       issues,
       detailLines,
-      leaves
+      leaves,
+      leaveSummary
     };
   }
 
@@ -399,14 +493,13 @@
     const employeeWarnings = [];
 
     state.employees.filter(employee => employee.active).forEach(employee => {
-      const leaves = getMonthLeaves(employee.id, month);
-      const restDays = leaves.filter(leave => leave.type === "monthly_rest").length;
-      const annualDays = leaves.filter(leave => leave.type === "annual_leave").reduce((sum, leave) => sum + Number(leave.days || 1), 0);
-      if (restDays > 7) {
-        employeeWarnings.push({ level: "warning", title: `${employee.name}月休 ${restDays} 天`, text: "超過 7 天，尚未自動扣年假，請確認假別。" });
-      }
-      if (annualDays > Number(employee.annualLeave || 0)) {
-        employeeWarnings.push({ level: "danger", title: `${employee.name}年假不足`, text: `已登記 ${annualDays} 天，餘額為 ${employee.annualLeave || 0} 天。` });
+      const leaveSummary = employeeLeaveSummary(employee, month);
+      if (leaveSummary.annualRemaining < 0) {
+        employeeWarnings.push({
+          level: "danger",
+          title: `${employee.name}年假不足`,
+          text: `本月使用 ${decimal(leaveSummary.annualUsed, 1)} 天（含月休超過 7 日轉抵），超出可用餘額 ${decimal(Math.abs(leaveSummary.annualRemaining), 1)} 天。`
+        });
       }
       if (employee.payType === "hourly" && Number(employee.hourlyRate) < MINIMUM_HOURLY_WAGE_2026) {
         employeeWarnings.push({ level: "danger", title: `${employee.name}時薪低於 2026 最低工資`, text: `目前設定 ${employee.hourlyRate} 元。` });
@@ -431,6 +524,48 @@
       ).join("");
       if (activeEmployees.some(employee => employee.id === current)) select.value = current;
     });
+  }
+
+  function renderCloseProgress() {
+    const month = state.settings.month;
+    const records = Object.values(state.attendance).filter(record => record.date.startsWith(month));
+    const issueCount = records.filter(record => record.status !== "confirmed").length;
+    const monthState = state.closedMonths?.[month] || {};
+    const steps = [
+      { key: "upload", done: records.length > 0 },
+      { key: "review", done: records.length > 0 && issueCount === 0 },
+      { key: "calculate", done: records.length > 0 && issueCount === 0 },
+      { key: "lock", done: Boolean(monthState.locked) },
+      { key: "export", done: Boolean(monthState.exportedAt) }
+    ];
+    const firstPending = steps.findIndex(step => !step.done);
+    $$("#close-progress-list [data-close-step]").forEach((item, index) => {
+      item.classList.toggle("is-done", steps[index].done);
+      item.classList.toggle("is-current", index === firstPending);
+    });
+    const completed = steps.filter(step => step.done).length;
+    $("#close-progress-summary").textContent = monthState.locked
+      ? `已鎖定・${completed}/5`
+      : `${completed}/5 已完成`;
+  }
+
+  function renderAudit() {
+    const entries = (state.auditLog || [])
+      .filter(entry => entry.month === state.settings.month)
+      .slice(0, 12);
+    $("#audit-list").innerHTML = entries.length ? entries.map(entry => {
+      const time = new Date(entry.timestamp);
+      const displayTime = Number.isNaN(time.getTime())
+        ? ""
+        : new Intl.DateTimeFormat("zh-TW", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(time);
+      return `
+        <div class="audit-item">
+          <span class="audit-dot"></span>
+          <div><strong>${escapeHtml(entry.action)}</strong><p>${escapeHtml(entry.detail || "—")}</p></div>
+          <small>${escapeHtml(entry.actor || "本機使用者")}<br>${escapeHtml(displayTime)}</small>
+        </div>
+      `;
+    }).join("") : '<p class="empty-copy">本月尚無修改紀錄；新增或複核打卡後會自動留存。</p>';
   }
 
   function renderDashboard() {
@@ -476,6 +611,7 @@
         <div><strong>目前沒有待確認項目</strong><p>可以繼續上傳打卡或進行薪資試算。</p></div>
       </div>
     `;
+    renderCloseProgress();
   }
 
   function dayTypeMarkup(date) {
@@ -510,6 +646,29 @@
         </tr>
       `;
     }).join("");
+
+    $("#attendance-card-list").innerHTML = dateRangeForMonth(month).map(date => {
+      const key = attendanceKey(employeeId, date);
+      const record = state.attendance[key];
+      const leave = state.leaveRecords[key];
+      const minutes = recordMinutes(record);
+      const day = getDayInfo(date);
+      return `
+        <article class="attendance-date-card day-${day.type}">
+          <div class="attendance-card-date">
+            <span>${Number(date.slice(-2))}</span>
+            <div><strong>星期${weekdayLabel(date)}</strong><small>${escapeHtml(day.label)}</small></div>
+            ${record?.status ? `<i class="dot ${record.status}" title="${statusLabel(record.status)}"></i>` : ""}
+          </div>
+          <div class="attendance-card-times">${formatSegments(record?.segments)}</div>
+          <div class="attendance-card-meta">
+            <span>${minutes ? `${decimal(minutes, 0)} 分鐘` : "尚無工時"}</span>
+            <span>${leave ? leaveLabel(leave.type) : statusLabel(record?.status)}</span>
+            <button class="text-btn edit-attendance" type="button" data-date="${date}">核對</button>
+          </div>
+        </article>
+      `;
+    }).join("");
   }
 
   function renderPayroll() {
@@ -524,7 +683,7 @@
         <td class="number">${money(row.earnings)}</td>
         <td class="number">${money(row.deductions)}</td>
         <td class="number"><strong>${money(row.total, state.settings.roundingMode === "none" ? 2 : 0)}</strong></td>
-        <td><button class="text-btn view-payslip" type="button" data-employee-id="${row.employee.id}">明細</button></td>
+        <td><button class="text-btn view-payslip" type="button" data-employee-id="${row.employee.id}">9:16 出席明細</button></td>
       </tr>
     `).join("");
 
@@ -540,6 +699,10 @@
       warning.hidden = true;
     }
     renderAdjustments();
+    renderAudit();
+    const lockButton = $("#toggle-month-lock");
+    lockButton.textContent = isMonthLocked() ? "解除本月鎖定" : "鎖定本月";
+    lockButton.classList.toggle("is-locked", isMonthLocked());
   }
 
   function renderAdjustments() {
@@ -659,6 +822,7 @@
   }
 
   function openEmployeeDialog(employeeId = "") {
+    if (!requireUnlockedMonth()) return;
     const employee = employeeId ? getEmployee(employeeId) : null;
     $("#employee-dialog-title").textContent = employee ? `編輯 ${employee.name}` : "新增員工";
     $("#employee-id").value = employee?.id || "";
@@ -689,6 +853,7 @@
   }
 
   function openAttendanceDialog(date = "") {
+    if (!requireUnlockedMonth()) return;
     const employeeId = $("#attendance-employee").value;
     const selectedDate = date || `${state.settings.month}-01`;
     const key = attendanceKey(employeeId, selectedDate);
@@ -704,25 +869,132 @@
     $("#attendance-leave-type").value = leave?.type || "";
     $("#attendance-note").value = record?.note || leave?.note || "";
     $("#delete-attendance").hidden = !record && !leave;
+    saveAndAdvanceAttendance = false;
+    const preview = $("#attendance-source-preview");
+    const sourceName = record?.source?.replace(/^OCR：/, "");
+    const upload = sourceName ? runtimeUploads.find(item => item.file?.name === sourceName) : null;
+    if (record?.source) {
+      preview.hidden = false;
+      preview.innerHTML = `
+        ${upload?.url ? `<img src="${upload.url}" alt="${escapeHtml(sourceName)} 原始打卡照片" />` : '<div class="source-placeholder">原始照片僅在本次上傳期間可預覽</div>'}
+        <div>
+          <strong>${escapeHtml(record.source)}</strong>
+          <p>辨識信心 ${decimal(record.confidence || 0, 0)}%・請對照照片後確認時間</p>
+          ${upload?.url ? `<button class="text-btn" type="button" data-preview-upload="${upload.id}">放大查看原圖</button>` : ""}
+        </div>
+      `;
+    } else {
+      preview.hidden = true;
+      preview.innerHTML = "";
+    }
     renderSegmentInputs(record?.segments?.length ? record.segments : [{ start: "", end: "" }]);
     $("#attendance-dialog").showModal();
   }
 
   function openPayslip(employeeId) {
-    const row = calculatePayroll(getEmployee(employeeId), state.settings.month);
-    $("#payslip-title").textContent = `${row.employee.name}・${monthLabel(state.settings.month)}薪資單`;
+    const employee = getEmployee(employeeId);
+    if (!employee) return;
+    const month = state.settings.month;
+    const row = calculatePayroll(employee, month);
+    const records = getMonthAttendance(employeeId, month);
+    const recordMap = new Map(records.map(record => [record.date, record]));
+    const leaveMap = new Map(getMonthLeaves(employeeId, month).map(leave => [leave.date, leave]));
+    const confirmed = records.filter(record => record.status === "confirmed");
+    const groupedMinutes = confirmed.reduce((totals, record) => {
+      const type = getDayInfo(record.date).type;
+      totals[type] = (totals[type] || 0) + recordMinutes(record);
+      return totals;
+    }, {});
+    const applicableAdjustments = state.adjustments.filter(adjustment =>
+      adjustment.employeeId === employee.id && (adjustment.recurring || adjustment.month === month)
+    );
+    const facts = employee.payType === "hourly"
+      ? [
+          ["平日時薪", money(employee.hourlyRate)],
+          ["週末時薪", money(employee.weekendRate || employee.hourlyRate)],
+          ["國定假日基礎", money(employee.holidayRate || employee.hourlyRate)],
+          ["平日工作分鐘", `${groupedMinutes.weekday || 0} 分`],
+          ["週末工作分鐘", `${groupedMinutes.weekend || 0} 分`],
+          ["國定／颱風分鐘", `${(groupedMinutes.national || 0) + (groupedMinutes.typhoon || 0)} 分`]
+        ]
+      : [
+          ["固定月薪", money(employee.monthlySalary)],
+          ["固定班別", employee.scheduleStart ? `${employee.scheduleStart}－${employee.scheduleEnd || "未設定"}` : "未設定"],
+          ["平日時薪基礎", money(Number(employee.monthlySalary || 0) / 240, 2)],
+          ["本月月休", `${decimal(row.leaveSummary.restDays, 1)} 天`],
+          ["轉抵／使用年假", `${decimal(row.leaveSummary.annualUsed, 1)} 天`],
+          ["年假試算餘額", `${decimal(row.leaveSummary.annualRemaining, 1)} 天`]
+        ];
+    const calculationRows = [
+      ["一般薪資", row.regularPay],
+      ...(row.overtimePay ? [["提早上班加班費", row.overtimePay]] : []),
+      ...(row.specialPay ? [["國定假日／颱風加給", row.specialPay]] : []),
+      ...applicableAdjustments.map(adjustment => [
+        `${adjustment.type === "deduction" ? "扣款" : "加給"}・${adjustment.name}`,
+        adjustment.type === "deduction" ? -Number(adjustment.amount) : Number(adjustment.amount)
+      ]),
+      ...(!applicableAdjustments.length ? [["其他加給／扣款", 0]] : [])
+    ];
+
+    $("#payslip-title").textContent = `${employee.name}・${monthLabel(month)}出席與薪資明細`;
     $("#payslip-content").innerHTML = `
-      <div class="payslip-summary">
-        <div><span>薪制</span><strong>${row.employee.payType === "monthly" ? "月薪制" : "時薪制"}</strong></div>
-        <div><span>確認工時</span><strong>${decimal((row.regularMinutes + row.overtimeMinutes) / 60, 2)} 小時</strong></div>
-        <div><span>待確認</span><strong>${row.issues} 筆</strong></div>
-      </div>
-      <div class="payslip-lines">
-        ${row.detailLines.map(line => `
-          <div class="payslip-line"><span>${escapeHtml(line.label)}</span><strong>${line.amount < 0 ? "−" : ""}${money(Math.abs(line.amount), state.settings.roundingMode === "none" ? 2 : 0)}</strong></div>
-        `).join("")}
-        <div class="payslip-line total"><span>本月實領</span><strong>${money(row.total, state.settings.roundingMode === "none" ? 2 : 0)}</strong></div>
-      </div>
+      <article class="employee-statement">
+        <header class="statement-name">
+          <strong>${escapeHtml(employee.name)}</strong>
+          <span>${monthLabel(month)}・${employee.payType === "monthly" ? "月薪制" : "時薪制"}</span>
+        </header>
+        <table class="statement-table">
+          <thead>
+            <tr>
+              <th>日期</th><th>星期</th><th>上班時間</th><th>下班時間</th>
+              <th>共計時間</th><th>總分鐘</th><th>當日薪資</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${dateRangeForMonth(month).map(date => {
+              const record = recordMap.get(date);
+              const leave = leaveMap.get(date);
+              const day = getDayInfo(date);
+              const times = statementTimes(record);
+              const minutes = record?.status === "confirmed" ? recordMinutes(record) : 0;
+              const dailyPay = dailyStatementPay(employee, record);
+              const statusCopy = record?.status && record.status !== "confirmed" ? statusLabel(record.status) : "";
+              const wageCopy = statusCopy || (leave ? leaveLabel(leave.type) : (record
+                ? (employee.payType === "monthly" && !dailyPay ? "月薪內" : money(dailyPay))
+                : "—"));
+              return `
+                <tr class="statement-day-${day.type} ${dailyPay && day.type !== "weekday" ? "has-premium" : ""}">
+                  <td>${Number(date.slice(-2))}</td>
+                  <td>星期${weekdayLabel(date)}</td>
+                  <td>${record?.status === "unreadable" ? "無法判斷" : escapeHtml(times.start)}</td>
+                  <td>${record?.status === "unreadable" ? "無法判斷" : escapeHtml(times.end)}</td>
+                  <td>${minutes ? minutesAsClock(minutes) : "—"}</td>
+                  <td>${minutes || "—"}</td>
+                  <td>${escapeHtml(wageCopy)}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+        <section class="statement-calculation">
+          <h3>薪資計算明細</h3>
+          <div class="statement-facts">
+            ${facts.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join("")}
+          </div>
+          <div class="statement-pay-lines">
+            ${calculationRows.map(([label, amount]) => `
+              <div><span>${escapeHtml(label)}</span><strong class="${amount < 0 ? "negative" : ""}">${amount < 0 ? "−" : ""}${money(Math.abs(amount))}</strong></div>
+            `).join("")}
+          </div>
+          <div class="statement-total"><span>本月實領薪資</span><strong>${money(row.total)}</strong></div>
+        </section>
+        <footer class="statement-legend">
+          <span class="weekend">週末六日</span>
+          <span class="special">國定假日／颱風假</span>
+          <span class="premium">薪資加成</span>
+        </footer>
+        ${row.issues ? `<p class="statement-warning">有 ${row.issues} 筆打卡尚未確認，未納入本次薪資。</p>` : ""}
+      </article>
     `;
     $("#payslip-dialog").showModal();
   }
@@ -834,6 +1106,7 @@
   }
 
   async function recognizeUpload(uploadId) {
+    if (!requireUnlockedMonth()) return;
     const upload = runtimeUploads.find(item => item.id === uploadId);
     if (!upload) return;
     upload.status = "processing";
@@ -883,6 +1156,7 @@
       upload.status = "done";
       upload.statusText = `辨識 ${recognizedCount} 日・待人工確認${unreadableCount ? `・${unreadableCount} 日無法判斷` : ""}`;
       $("#attendance-employee").value = upload.employeeId;
+      logAudit("匯入 OCR 打卡", `${getEmployee(upload.employeeId)?.name || "員工"}・${upload.file.name}・共 ${recognizedCount + unreadableCount} 日`);
       saveState("OCR 結果已儲存");
       renderAll();
       showView("attendance");
@@ -929,6 +1203,13 @@
     ];
     const csv = "\uFEFF" + csvRows.map(row => row.map(cell => `"${String(cell).replaceAll('"', '""')}"`).join(",")).join("\r\n");
     downloadBlob(csv, `初一食午薪資_${state.settings.month}.csv`, "text/csv;charset=utf-8");
+    state.closedMonths[state.settings.month] = {
+      ...(state.closedMonths[state.settings.month] || {}),
+      exportedAt: new Date().toISOString()
+    };
+    logAudit("匯出薪資資料", "CSV 薪資總表");
+    saveState();
+    renderAll();
     toast("CSV 已匯出");
   }
 
@@ -980,6 +1261,13 @@
     window.XLSX.utils.book_append_sheet(workbook, window.XLSX.utils.json_to_sheet(attendanceRows), "打卡明細");
     window.XLSX.utils.book_append_sheet(workbook, window.XLSX.utils.json_to_sheet(adjustmentRows), "加給扣款");
     window.XLSX.writeFile(workbook, `初一食午薪資_${state.settings.month}.xlsx`);
+    state.closedMonths[state.settings.month] = {
+      ...(state.closedMonths[state.settings.month] || {}),
+      exportedAt: new Date().toISOString()
+    };
+    logAudit("匯出薪資資料", "Excel 薪資總表、打卡明細與加給扣款");
+    saveState();
+    renderAll();
     toast("Excel 已匯出");
   }
 
@@ -1000,6 +1288,10 @@
       const button = event.target.closest(".edit-attendance");
       if (button) openAttendanceDialog(button.dataset.date);
     });
+    $("#attendance-card-list").addEventListener("click", event => {
+      const button = event.target.closest(".edit-attendance");
+      if (button) openAttendanceDialog(button.dataset.date);
+    });
 
     $("#add-employee").addEventListener("click", () => openEmployeeDialog());
     $("#employee-grid").addEventListener("click", event => {
@@ -1009,6 +1301,7 @@
     $("#employee-pay-type").addEventListener("change", toggleEmployeeFields);
     $("#employee-form").addEventListener("submit", event => {
       event.preventDefault();
+      if (!requireUnlockedMonth()) return;
       const existingId = $("#employee-id").value;
       const payload = {
         id: existingId || uid("employee"),
@@ -1028,6 +1321,7 @@
       const index = state.employees.findIndex(employee => employee.id === existingId);
       if (index >= 0) state.employees[index] = payload;
       else state.employees.push(payload);
+      logAudit(index >= 0 ? "更新員工薪資設定" : "新增員工", payload.name);
       saveState();
       $("#employee-dialog").close();
       renderAll();
@@ -1055,6 +1349,9 @@
     });
     $("#attendance-form").addEventListener("submit", event => {
       event.preventDefault();
+      if (!requireUnlockedMonth()) return;
+      const shouldAdvance = saveAndAdvanceAttendance;
+      saveAndAdvanceAttendance = false;
       const date = $("#attendance-date").value;
       const key = attendanceKey(attendanceDialogEmployeeId, date);
       if (attendanceDialogOriginalDate && attendanceDialogOriginalDate !== date) {
@@ -1096,16 +1393,45 @@
       } else {
         delete state.leaveRecords[key];
       }
+      logAudit(
+        status === "confirmed" ? "確認打卡紀錄" : "更新打卡紀錄",
+        `${getEmployee(attendanceDialogEmployeeId)?.name || "員工"}・${date}・${statusLabel(status)}`
+      );
       saveState();
       $("#attendance-dialog").close();
       renderAll();
-      toast("打卡紀錄已儲存");
+      if (shouldAdvance) {
+        const issues = getMonthAttendance(attendanceDialogEmployeeId, state.settings.month)
+          .filter(record => record.status !== "confirmed")
+          .sort((a, b) => a.date.localeCompare(b.date));
+        const next = issues.find(record => record.date > date) || issues[0];
+        if (next) {
+          openAttendanceDialog(next.date);
+          toast("已儲存，接著核對下一筆。");
+        } else {
+          toast("打卡紀錄已儲存；這位員工已無待確認項目。");
+        }
+      } else {
+        toast("打卡紀錄已儲存");
+      }
+    });
+    $("#save-next-attendance").addEventListener("click", () => {
+      saveAndAdvanceAttendance = true;
+      $("#attendance-form").requestSubmit();
+    });
+    $("#attendance-source-preview").addEventListener("click", event => {
+      const button = event.target.closest("[data-preview-upload]");
+      if (!button) return;
+      const upload = runtimeUploads.find(item => item.id === button.dataset.previewUpload);
+      if (upload) window.open(upload.url, "_blank", "noopener");
     });
     $("#delete-attendance").addEventListener("click", () => {
+      if (!requireUnlockedMonth()) return;
       const date = $("#attendance-date").value;
       const key = attendanceKey(attendanceDialogEmployeeId, date);
       delete state.attendance[key];
       delete state.leaveRecords[key];
+      logAudit("刪除打卡紀錄", `${getEmployee(attendanceDialogEmployeeId)?.name || "員工"}・${date}`);
       saveState();
       $("#attendance-dialog").close();
       renderAll();
@@ -1116,15 +1442,19 @@
 
     $("#adjustment-form").addEventListener("submit", event => {
       event.preventDefault();
+      if (!requireUnlockedMonth()) return;
+      const employeeId = $("#adjustment-employee").value;
+      const adjustmentName = $("#adjustment-name").value.trim();
       state.adjustments.push({
         id: uid("adjustment"),
-        employeeId: $("#adjustment-employee").value,
-        name: $("#adjustment-name").value.trim(),
+        employeeId,
+        name: adjustmentName,
         type: $("#adjustment-type").value,
         amount: Number($("#adjustment-amount").value || 0),
         recurring: $("#adjustment-recurring").checked,
         month: $("#adjustment-recurring").checked ? "" : state.settings.month
       });
+      logAudit("新增薪資項目", `${getEmployee(employeeId)?.name || "員工"}・${adjustmentName}`);
       event.target.reset();
       saveState();
       renderAll();
@@ -1133,7 +1463,10 @@
     $("#adjustment-list").addEventListener("click", event => {
       const button = event.target.closest(".remove-adjustment");
       if (!button) return;
+      if (!requireUnlockedMonth()) return;
+      const removed = state.adjustments.find(adjustment => adjustment.id === button.dataset.id);
       state.adjustments = state.adjustments.filter(adjustment => adjustment.id !== button.dataset.id);
+      if (removed) logAudit("移除薪資項目", `${getEmployee(removed.employeeId)?.name || "員工"}・${removed.name}`);
       saveState();
       renderAll();
       toast("薪資項目已移除");
@@ -1141,9 +1474,11 @@
 
     $("#rules-form").addEventListener("submit", event => {
       event.preventDefault();
+      if (!requireUnlockedMonth()) return;
       state.settings.nationalMultiplier = Number($("#national-multiplier").value || 2);
       state.settings.typhoonMultiplier = Number($("#typhoon-multiplier").value || 1.5);
       state.settings.roundingMode = $("#rounding-mode").value;
+      logAudit("更新薪資規則", `國定假日 ${state.settings.nationalMultiplier} 倍・颱風日 ${state.settings.typhoonMultiplier} 倍`);
       saveState();
       renderAll();
       toast("薪資規則已儲存");
@@ -1154,7 +1489,9 @@
       const label = $("#special-day-label").value.trim();
       const type = $("#special-day-type").value;
       if (!date || !label) return;
+      if (!requireUnlockedMonth(date.slice(0, 7))) return;
       state.specialDays.push({ id: uid("special-day"), date, label, type, official: false });
+      logAudit("新增特殊日", `${date}・${label}`, date.slice(0, 7));
       event.target.reset();
       saveState();
       renderAll();
@@ -1163,7 +1500,10 @@
     $("#special-day-list").addEventListener("click", event => {
       const button = event.target.closest(".remove-special-day");
       if (!button) return;
+      const day = state.specialDays.find(item => item.id === button.dataset.id);
+      if (day && !requireUnlockedMonth(day.date.slice(0, 7))) return;
       state.specialDays = state.specialDays.filter(day => day.id !== button.dataset.id);
+      if (day) logAudit("移除特殊日", `${day.date}・${day.label}`, day.date.slice(0, 7));
       saveState();
       renderAll();
       toast("特殊日已移除");
@@ -1203,6 +1543,23 @@
       if (button) openPayslip(button.dataset.employeeId);
     });
     $("#print-payslip").addEventListener("click", () => window.print());
+    $("#toggle-month-lock").addEventListener("click", () => {
+      const month = state.settings.month;
+      const current = state.closedMonths[month] || {};
+      if (!current.locked) {
+        const issueCount = currentIssues().attendanceIssues.length;
+        if (issueCount && !window.confirm(`本月仍有 ${issueCount} 筆打卡待確認，仍要鎖定嗎？`)) return;
+        state.closedMonths[month] = { ...current, locked: true, lockedAt: new Date().toISOString() };
+        logAudit("鎖定月份", `${monthLabel(month)}停止修改`);
+        toast("本月已鎖定，仍可查看與匯出。");
+      } else {
+        state.closedMonths[month] = { ...current, locked: false, unlockedAt: new Date().toISOString() };
+        logAudit("解除月份鎖定", `${monthLabel(month)}可再次修改`);
+        toast("已解除鎖定。");
+      }
+      saveState();
+      renderAll();
+    });
     $("#export-csv").addEventListener("click", exportCsv);
     $("#export-xlsx").addEventListener("click", exportXlsx);
 

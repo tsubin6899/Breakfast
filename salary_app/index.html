@@ -74,6 +74,23 @@
             <button class="primary-btn" type="button" data-go="attendance">上傳打卡卡片</button>
           </div>
 
+          <section class="close-progress panel" aria-labelledby="close-progress-title">
+            <div class="close-progress-heading">
+              <div>
+                <p class="eyebrow">MONTHLY CHECKLIST</p>
+                <h3 id="close-progress-title">本月結算進度</h3>
+              </div>
+              <span id="close-progress-summary" class="rule-chip">準備中</span>
+            </div>
+            <ol id="close-progress-list" class="close-steps">
+              <li data-close-step="upload"><span>1</span><strong>匯入打卡</strong><small>上傳或手動輸入</small></li>
+              <li data-close-step="review"><span>2</span><strong>人工複核</strong><small>排除辨識疑問</small></li>
+              <li data-close-step="calculate"><span>3</span><strong>完成試算</strong><small>檢查加給與扣款</small></li>
+              <li data-close-step="lock"><span>4</span><strong>鎖定月份</strong><small>避免誤改資料</small></li>
+              <li data-close-step="export"><span>5</span><strong>匯出歸檔</strong><small>Excel 與員工明細</small></li>
+            </ol>
+          </section>
+
           <div class="metric-grid">
             <article class="metric-card accent-green">
               <span>預估薪資總額</span>
@@ -218,6 +235,7 @@
                 <tbody id="attendance-body"></tbody>
               </table>
             </div>
+            <div id="attendance-card-list" class="attendance-card-list" aria-label="手機版每日工時紀錄"></div>
           </article>
         </section>
 
@@ -229,6 +247,7 @@
               <p>時薪精確至分鐘；月薪加班依每日分鐘與倍率分段計算。</p>
             </div>
             <div class="button-row">
+              <button class="secondary-btn" id="toggle-month-lock" type="button">鎖定本月</button>
               <button class="secondary-btn" id="export-csv" type="button">匯出 CSV</button>
               <button class="primary-btn" id="export-xlsx" type="button">匯出 Excel</button>
             </div>
@@ -305,6 +324,17 @@
               <button class="primary-btn" type="submit">加入項目</button>
             </form>
             <div id="adjustment-list" class="tag-list"></div>
+          </article>
+
+          <article class="panel audit-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">AUDIT TRAIL</p>
+                <h3>本月操作紀錄</h3>
+              </div>
+              <span class="muted-text">本機使用者</span>
+            </div>
+            <div id="audit-list" class="audit-list"></div>
           </article>
         </section>
 
@@ -404,7 +434,7 @@
               </div>
               <ul>
                 <li>無法判斷的打卡時間必須人工確認，不會自動猜測。</li>
-                <li>月休超過 7 天只顯示提醒，不會自動扣除年假。</li>
+                <li>月休超過 7 天會自動納入本月年假使用試算，並顯示試算後餘額。</li>
                 <li>國定假日、例假、休息日與颱風日應分別標記。</li>
                 <li>月薪員工加班基礎依月薪 ÷ 240，再套用法定倍率。</li>
               </ul>
@@ -468,6 +498,7 @@
         <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
       </div>
       <input id="attendance-date" type="date" required />
+      <div id="attendance-source-preview" class="attendance-source-preview" hidden></div>
       <div id="segment-list" class="segment-list"></div>
       <button class="text-btn" id="add-segment" type="button">＋ 新增一段工作時間</button>
       <div class="form-grid two-col">
@@ -499,24 +530,25 @@
         <button class="danger-text-btn" id="delete-attendance" type="button">刪除紀錄</button>
         <span class="dialog-spacer"></span>
         <button class="secondary-btn" type="button" data-close-dialog>取消</button>
+        <button class="secondary-btn" id="save-next-attendance" type="button">儲存並下一筆</button>
         <button class="primary-btn" type="submit">儲存紀錄</button>
       </div>
     </form>
   </dialog>
 
-  <dialog id="payslip-dialog">
+  <dialog id="payslip-dialog" class="statement-dialog">
     <div class="dialog-form payslip-dialog-content">
       <div class="dialog-heading">
         <div>
-          <p class="eyebrow">PAYSLIP</p>
-          <h2 id="payslip-title">薪資明細</h2>
+          <p class="eyebrow">ATTENDANCE STATEMENT · 9:16</p>
+          <h2 id="payslip-title">員工出席與薪資明細</h2>
         </div>
         <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
       </div>
       <div id="payslip-content"></div>
       <div class="dialog-actions">
         <button class="secondary-btn" type="button" data-close-dialog>關閉</button>
-        <button class="primary-btn" id="print-payslip" type="button">列印薪資單</button>
+        <button class="primary-btn" id="print-payslip" type="button">列印 9:16 明細</button>
       </div>
     </div>
   </dialog>
