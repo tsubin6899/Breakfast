@@ -1,10 +1,14 @@
-const CACHE_NAME = "breakfast-payroll-shell-v9";
+const CACHE_NAME = "breakfast-payroll-shell-v10";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
-  "./manifest.webmanifest"
+  "./manifest.webmanifest",
+  "./assets/app-icon-192.png",
+  "./assets/app-icon-512.png",
+  "./assets/app-icon-180.png",
+  "./assets/favicon-32.png"
 ];
 
 self.addEventListener("install", event => {

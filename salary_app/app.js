@@ -60,12 +60,12 @@
       attendance: {},
       leaveRecords: {},
       adjustments: [
-        { id: "adj-lin-senior-bakery", employeeId: "lin-chen", name: "資深麵包台獎金", amount: 3000, type: "earning", recurring: true, month: "" },
-        { id: "adj-lin-base", employeeId: "lin-chen", name: "底薪加給", amount: 1000, type: "earning", recurring: true, month: "" },
-        { id: "adj-huang-senior", employeeId: "huang", name: "資深員工獎金", amount: 2000, type: "earning", recurring: true, month: "" },
-        { id: "adj-jun-kitchen", employeeId: "lin-jun", name: "內場工作加給", amount: 2000, type: "earning", recurring: true, month: "" },
-        { id: "adj-jun-base", employeeId: "lin-jun", name: "底薪加給", amount: 1000, type: "earning", recurring: true, month: "" },
-        { id: "adj-he-insurance", employeeId: "he", name: "勞保／健保員工自負額", amount: 872, type: "deduction", recurring: true, month: "" }
+        { id: "adj-lin-senior-bakery", employeeId: "lin-chen", name: "資深麵包台獎金", amount: 3000, type: "earning", category: "bonus", recurring: true, month: "" },
+        { id: "adj-lin-base", employeeId: "lin-chen", name: "底薪加給", amount: 1000, type: "earning", category: "allowance", recurring: true, month: "" },
+        { id: "adj-huang-senior", employeeId: "huang", name: "資深員工獎金", amount: 2000, type: "earning", category: "bonus", recurring: true, month: "" },
+        { id: "adj-jun-kitchen", employeeId: "lin-jun", name: "內場工作加給", amount: 2000, type: "earning", category: "allowance", recurring: true, month: "" },
+        { id: "adj-jun-base", employeeId: "lin-jun", name: "底薪加給", amount: 1000, type: "earning", category: "allowance", recurring: true, month: "" },
+        { id: "adj-he-insurance", employeeId: "he", name: "勞保／健保員工自負額", amount: 872, type: "deduction", category: "deduction", recurring: true, month: "" }
       ],
       specialDays: OFFICIAL_DAYS_2026,
       closedMonths: {},
@@ -118,6 +118,26 @@
 
   function uid(prefix = "id") {
     return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  }
+
+  function adjustmentCategory(adjustment) {
+    if (["bonus", "gift", "allowance", "deduction"].includes(adjustment?.category)) {
+      return adjustment.category;
+    }
+    if (adjustment?.type === "deduction") return "deduction";
+    const name = String(adjustment?.name || "");
+    if (name.includes("禮金")) return "gift";
+    if (name.includes("獎金")) return "bonus";
+    return "allowance";
+  }
+
+  function adjustmentCategoryLabel(adjustment) {
+    return {
+      bonus: "獎金",
+      gift: "禮金",
+      allowance: "其他加給",
+      deduction: "扣款"
+    }[adjustmentCategory(adjustment)];
   }
 
   function isMonthLocked(month = state.settings.month) {
@@ -447,7 +467,7 @@
 
     applicableAdjustments.forEach(adjustment => {
       detailLines.push({
-        label: `${adjustment.type === "deduction" ? "扣款" : "加給"}・${adjustment.name}`,
+        label: `${adjustmentCategoryLabel(adjustment)}・${adjustment.name}`,
         amount: adjustment.type === "deduction" ? -Number(adjustment.amount) : Number(adjustment.amount)
       });
     });
@@ -478,6 +498,7 @@
       overtimeMinutes,
       issues,
       detailLines,
+      adjustments: applicableAdjustments,
       leaves,
       leaveSummary
     };
@@ -676,19 +697,33 @@
 
   function renderPayroll() {
     const payroll = payrollForMonth();
-    $("#payroll-body").innerHTML = payroll.map(row => `
-      <tr>
-        <td><strong>${escapeHtml(row.employee.name)}</strong></td>
-        <td>${row.employee.payType === "monthly" ? "月薪制" : "時薪制"}</td>
-        <td class="number">${money(row.regularPay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
-        <td class="number">${money(row.overtimePay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
-        <td class="number">${money(row.specialPay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
-        <td class="number">${money(row.earnings)}</td>
-        <td class="number">${money(row.deductions)}</td>
-        <td class="number"><strong>${money(row.total, state.settings.roundingMode === "none" ? 2 : 0)}</strong></td>
-        <td><button class="text-btn view-payslip" type="button" data-employee-id="${row.employee.id}">9:16 出席明細</button></td>
-      </tr>
-    `).join("");
+    $("#payroll-body").innerHTML = payroll.map(row => {
+      const earningsNames = row.adjustments
+        .filter(adjustment => adjustment.type === "earning")
+        .map(adjustment => adjustment.name);
+      const deductionNames = row.adjustments
+        .filter(adjustment => adjustment.type === "deduction")
+        .map(adjustment => adjustment.name);
+      return `
+        <tr>
+          <td><strong>${escapeHtml(row.employee.name)}</strong></td>
+          <td>${row.employee.payType === "monthly" ? "月薪制" : "時薪制"}</td>
+          <td class="number">${money(row.regularPay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
+          <td class="number">${money(row.overtimePay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
+          <td class="number">${money(row.specialPay, state.settings.roundingMode === "none" ? 2 : 0)}</td>
+          <td class="number payroll-adjustment-cell">
+            <strong>${money(row.earnings)}</strong>
+            <small title="${escapeHtml(earningsNames.join("、"))}">${earningsNames.length ? escapeHtml(earningsNames.join("、")) : "無"}</small>
+          </td>
+          <td class="number payroll-adjustment-cell deduction-cell">
+            <strong>${money(row.deductions)}</strong>
+            <small title="${escapeHtml(deductionNames.join("、"))}">${deductionNames.length ? escapeHtml(deductionNames.join("、")) : "無"}</small>
+          </td>
+          <td class="number"><strong>${money(row.total, state.settings.roundingMode === "none" ? 2 : 0)}</strong></td>
+          <td><button class="text-btn view-payslip" type="button" data-employee-id="${row.employee.id}">9:16 出席明細</button></td>
+        </tr>
+      `;
+    }).join("");
 
     const total = payroll.reduce((sum, row) => sum + row.total, 0);
     $("#payroll-total").textContent = money(total, state.settings.roundingMode === "none" ? 2 : 0);
@@ -711,17 +746,49 @@
   function renderAdjustments() {
     const month = state.settings.month;
     const list = state.adjustments.filter(adjustment => adjustment.recurring || adjustment.month === month);
-    $("#adjustment-list").innerHTML = list.length ? list.map(adjustment => {
-      const employee = getEmployee(adjustment.employeeId);
+    const categories = [
+      { id: "bonus", label: "獎金", icon: "獎" },
+      { id: "gift", label: "禮金", icon: "禮" },
+      { id: "allowance", label: "其他加給", icon: "加" },
+      { id: "deduction", label: "扣款", icon: "扣" }
+    ];
+    const totals = Object.fromEntries(categories.map(category => [category.id, 0]));
+    list.forEach(adjustment => {
+      totals[adjustmentCategory(adjustment)] += Number(adjustment.amount || 0);
+    });
+    $("#adjustment-summary").innerHTML = categories.map(category => `
+      <article class="adjustment-summary-card category-${category.id}">
+        <span>${category.icon}</span>
+        <div><small>${category.label}</small><strong>${money(totals[category.id])}</strong></div>
+      </article>
+    `).join("");
+    $("#adjustment-list").innerHTML = list.length ? categories.map(category => {
+      const items = list.filter(adjustment => adjustmentCategory(adjustment) === category.id);
+      if (!items.length) return "";
       return `
-        <span class="adjustment-tag ${adjustment.type === "deduction" ? "deduction" : ""}">
-          ${escapeHtml(employee?.name || "已刪除員工")}・${escapeHtml(adjustment.name)}
-          ${adjustment.type === "deduction" ? "−" : "+"}${money(adjustment.amount)}
-          ${adjustment.recurring ? "／每月" : ""}
-          <button type="button" class="remove-adjustment" data-id="${adjustment.id}" aria-label="刪除">×</button>
-        </span>
+        <section class="adjustment-group category-${category.id}">
+          <header>
+            <span>${category.icon}</span>
+            <strong>${category.label}</strong>
+            <small>${items.length} 筆・${money(totals[category.id])}</small>
+          </header>
+          <div class="adjustment-rows">
+            ${items.map(adjustment => {
+              const employee = getEmployee(adjustment.employeeId);
+              return `
+                <div class="adjustment-row">
+                  <span class="adjustment-employee">${escapeHtml(employee?.name || "已刪除員工")}</span>
+                  <strong>${escapeHtml(adjustment.name)}</strong>
+                  <small>${adjustment.recurring ? "每月固定" : monthLabel(month)}</small>
+                  <b class="${category.id === "deduction" ? "negative" : "positive"}">${category.id === "deduction" ? "−" : "+"}${money(adjustment.amount)}</b>
+                  <button type="button" class="remove-adjustment" data-id="${adjustment.id}" aria-label="刪除 ${escapeHtml(adjustment.name)}">×</button>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        </section>
       `;
-    }).join("") : '<p class="empty-copy">本月沒有額外加給或扣款</p>';
+    }).join("") : '<p class="empty-copy">本月沒有獎金、禮金、其他加給或扣款。</p>';
   }
 
   function employeeRateMarkup(employee) {
@@ -746,12 +813,14 @@
       <article class="employee-card ${employee.active ? "" : "is-inactive"}">
         <div class="employee-card-header">
           <span class="employee-avatar">${escapeHtml(employee.name.slice(0, 1))}</span>
-          <span class="status-pill ${employee.active ? "status-confirmed" : "status-unreadable"}">${employee.active ? "在職" : "停用"}</span>
+          <div class="employee-card-actions">
+            <span class="status-pill ${employee.active ? "status-confirmed" : "status-unreadable"}">${employee.active ? "在職" : "停用"}</span>
+            <button class="text-btn edit-employee" type="button" data-id="${employee.id}">編輯</button>
+          </div>
         </div>
         <h3>${escapeHtml(employee.name)}</h3>
         <p>${employee.payType === "monthly" ? "月薪制" : "時薪制"}${employee.hireDate ? `・${escapeHtml(employee.hireDate)} 到職` : "・到職日未設定"}</p>
         <div class="employee-rate-grid">${employeeRateMarkup(employee)}</div>
-        <button class="text-btn edit-employee" type="button" data-id="${employee.id}">編輯</button>
       </article>
     `).join("");
   }
@@ -935,7 +1004,7 @@
       ...(row.overtimePay ? [["提早上班加班費", row.overtimePay]] : []),
       ...(row.specialPay ? [["國定假日／颱風加給", row.specialPay]] : []),
       ...applicableAdjustments.map(adjustment => [
-        `${adjustment.type === "deduction" ? "扣款" : "加給"}・${adjustment.name}`,
+        `${adjustmentCategoryLabel(adjustment)}・${adjustment.name}`,
         adjustment.type === "deduction" ? -Number(adjustment.amount) : Number(adjustment.amount)
       ]),
       ...(!applicableAdjustments.length ? [["其他加給／扣款", 0]] : [])
@@ -2120,6 +2189,7 @@
       .map(adjustment => ({
         員工: getEmployee(adjustment.employeeId)?.name || "",
         項目: adjustment.name,
+        分類: adjustmentCategoryLabel(adjustment),
         類型: adjustment.type === "deduction" ? "扣款" : "加給",
         金額: adjustment.amount,
         週期: adjustment.recurring ? "每月固定" : state.settings.month
@@ -2320,11 +2390,13 @@
       if (!requireUnlockedMonth()) return;
       const employeeId = $("#adjustment-employee").value;
       const adjustmentName = $("#adjustment-name").value.trim();
+      const category = $("#adjustment-category").value;
       state.adjustments.push({
         id: uid("adjustment"),
         employeeId,
         name: adjustmentName,
-        type: $("#adjustment-type").value,
+        type: category === "deduction" ? "deduction" : "earning",
+        category,
         amount: Number($("#adjustment-amount").value || 0),
         recurring: $("#adjustment-recurring").checked,
         month: $("#adjustment-recurring").checked ? "" : state.settings.month

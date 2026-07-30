@@ -1,10 +1,24 @@
 {
   "name": "初一食午薪資管理",
-  "short_name": "薪資管理",
+  "short_name": "初一食午薪資",
   "description": "員工打卡、工時與薪資計算工具",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f5f1e7",
-  "theme_color": "#1f5b45",
-  "lang": "zh-Hant"
+  "background_color": "#f4f1e8",
+  "theme_color": "#0e4b86",
+  "lang": "zh-Hant",
+  "icons": [
+    {
+      "src": "./assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }

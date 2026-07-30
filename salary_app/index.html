@@ -3,9 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="theme-color" content="#1f5b45" />
+  <meta name="theme-color" content="#0e4b86" />
   <meta name="description" content="初一食午員工打卡、工時與薪資計算管理工具" />
   <title>初一食午｜薪資管理</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-180.png" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -16,7 +18,7 @@
   <div class="app-shell">
     <aside class="sidebar" aria-label="主要選單">
       <a class="brand" href="../" aria-label="回到初一食午首頁">
-        <span class="brand-mark">初</span>
+        <span class="brand-mark"><img src="./assets/app-icon-192.png" alt="" /></span>
         <span>
           <strong>初一食午</strong>
           <small>薪資管理</small>
@@ -281,7 +283,7 @@
                     <th class="number">一般薪資</th>
                     <th class="number">加班費</th>
                     <th class="number">國定／颱風加給</th>
-                    <th class="number">其他加給</th>
+                    <th class="number">獎金／禮金／加給</th>
                     <th class="number">扣款</th>
                     <th class="number">實領</th>
                     <th></th>
@@ -304,21 +306,33 @@
               <div>
                 <p class="eyebrow">ADJUSTMENTS</p>
                 <h3>獎金、禮金與扣款</h3>
+                <p class="panel-description">先選擇分類，再依員工、項目、週期與金額分組核對。</p>
               </div>
             </div>
-            <form id="adjustment-form" class="inline-form">
+            <form id="adjustment-form" class="inline-form adjustment-form">
               <label>
                 <span>員工</span>
                 <select id="adjustment-employee" required></select>
               </label>
               <label>
                 <span>項目</span>
-                <input id="adjustment-name" type="text" placeholder="例如：生日禮金" required />
+                <input id="adjustment-name" type="text" list="adjustment-name-options" placeholder="例如：生日禮金" required />
+                <datalist id="adjustment-name-options">
+                  <option value="三節禮金"></option>
+                  <option value="生日禮金"></option>
+                  <option value="資深麵包台獎金"></option>
+                  <option value="資深員工獎金"></option>
+                  <option value="內場工作加給"></option>
+                  <option value="底薪加給"></option>
+                  <option value="勞保／健保員工自負額"></option>
+                </datalist>
               </label>
               <label>
-                <span>類型</span>
-                <select id="adjustment-type">
-                  <option value="earning">加給</option>
+                <span>分類</span>
+                <select id="adjustment-category">
+                  <option value="bonus">獎金</option>
+                  <option value="gift">禮金</option>
+                  <option value="allowance">其他加給</option>
                   <option value="deduction">扣款</option>
                 </select>
               </label>
@@ -332,7 +346,8 @@
               </label>
               <button class="primary-btn" type="submit">加入項目</button>
             </form>
-            <div id="adjustment-list" class="tag-list"></div>
+            <div id="adjustment-summary" class="adjustment-summary-grid"></div>
+            <div id="adjustment-list" class="adjustment-groups"></div>
           </article>
 
           <article class="panel audit-panel">
