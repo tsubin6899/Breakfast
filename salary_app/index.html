@@ -229,22 +229,47 @@
               <span><i class="dot review"></i>待確認</span>
               <span><i class="dot unreadable"></i>無法判斷</span>
             </div>
-            <div class="table-wrap large-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th>日期</th>
-                    <th>日別</th>
-                    <th>打卡時段</th>
-                    <th class="number">分鐘</th>
-                    <th>假別</th>
-                    <th>狀態</th>
-                    <th>來源</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody id="attendance-body"></tbody>
-              </table>
+            <div class="attendance-split large-table" aria-label="每日工時上下半月紀錄">
+              <section class="attendance-half attendance-half-first">
+                <header>
+                  <div><span>上半月</span><strong>1～15 日</strong></div>
+                  <small>左欄</small>
+                </header>
+                <div class="table-wrap">
+                  <table class="attendance-half-table">
+                    <thead>
+                      <tr>
+                        <th>日期</th>
+                        <th>打卡時段</th>
+                        <th class="number">分鐘</th>
+                        <th>假別／狀態</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendance-body-first"></tbody>
+                  </table>
+                </div>
+              </section>
+              <section class="attendance-half attendance-half-second">
+                <header>
+                  <div><span>下半月</span><strong>16～月底</strong></div>
+                  <small>右欄</small>
+                </header>
+                <div class="table-wrap">
+                  <table class="attendance-half-table">
+                    <thead>
+                      <tr>
+                        <th>日期</th>
+                        <th>打卡時段</th>
+                        <th class="number">分鐘</th>
+                        <th>假別／狀態</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody id="attendance-body-second"></tbody>
+                  </table>
+                </div>
+              </section>
             </div>
             <div id="attendance-card-list" class="attendance-card-list" aria-label="手機版每日工時紀錄"></div>
           </article>

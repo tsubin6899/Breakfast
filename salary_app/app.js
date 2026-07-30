@@ -650,28 +650,40 @@
     if (!employeeId) return;
     select.value = employeeId;
     const month = state.settings.month;
-
-    $("#attendance-body").innerHTML = dateRangeForMonth(month).map(date => {
+    const dates = dateRangeForMonth(month);
+    const rowMarkup = date => {
       const key = attendanceKey(employeeId, date);
       const record = state.attendance[key];
       const leave = state.leaveRecords[key];
       const minutes = recordMinutes(record);
       const status = record?.status;
+      const day = getDayInfo(date);
       return `
-        <tr>
-          <td><strong>${Number(date.slice(-2))}</strong>（${weekdayLabel(date)}）</td>
-          <td>${dayTypeMarkup(date)}</td>
-          <td>${formatSegments(record?.segments)}</td>
+        <tr class="attendance-row day-${day.type}">
+          <td class="attendance-day-cell">
+            <strong>${Number(date.slice(-2))}</strong>
+            <small>週${weekdayLabel(date)}・${escapeHtml(day.label)}</small>
+          </td>
+          <td class="attendance-time-cell">${formatSegments(record?.segments)}</td>
           <td class="number">${minutes ? decimal(minutes, 0) : "—"}</td>
-          <td>${leave ? `<span class="status-pill status-review">${escapeHtml(leaveLabel(leave.type))}</span>` : "—"}</td>
-          <td>${status ? `<span class="status-pill status-${status}">${statusLabel(status)}</span>` : '<span class="muted-text">無紀錄</span>'}</td>
-          <td title="${escapeHtml(record?.source || "")}">${record?.source ? escapeHtml(record.source.slice(0, 16)) : "—"}</td>
-          <td><button class="text-btn edit-attendance" type="button" data-date="${date}">編輯</button></td>
+          <td class="attendance-state-cell" title="${escapeHtml(record?.source || "")}">
+            ${leave ? `<span class="status-pill status-review">${escapeHtml(leaveLabel(leave.type))}</span>` : ""}
+            ${status ? `<span class="status-pill status-${status}">${statusLabel(status)}</span>` : '<span class="muted-text">無紀錄</span>'}
+          </td>
+          <td><button class="text-btn edit-attendance compact-edit" type="button" data-date="${date}">核對</button></td>
         </tr>
       `;
-    }).join("");
+    };
+    $("#attendance-body-first").innerHTML = dates
+      .filter(date => Number(date.slice(-2)) <= 15)
+      .map(rowMarkup)
+      .join("");
+    $("#attendance-body-second").innerHTML = dates
+      .filter(date => Number(date.slice(-2)) >= 16)
+      .map(rowMarkup)
+      .join("");
 
-    $("#attendance-card-list").innerHTML = dateRangeForMonth(month).map(date => {
+    $("#attendance-card-list").innerHTML = dates.map(date => {
       const key = attendanceKey(employeeId, date);
       const record = state.attendance[key];
       const leave = state.leaveRecords[key];
@@ -2229,7 +2241,7 @@
 
     $("#attendance-employee").addEventListener("change", renderAttendance);
     $("#add-manual-record").addEventListener("click", () => openAttendanceDialog());
-    $("#attendance-body").addEventListener("click", event => {
+    $(".attendance-split").addEventListener("click", event => {
       const button = event.target.closest(".edit-attendance");
       if (button) openAttendanceDialog(button.dataset.date);
     });
