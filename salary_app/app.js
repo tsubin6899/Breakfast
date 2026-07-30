@@ -1374,7 +1374,7 @@
       const columnWidth = geometry.spacing * 2.02;
       const reviewCanvas = document.createElement("canvas");
       reviewCanvas.width = 960;
-      reviewCanvas.height = 118;
+      reviewCanvas.height = 180;
       const reviewContext = reviewCanvas.getContext("2d");
       reviewContext.fillStyle = "#f4f5f2";
       reviewContext.fillRect(0, 0, reviewCanvas.width, reviewCanvas.height);
@@ -1414,9 +1414,9 @@
           destinationHeight
         );
         const reviewX = Math.max(0, cellLeft + columnWidth * 0.02);
-        const reviewY = Math.max(0, boundary - geometry.spacing * 1.08);
+        const reviewY = Math.max(0, boundary - geometry.spacing * 1.3);
         const reviewWidth = Math.max(1, Math.min(source.width - reviewX, columnWidth * 0.96));
-        const reviewHeight = Math.max(1, Math.min(source.height - reviewY, geometry.spacing * 1.55));
+        const reviewHeight = Math.max(1, Math.min(source.height - reviewY, geometry.spacing * 2.1));
         reviewContext.save();
         reviewContext.filter = "grayscale(1) contrast(190%)";
         reviewContext.drawImage(
@@ -1555,12 +1555,7 @@
   }
 
   function buildUploadReviewRows(sheet, rows) {
-    let selected = rows.filter(row =>
-      row.segments.length ||
-      row.cells.some(cell => cell.time || cell.density > 0.006)
-    );
-    if (!selected.length) selected = rows;
-    return selected.map(row => {
+    return rows.map(row => {
       const rowIndex = row.day - sheet.geometry.startDay;
       const suggestedSegments = Array.from({ length: 3 }, (_, segmentIndex) => ({
         start: row.cells[segmentIndex * 2]?.time || "",
@@ -1589,8 +1584,11 @@
       return `
         <article class="ocr-review-row" data-day="${row.day}">
           <div class="ocr-review-date">
-            <strong>${row.day} 日</strong>
-            <span>星期${weekdayLabel(date)}</span>
+            <label class="ocr-review-day-field">
+              <span>實際日期</span>
+              <span class="ocr-review-day-input"><input class="ocr-review-day" type="number" min="1" max="${daysInMonth(state.settings.month)}" value="${row.day}" /> 日</span>
+            </label>
+            <span class="ocr-review-weekday">星期${weekdayLabel(date)}</span>
             ${row.hasGuess ? '<span class="status-pill status-review">有初步猜測</span>' : '<span class="status-pill status-unreadable">請人工讀取</span>'}
             <label><input class="ocr-review-skip" type="checkbox" /> 當日無打卡</label>
           </div>
@@ -1616,30 +1614,80 @@
   function saveOcrQuickReview() {
     const upload = runtimeUploads.find(item => item.id === ocrReviewUploadId);
     if (!upload || !requireUnlockedMonth()) return;
+    const reviewRows = $$(".ocr-review-row", $("#ocr-review-list"));
+    reviewRows.forEach(row => row.classList.remove("has-error"));
+    const entries = reviewRows.map(reviewRow => {
+      const starts = $$(".ocr-review-start", reviewRow);
+      const ends = $$(".ocr-review-end", reviewRow);
+      return {
+        element: reviewRow,
+        originalDay: Number(reviewRow.dataset.day),
+        day: Number($(".ocr-review-day", reviewRow).value),
+        skip: $(".ocr-review-skip", reviewRow).checked,
+        segments: starts.map((input, index) => ({
+          start: input.value,
+          end: ends[index].value
+        })).filter(segment => segment.start || segment.end)
+      };
+    });
+
+    const usedDates = new Map();
+    let hasError = false;
+    entries.forEach(entry => {
+      if (entry.skip || !entry.segments.length) return;
+      if (entry.day < 1 || entry.day > daysInMonth(state.settings.month)) {
+        entry.element.classList.add("has-error");
+        hasError = true;
+        return;
+      }
+      if (usedDates.has(entry.day)) {
+        entry.element.classList.add("has-error");
+        usedDates.get(entry.day).classList.add("has-error");
+        hasError = true;
+      } else {
+        usedDates.set(entry.day, entry.element);
+      }
+      const selectedDate = `${state.settings.month}-${String(entry.day).padStart(2, "0")}`;
+      const selectedRecord = state.attendance[attendanceKey(upload.employeeId, selectedDate)];
+      if (entry.day !== entry.originalDay && selectedRecord?.status === "confirmed") {
+        entry.element.classList.add("has-error");
+        hasError = true;
+      }
+    });
+    if (hasError) {
+      toast("日期有重複、超出範圍，或該日期已有確認紀錄；紅框處請先修正。");
+      return;
+    }
+
     let confirmedCount = 0;
     let partialCount = 0;
-    $$(".ocr-review-row", $("#ocr-review-list")).forEach(reviewRow => {
-      const day = Number(reviewRow.dataset.day);
-      const date = `${state.settings.month}-${String(day).padStart(2, "0")}`;
+    entries.forEach(entry => {
+      const date = `${state.settings.month}-${String(entry.day).padStart(2, "0")}`;
       const key = attendanceKey(upload.employeeId, date);
+      const originalDate = `${state.settings.month}-${String(entry.originalDay).padStart(2, "0")}`;
+      const originalKey = attendanceKey(upload.employeeId, originalDate);
+      if (entry.day !== entry.originalDay && state.attendance[originalKey]?.status !== "confirmed") {
+        delete state.attendance[originalKey];
+        delete state.leaveRecords[originalKey];
+      }
       if (state.attendance[key]?.status === "confirmed") return;
-      if ($(".ocr-review-skip", reviewRow).checked) {
+      if (entry.skip) {
         delete state.attendance[key];
         delete state.leaveRecords[key];
         return;
       }
-      const starts = $$(".ocr-review-start", reviewRow);
-      const ends = $$(".ocr-review-end", reviewRow);
-      const segments = starts.map((input, index) => ({
-        start: input.value,
-        end: ends[index].value
-      })).filter(segment => segment.start || segment.end);
-      if (!segments.length) return;
-      const complete = segments.every(segment => segment.start && segment.end);
+      if (!entry.segments.length) {
+        const existing = state.attendance[originalKey];
+        if (existing?.status !== "confirmed" && existing?.source === `OCR：${upload.file.name}`) {
+          delete state.attendance[originalKey];
+        }
+        return;
+      }
+      const complete = entry.segments.every(segment => segment.start && segment.end);
       state.attendance[key] = {
         employeeId: upload.employeeId,
         date,
-        segments,
+        segments: entry.segments,
         status: complete ? "confirmed" : "unreadable",
         source: `人工核對：${upload.file.name}`,
         confidence: complete ? 100 : 0,
@@ -2140,6 +2188,20 @@
       }
     });
     $("#save-ocr-review").addEventListener("click", saveOcrQuickReview);
+    $("#ocr-review-list").addEventListener("input", event => {
+      if (!event.target.classList.contains("ocr-review-day")) return;
+      const row = event.target.closest(".ocr-review-row");
+      const day = Number(event.target.value);
+      const weekday = $(".ocr-review-weekday", row);
+      if (day >= 1 && day <= daysInMonth(state.settings.month)) {
+        const date = `${state.settings.month}-${String(day).padStart(2, "0")}`;
+        weekday.textContent = `星期${weekdayLabel(date)}`;
+        row.classList.remove("has-error");
+      } else {
+        weekday.textContent = "日期超出範圍";
+        row.classList.add("has-error");
+      }
+    });
 
     $("#payroll-body").addEventListener("click", event => {
       const button = event.target.closest(".view-payslip");

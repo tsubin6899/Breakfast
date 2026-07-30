@@ -1368,17 +1368,34 @@ dialog::backdrop {
 
 .ocr-review-date {
   display: grid;
-  gap: 3px;
+  gap: 7px;
 }
 
-.ocr-review-date strong {
+.ocr-review-day-field {
+  gap: 4px;
+}
+
+.ocr-review-day-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.ocr-review-day-input input {
+  width: 70px;
+  min-height: 42px;
+  padding: 6px 8px;
   font-size: 18px;
+  font-weight: 900;
 }
 
 .ocr-review-date span,
 .ocr-review-date label {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .ocr-review-date label {
@@ -1395,7 +1412,7 @@ dialog::backdrop {
 
 .ocr-review-crop {
   width: 100%;
-  min-height: 72px;
+  min-height: 120px;
   border: 1px solid #d7ddd8;
   border-radius: 9px;
   object-fit: contain;
@@ -1417,13 +1434,19 @@ dialog::backdrop {
 
 .ocr-review-segment > span {
   color: var(--muted);
-  font-size: 9px;
+  font-size: 12px;
 }
 
 .ocr-review-segment input {
-  min-height: 34px;
-  padding: 5px 7px;
-  font-size: 12px;
+  min-height: 42px;
+  padding: 7px 9px;
+  font-size: 15px;
+}
+
+.ocr-review-row.has-error {
+  border-color: var(--red);
+  background: #fff1ef;
+  box-shadow: 0 0 0 3px rgba(184, 82, 75, .1);
 }
 
 .statement-dialog {
@@ -1720,6 +1743,121 @@ dialog::backdrop {
   font-size: 12px;
 }
 
+/* Larger default UI typography for daily desktop and tablet use. */
+.workspace {
+  font-size: 16px;
+}
+
+.brand strong {
+  font-size: 17px;
+}
+
+.brand small,
+.sidebar-footer,
+.nav-item small {
+  font-size: 12px;
+}
+
+.nav-item {
+  min-height: 48px;
+  font-size: 14px;
+}
+
+.topbar h1 {
+  font-size: 23px;
+}
+
+.eyebrow {
+  font-size: 12px;
+}
+
+.section-intro h2 {
+  font-size: clamp(28px, 3vw, 39px);
+}
+
+.section-intro p,
+.hero-strip p:not(.eyebrow) {
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+.panel-heading h3,
+.close-progress-heading h3 {
+  font-size: 20px;
+}
+
+.metric-card span {
+  font-size: 14px;
+}
+
+.metric-card small {
+  font-size: 12px;
+}
+
+label > span,
+label small {
+  font-size: 13px;
+}
+
+input,
+select,
+textarea {
+  min-height: 46px;
+  font-size: 15px;
+}
+
+.primary-btn,
+.secondary-btn,
+.text-btn,
+.danger-text-btn,
+.icon-btn {
+  font-size: 14px;
+}
+
+th {
+  font-size: 13px;
+}
+
+td,
+tfoot th {
+  font-size: 15px;
+}
+
+.status-pill,
+.type-pill,
+.rule-chip {
+  font-size: 12px;
+}
+
+.action-item strong,
+.upload-item strong {
+  font-size: 14px;
+}
+
+.action-item p,
+.upload-item small,
+.muted-text,
+.empty-copy {
+  font-size: 12px;
+}
+
+.upload-item-actions button {
+  min-height: 36px;
+  font-size: 12px;
+}
+
+.time-chip {
+  font-size: 12px;
+}
+
+.dialog-heading h2 {
+  font-size: 28px;
+}
+
+.dialog-form {
+  font-size: 15px;
+}
+
 @media (max-width: 1120px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1795,7 +1933,7 @@ dialog::backdrop {
   }
 
   .topbar h1 {
-    font-size: 18px;
+    font-size: 20px;
   }
 
   .topbar .eyebrow,
@@ -1813,7 +1951,7 @@ dialog::backdrop {
   }
 
   .hero-strip h2 {
-    font-size: 28px;
+    font-size: 30px;
   }
 
   .metric-grid,
@@ -1991,7 +2129,7 @@ dialog::backdrop {
   }
 
   .ocr-review-crop {
-    min-height: 90px;
+    min-height: 140px;
   }
 
   .dialog-actions {
