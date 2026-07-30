@@ -1,0 +1,13 @@
+{
+  "name": "breakfast-payroll-app",
+  "private": true,
+  "scripts": {
+    "dev": "netlify dev",
+    "check": "node --check salary_app/app.js"
+  },
+  "devDependencies": {
+    "@netlify/functions": "5.3.0",
+    "@types/node": "^26.1.2",
+    "typescript": "^7.0.2"
+  }
+}

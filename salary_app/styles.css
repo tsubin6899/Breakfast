@@ -802,6 +802,18 @@ textarea {
   font-size: 11px;
 }
 
+.ai-access-field {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.ai-access-field small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .progress-box div {
   display: flex;
   justify-content: space-between;
@@ -1441,6 +1453,14 @@ dialog::backdrop {
   min-height: 42px;
   padding: 7px 9px;
   font-size: 15px;
+}
+
+.ocr-review-ai-note {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.55;
+  padding-top: 3px;
 }
 
 .ocr-review-row.has-error {

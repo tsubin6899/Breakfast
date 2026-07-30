@@ -8,7 +8,6 @@
   <title>初一食午｜薪資管理</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="./app.js"></script>
@@ -150,8 +149,8 @@
           <div class="section-intro">
             <div>
               <p class="eyebrow">TIME CARD REVIEW</p>
-              <h2>上傳打卡卡片，逐筆確認辨識結果</h2>
-              <p>卡片日期列固定，系統只辨識時間；看不清楚時會標示「無法判斷」。</p>
+              <h2>上傳打卡卡片，由 AI 讀取日期與時間</h2>
+              <p>AI 會分開判讀倒置日期與正向時間，不再依賴印章是否對準表格列。</p>
             </div>
           </div>
 
@@ -176,14 +175,19 @@
                   </select>
                 </label>
               </div>
+              <label class="ai-access-field">
+                <span>AI 辨識連線密碼</span>
+                <input id="ai-access-token" type="password" autocomplete="current-password" placeholder="輸入 Netlify 設定的連線密碼" />
+                <small>這不是 OpenAI API Key，只是保護辨識服務的店內密碼；僅儲存在這台裝置。</small>
+              </label>
               <button class="drop-zone" id="drop-zone" type="button">
                 <strong>拖曳或點選打卡照片</strong>
                 <span>支援 JPG、PNG；一次可選多張</span>
               </button>
               <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
               <div class="ocr-reading-tip">
-                <strong>點陣字辨識＋快速人工核對</strong>
-                <span>程式會先定位日期並放大每個打卡格；可辨識的時間會先填入，無法辨識時直接在同一畫面看放大圖輸入。檔名結尾為 1／2 時會自動判斷上下半月。</span>
+                <strong>雲端 AI 辨識＋快速人工核對</strong>
+                <span>照片會傳送至 OpenAI 進行辨識，不會寫入 GitHub；AI 先填入可讀取的日期與時間，低信心或模糊內容仍需人工確認。檔名結尾為 1／2 時會自動判斷上下半月。</span>
               </div>
               <div id="ocr-progress" class="progress-box" hidden>
                 <div><span id="ocr-progress-label">準備辨識</span><strong id="ocr-progress-percent">0%</strong></div>
@@ -551,7 +555,7 @@
         <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
       </div>
       <div class="alert">
-        印章可能蓋在兩列之間，因此日期可以自行修改。請用倒著的數字核對日期、用正向數字輸入時間；空白列不用填，完整時段會直接存為「已確認」。
+        AI 已分別讀取倒置日期與正向時間，但所有結果仍請對照放大圖確認。印章可能蓋在兩列之間，因此日期可以自行修改；空白列不用填，完整時段會直接存為「已確認」。
       </div>
       <div id="ocr-review-list" class="ocr-review-list"></div>
       <div class="dialog-actions">

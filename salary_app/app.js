@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "breakfast-payroll-v1";
+  const AI_TOKEN_STORAGE_KEY = "breakfast-payroll-ai-token";
   const APP_VERSION = 1;
   const MINIMUM_HOURLY_WAGE_2026 = 196;
   const MINIMUM_MONTHLY_WAGE_2026 = 29500;
@@ -789,7 +790,7 @@
           <small>${escapeHtml(getEmployee(upload.employeeId)?.name || "")}・${upload.half === "first" ? "1～15 日" : "16～31 日"}・${escapeHtml(upload.statusText)}</small>
         </div>
         <div class="upload-item-actions">
-          <button type="button" data-upload-action="recognize" data-id="${upload.id}">建立辨識與核對</button>
+          <button type="button" data-upload-action="recognize" data-id="${upload.id}">AI 辨識並核對</button>
           ${upload.reviewRows?.length ? `<button type="button" data-upload-action="quick-review" data-id="${upload.id}">快速核對 ${upload.reviewRows.length} 日</button>` : ""}
           <button type="button" data-upload-action="view" data-id="${upload.id}">查看原圖</button>
           ${upload.ocrPreviewUrl ? `<button type="button" data-upload-action="view-ocr" data-id="${upload.id}">查看辨識影像</button>` : ""}
@@ -1556,7 +1557,8 @@
 
   function buildUploadReviewRows(sheet, rows) {
     return rows.map(row => {
-      const rowIndex = row.day - sheet.geometry.startDay;
+      const cropDay = row.cropDay || row.day;
+      const rowIndex = cropDay - sheet.geometry.startDay;
       const suggestedSegments = Array.from({ length: 3 }, (_, segmentIndex) => ({
         start: row.cells[segmentIndex * 2]?.time || "",
         end: row.cells[segmentIndex * 2 + 1]?.time || ""
@@ -1565,7 +1567,11 @@
         day: row.day,
         image: sheet.reviewCanvases[rowIndex]?.toDataURL("image/jpeg", 0.9) || "",
         suggestedSegments,
-        hasGuess: suggestedSegments.some(segment => segment.start || segment.end)
+        hasGuess: suggestedSegments.some(segment => segment.start || segment.end),
+        hasInk: Boolean(row.hasInk),
+        confidence: Math.round(Number(row.confidence) || 0),
+        dateUncertain: Boolean(row.dateUncertain),
+        aiNote: row.aiNote || ""
       };
     });
   }
@@ -1582,14 +1588,17 @@
     $("#ocr-review-list").innerHTML = upload.reviewRows.map(row => {
       const date = `${state.settings.month}-${String(row.day).padStart(2, "0")}`;
       return `
-        <article class="ocr-review-row" data-day="${row.day}">
+        <article class="ocr-review-row" data-day="${row.day}" data-has-ink="${row.hasInk ? "true" : "false"}">
           <div class="ocr-review-date">
             <label class="ocr-review-day-field">
               <span>實際日期</span>
               <span class="ocr-review-day-input"><input class="ocr-review-day" type="number" min="1" max="${daysInMonth(state.settings.month)}" value="${row.day}" /> 日</span>
             </label>
             <span class="ocr-review-weekday">星期${weekdayLabel(date)}</span>
-            ${row.hasGuess ? '<span class="status-pill status-review">有初步猜測</span>' : '<span class="status-pill status-unreadable">請人工讀取</span>'}
+            ${row.hasGuess
+              ? `<span class="status-pill status-review">AI ${row.confidence || 0}%</span>`
+              : '<span class="status-pill status-unreadable">請人工讀取</span>'}
+            ${row.dateUncertain ? '<span class="status-pill status-unreadable">日期待確認</span>' : ""}
             <label><input class="ocr-review-skip" type="checkbox" /> 當日無打卡</label>
           </div>
           <a href="${row.image}" target="_blank" rel="noopener" title="開啟放大裁切">
@@ -1604,6 +1613,7 @@
                 <input class="ocr-review-end" type="time" value="${escapeHtml(segment.end)}" aria-label="${row.day} 日第 ${index + 1} 段下班" />
               </div>
             `).join("")}
+            ${row.aiNote ? `<small class="ocr-review-ai-note">${escapeHtml(row.aiNote)}</small>` : ""}
           </div>
         </article>
       `;
@@ -1623,6 +1633,7 @@
         element: reviewRow,
         originalDay: Number(reviewRow.dataset.day),
         day: Number($(".ocr-review-day", reviewRow).value),
+        hasInk: reviewRow.dataset.hasInk === "true",
         skip: $(".ocr-review-skip", reviewRow).checked,
         segments: starts.map((input, index) => ({
           start: input.value,
@@ -1634,7 +1645,7 @@
     const usedDates = new Map();
     let hasError = false;
     entries.forEach(entry => {
-      if (entry.skip || !entry.segments.length) return;
+      if (entry.skip || (!entry.segments.length && !entry.hasInk)) return;
       if (entry.day < 1 || entry.day > daysInMonth(state.settings.month)) {
         entry.element.classList.add("has-error");
         hasError = true;
@@ -1666,6 +1677,7 @@
       const key = attendanceKey(upload.employeeId, date);
       const originalDate = `${state.settings.month}-${String(entry.originalDay).padStart(2, "0")}`;
       const originalKey = attendanceKey(upload.employeeId, originalDate);
+      const originalRecord = state.attendance[originalKey];
       if (entry.day !== entry.originalDay && state.attendance[originalKey]?.status !== "confirmed") {
         delete state.attendance[originalKey];
         delete state.leaveRecords[originalKey];
@@ -1677,8 +1689,16 @@
         return;
       }
       if (!entry.segments.length) {
+        if (entry.hasInk) {
+          if (originalRecord && originalRecord.status !== "confirmed") {
+            state.attendance[key] = { ...originalRecord, date };
+          }
+          return;
+        }
         const existing = state.attendance[originalKey];
-        if (existing?.status !== "confirmed" && existing?.source === `OCR：${upload.file.name}`) {
+        const sameUploadSource = existing?.source === `OCR：${upload.file.name}` ||
+          existing?.source === `AI：${upload.file.name}`;
+        if (existing?.status !== "confirmed" && sameUploadSource) {
           delete state.attendance[originalKey];
         }
         return;
@@ -1709,108 +1729,298 @@
     toast(`已儲存 ${confirmedCount} 日確認紀錄${partialCount ? `；${partialCount} 日仍需補齊` : ""}。`);
   }
 
+  function isValidAiTime(value) {
+    const match = /^(\d{2}):(\d{2})$/.exec(String(value || ""));
+    return Boolean(match && Number(match[1]) <= 23 && Number(match[2]) <= 59);
+  }
+
+  function createScaledCanvas(bitmap, source, maximumWidth, maximumHeight, filter = "none") {
+    const scale = Math.min(
+      maximumWidth / source.width,
+      maximumHeight / source.height,
+      source.allowUpscale ? 2 : 1
+    );
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(source.width * scale));
+    canvas.height = Math.max(1, Math.round(source.height * scale));
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.filter = filter;
+    context.drawImage(
+      bitmap,
+      source.x,
+      source.y,
+      source.width,
+      source.height,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+    context.filter = "none";
+    return canvas;
+  }
+
+  function prepareAiImages(bitmap) {
+    const original = createScaledCanvas(bitmap, {
+      x: 0,
+      y: 0,
+      width: bitmap.width,
+      height: bitmap.height,
+      allowUpscale: false
+    }, 1700, 2100);
+    const cropX = Math.round(bitmap.width * 0.1);
+    const cropY = Math.round(bitmap.height * 0.28);
+    const cropWidth = Math.round(bitmap.width * 0.7);
+    const cropHeight = Math.round(bitmap.height * 0.62);
+    const enhanced = createScaledCanvas(bitmap, {
+      x: cropX,
+      y: cropY,
+      width: cropWidth,
+      height: cropHeight,
+      allowUpscale: true
+    }, 1700, 2100, "grayscale(1) contrast(175%) brightness(110%)");
+    return [
+      original.toDataURL("image/jpeg", 0.9),
+      enhanced.toDataURL("image/jpeg", 0.9)
+    ];
+  }
+
+  function createRowsFromAiResult(result, geometry) {
+    const firstDay = geometry.startDay;
+    const lastDay = Math.min(
+      firstDay + geometry.count - 1,
+      daysInMonth(state.settings.month)
+    );
+    const groups = new Map();
+    let unknownPunches = 0;
+
+    (result.punches || []).forEach(punch => {
+      const actualDay = Number(punch.day);
+      const printedRow = Number(punch.printedRow);
+      const hasActualDay = actualDay >= 1 && actualDay <= daysInMonth(state.settings.month);
+      const hasPrintedRow = printedRow >= firstDay && printedRow <= lastDay;
+      if (!hasActualDay && !hasPrintedRow) {
+        unknownPunches += 1;
+        return;
+      }
+      const day = hasActualDay ? actualDay : printedRow;
+      const cropDay = hasPrintedRow
+        ? printedRow
+        : Math.max(firstDay, Math.min(lastDay, day));
+      const groupKey = String(day);
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, {
+          day,
+          cropDay,
+          cells: Array.from({ length: OCR_COLUMN_COUNT }, () => ({
+            time: "",
+            confidence: 0,
+            hasInk: false
+          })),
+          notes: [],
+          confidenceValues: [],
+          dateUncertain: !hasActualDay
+        });
+      }
+      const row = groups.get(groupKey);
+      const column = Math.max(0, Math.min(OCR_COLUMN_COUNT - 1, Number(punch.column) || 0));
+      const time = punch.readable && isValidAiTime(punch.time) ? punch.time : "";
+      const confidence = Math.max(0, Math.min(100, Number(punch.confidence) || 0));
+      const existing = row.cells[column];
+      if (!existing.hasInk || confidence >= existing.confidence) {
+        row.cells[column] = {
+          time,
+          confidence,
+          hasInk: true
+        };
+      }
+      if (punch.note) row.notes.push(punch.note);
+      row.confidenceValues.push(confidence);
+      if (!hasActualDay) row.dateUncertain = true;
+    });
+
+    const activeRows = [...groups.values()].map(row => {
+      row.segments = [];
+      for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
+        const start = row.cells[column];
+        const end = row.cells[column + 1];
+        if (start.time && end.time) row.segments.push({ start: start.time, end: end.time });
+      }
+      row.hasInk = row.cells.some(cell => cell.hasInk);
+      row.hasPartial = row.cells.some((cell, index) => {
+        const partner = row.cells[index % 2 === 0 ? index + 1 : index - 1];
+        return cell.hasInk && !(cell.time && partner?.time);
+      });
+      row.confidence = row.confidenceValues.length
+        ? row.confidenceValues.reduce((sum, value) => sum + value, 0) / row.confidenceValues.length
+        : 0;
+      row.aiNote = [...new Set(row.notes)].join("；");
+      return row;
+    });
+
+    const activeDays = new Set(activeRows.map(row => row.day));
+    const blankRows = [];
+    for (let day = firstDay; day <= lastDay; day += 1) {
+      if (activeDays.has(day)) continue;
+      blankRows.push({
+        day,
+        cropDay: day,
+        cells: Array.from({ length: OCR_COLUMN_COUNT }, () => ({
+          time: "",
+          confidence: 0,
+          hasInk: false
+        })),
+        segments: [],
+        hasInk: false,
+        hasPartial: false,
+        confidence: 0,
+        aiNote: "",
+        dateUncertain: false
+      });
+    }
+
+    return {
+      rows: [...activeRows, ...blankRows].sort((a, b) => a.day - b.day),
+      activeRows,
+      unknownPunches
+    };
+  }
+
+  async function requestAiTimecard(upload, images, accessToken) {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 58_000);
+    try {
+      const response = await fetch("/api/recognize-timecard", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Timecard-Token": accessToken
+        },
+        body: JSON.stringify({
+          images,
+          employeeName: getEmployee(upload.employeeId)?.name || "",
+          month: state.settings.month,
+          half: upload.half,
+          fileName: upload.file.name
+        }),
+        signal: controller.signal
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const fallback = response.status === 404
+          ? "找不到 AI 辨識服務；請確認網站是由 Netlify 部署。"
+          : "雲端 AI 暫時無法完成辨識。";
+        throw new Error(payload.message || fallback);
+      }
+      if (!payload.result?.punches) throw new Error("AI 沒有回傳可用的打卡資料。");
+      return payload;
+    } catch (error) {
+      if (error?.name === "AbortError") throw new Error("AI 辨識等候逾時，請重試一次。");
+      if (error instanceof TypeError) {
+        throw new Error("無法連線 AI 辨識服務；請確認已使用 Netlify 網址開啟 APP。");
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  }
+
   async function recognizeUpload(uploadId) {
     if (!requireUnlockedMonth()) return;
     const upload = runtimeUploads.find(item => item.id === uploadId);
     if (!upload) return;
+    const accessToken = $("#ai-access-token").value.trim();
+    if (!accessToken) {
+      toast("請先輸入 AI 辨識連線密碼。");
+      $("#ai-access-token").focus();
+      return;
+    }
+    localStorage.setItem(AI_TOKEN_STORAGE_KEY, accessToken);
+
     let bitmap = null;
     upload.status = "processing";
-    upload.statusText = "辨識中";
+    upload.statusText = "雲端 AI 辨識中";
     renderUploads();
 
     try {
-      const worker = await getOcrWorker();
+      setOcrPhase("準備原圖與高對比副本", 5, 30);
       bitmap = await createImageBitmap(upload.file, { imageOrientation: "from-image" });
-      setOcrPhase("定位日期欄與表格", 5, 35);
-      await worker.setParameters({
-        tessedit_pageseg_mode: "11",
-        tessedit_char_whitelist: "0123456789",
-        classify_bln_numeric_mode: "1",
-        user_defined_dpi: "300"
-      });
-      const anchorResult = await worker.recognize(upload.file);
-      const geometry = findGridGeometry(
-        anchorResult.data.words || [],
-        upload.half,
-        bitmap.width,
-        bitmap.height
-      );
+      const images = prepareAiImages(bitmap);
 
-      setOcrPhase("消除格線並逐格讀取正向時間", 45, 48);
+      setOcrPhase("AI 正在逐一讀取倒置日期與正向時間", 38, 52);
+      const response = await requestAiTimecard(upload, images, accessToken);
+      const result = response.result;
+      if (result.cardHalf === "first" || result.cardHalf === "second") {
+        upload.half = result.cardHalf;
+      }
+
+      setOcrPhase("整理辨識結果與核對圖片", 92, 8);
+      const geometry = findGridGeometry([], upload.half, bitmap.width, bitmap.height);
       const sheet = buildNormalizedTimeSheet(bitmap, geometry);
       setUploadOcrPreview(upload, createLabeledOcrPreview(sheet));
-      await worker.setParameters({
-        tessedit_pageseg_mode: "11",
-        tessedit_char_whitelist: "0123456789:.",
-        classify_bln_numeric_mode: "1",
-        user_defined_dpi: "300",
-        tessedit_do_invert: "0"
-      });
-      const timeResult = await worker.recognize(sheet.canvas);
-      const allRows = extractNormalizedRows(timeResult.data.words || [], sheet);
-      upload.reviewRows = buildUploadReviewRows(sheet, allRows);
-      const rows = allRows.filter(row => row.segments.length || row.hasInk);
+      const aiRows = createRowsFromAiResult(result, geometry);
+      upload.reviewRows = buildUploadReviewRows(sheet, aiRows.rows);
+      upload.aiRequestId = response.requestId || "";
       let recognizedCount = 0;
       let unreadableCount = 0;
 
-      rows.forEach(row => {
+      aiRows.activeRows.forEach(row => {
+        if (row.day < 1 || row.day > daysInMonth(state.settings.month)) return;
         const date = `${state.settings.month}-${String(row.day).padStart(2, "0")}`;
-        if (!date.startsWith(state.settings.month) || row.day > daysInMonth(state.settings.month)) return;
         const key = attendanceKey(upload.employeeId, date);
         if (state.attendance[key]?.status === "confirmed") return;
-
-        const confidence = Math.round(row.confidence * 0.75 + geometry.confidence * 0.25);
-        if (row.segments.length) {
-          state.attendance[key] = {
-            employeeId: upload.employeeId,
-            date,
-            segments: row.segments,
-            status: "review",
-            source: `OCR：${upload.file.name}`,
-            confidence,
-            note: `點陣字逐格辨識；已忽略倒置日期。${row.hasPartial ? "另有一格時間不完整，請特別核對。" : "請對照原圖後改為已確認。"}${row.rawText ? ` 原始辨識：${row.rawText}` : ""}`
-          };
-          recognizedCount += 1;
-        } else if (row.hasInk) {
-          const partialSegments = [];
-          for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
-            const start = row.cells[column]?.time || "";
-            const end = row.cells[column + 1]?.time || "";
-            if (start || end) partialSegments.push({ start, end });
-          }
-          state.attendance[key] = {
-            employeeId: upload.employeeId,
-            date,
-            segments: partialSegments,
-            status: "unreadable",
-            source: `OCR：${upload.file.name}`,
-            confidence,
-            note: `${date} 有偵測到點陣印字，但正向上下班時間無法完整判斷。${row.rawText ? ` 原始辨識：${row.rawText}` : ""}`
-          };
-          unreadableCount += 1;
+        const partialSegments = [];
+        for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
+          const start = row.cells[column]?.time || "";
+          const end = row.cells[column + 1]?.time || "";
+          if (start || end) partialSegments.push({ start, end });
         }
+        const hasCompleteSegment = row.segments.length > 0;
+        state.attendance[key] = {
+          employeeId: upload.employeeId,
+          date,
+          segments: hasCompleteSegment ? row.segments : partialSegments,
+          status: hasCompleteSegment ? "review" : "unreadable",
+          source: `AI：${upload.file.name}`,
+          confidence: Math.round(row.confidence),
+          note: [
+            "雲端 AI 已分別判讀倒置日期與正向時間，尚待人工確認。",
+            row.dateUncertain ? "倒置日期不清楚，目前暫用最接近的表格列。" : "",
+            row.hasPartial ? "至少一個印章或成對時間不完整。" : "",
+            row.aiNote
+          ].filter(Boolean).join(" ")
+        };
+        if (hasCompleteSegment) recognizedCount += 1;
+        else unreadableCount += 1;
       });
 
+      const punchCount = Array.isArray(result.punches) ? result.punches.length : 0;
       upload.status = "done";
-      upload.statusText = `${geometry.method}（日期錨點 ${geometry.anchors}）・自動辨識 ${recognizedCount} 日・可快速核對 ${upload.reviewRows.length} 日`;
+      upload.statusText = `AI 找到 ${punchCount} 個印章・${recognizedCount} 日有完整時段・整體信心 ${result.overallConfidence || 0}%`;
       $("#attendance-employee").value = upload.employeeId;
-      logAudit("匯入 OCR 打卡", `${getEmployee(upload.employeeId)?.name || "員工"}・${upload.file.name}・共 ${recognizedCount + unreadableCount} 日`);
-      saveState("OCR 結果已儲存");
+      logAudit(
+        "匯入 AI 打卡辨識",
+        `${getEmployee(upload.employeeId)?.name || "員工"}・${upload.file.name}・${punchCount} 個印章`
+      );
+      saveState("AI 辨識結果已儲存");
       renderAll();
       showView("attendance");
-      $("#ocr-progress-label").textContent = "辨識完成";
+      $("#ocr-progress-label").textContent = "AI 辨識完成";
       $("#ocr-progress-percent").textContent = "100%";
       $("#ocr-progress-bar").value = 100;
-      toast(recognizedCount || unreadableCount
-        ? `辨識完成；已忽略倒置日期，請核對 ${recognizedCount + unreadableCount} 日結果。`
-        : "沒有偵測到正向時間；可查看辨識影像確認裁切範圍。");
+      const unknownText = aiRows.unknownPunches ? `；另有 ${aiRows.unknownPunches} 個印章日期與位置皆不清楚` : "";
+      toast(punchCount
+        ? `AI 找到 ${punchCount} 個印章${unknownText}，請逐項核對。`
+        : "AI 未找到可讀取的印章，請使用放大圖人工核對。");
       if (upload.reviewRows.length) openOcrQuickReview(upload.id);
     } catch (error) {
-      console.warn("OCR failed", error);
+      console.warn("Cloud AI recognition failed", error);
       upload.status = "error";
-      upload.statusText = "辨識失敗；請查看原圖或人工輸入";
+      upload.statusText = "AI 辨識失敗；可查看原圖或稍後重試";
       renderUploads();
-      toast("OCR 無法完成；照片仍可查看，請人工輸入打卡時間。");
+      toast(error instanceof Error ? error.message : "AI 辨識無法完成，請稍後重試。");
     } finally {
       bitmap?.close();
       $("#ocr-progress").hidden = true;
@@ -1925,6 +2135,12 @@
       state.settings.month = event.target.value;
       saveState();
       renderAll();
+    });
+    $("#ai-access-token").addEventListener("change", event => {
+      const value = event.target.value.trim();
+      if (value) localStorage.setItem(AI_TOKEN_STORAGE_KEY, value);
+      else localStorage.removeItem(AI_TOKEN_STORAGE_KEY);
+      toast(value ? "AI 連線密碼已儲存在這台裝置。" : "已清除 AI 連線密碼。");
     });
 
     $("#attendance-employee").addEventListener("change", renderAttendance);
@@ -2260,6 +2476,7 @@
 
   function init() {
     installEventHandlers();
+    $("#ai-access-token").value = localStorage.getItem(AI_TOKEN_STORAGE_KEY) || "";
     renderAll();
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("./service-worker.js").catch(() => {});
