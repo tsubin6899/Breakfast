@@ -785,6 +785,23 @@ textarea {
   background: #f3efe4;
 }
 
+.ocr-reading-tip {
+  display: grid;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-left: 3px solid var(--green-2);
+  border-radius: 9px;
+  color: var(--muted);
+  background: var(--green-soft);
+  font-size: 10px;
+}
+
+.ocr-reading-tip strong {
+  color: var(--green);
+  font-size: 11px;
+}
+
 .progress-box div {
   display: flex;
   justify-content: space-between;
@@ -1776,6 +1793,7 @@ dialog::backdrop {
   .upload-item-actions {
     grid-column: 1 / -1;
     flex-direction: row;
+    flex-wrap: wrap;
   }
 
   .segment-row {

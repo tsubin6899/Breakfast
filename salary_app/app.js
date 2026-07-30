@@ -99,6 +99,7 @@
   let state = loadState();
   let runtimeUploads = [];
   let ocrWorker = null;
+  let ocrPhase = { label: "", start: 0, span: 100 };
   let toastTimer = null;
   let attendanceDialogEmployeeId = "";
   let attendanceDialogOriginalDate = "";
@@ -789,6 +790,7 @@
         <div class="upload-item-actions">
           <button type="button" data-upload-action="recognize" data-id="${upload.id}">開始辨識</button>
           <button type="button" data-upload-action="view" data-id="${upload.id}">查看原圖</button>
+          ${upload.ocrPreviewUrl ? `<button type="button" data-upload-action="view-ocr" data-id="${upload.id}">查看辨識影像</button>` : ""}
           <button type="button" data-upload-action="remove" data-id="${upload.id}">移除</button>
         </div>
       </div>
@@ -1049,33 +1051,48 @@
 
   function addUploadFiles(files) {
     const employeeId = $("#upload-employee").value;
-    const half = $("#upload-half").value;
+    const selectedHalf = $("#upload-half").value;
     [...files].filter(file => file.type.startsWith("image/")).forEach(file => {
+      const stem = file.name.replace(/\.[^.]+$/, "").trim();
+      const inferredHalf = /1$/.test(stem) ? "first" : (/2$/.test(stem) ? "second" : selectedHalf);
       runtimeUploads.push({
         id: uid("upload"),
         file,
         url: URL.createObjectURL(file),
         employeeId,
-        half,
+        half: inferredHalf,
         status: "queued",
-        statusText: "等待辨識"
+        statusText: inferredHalf !== selectedHalf ? "已依檔名判斷日期範圍・等待辨識" : "等待辨識"
       });
     });
     renderUploads();
   }
 
+  const OCR_CELL_WIDTH = 180;
+  const OCR_ROW_HEIGHT = 72;
+  const OCR_COLUMN_COUNT = 6;
+
+  function setOcrPhase(label, start, span) {
+    ocrPhase = { label, start, span };
+    const box = $("#ocr-progress");
+    box.hidden = false;
+    $("#ocr-progress-label").textContent = label;
+    $("#ocr-progress-percent").textContent = `${Math.round(start)}%`;
+    $("#ocr-progress-bar").value = start;
+  }
+
   function updateOcrProgress(progress) {
     const box = $("#ocr-progress");
     box.hidden = false;
-    const pct = Math.round((progress.progress || 0) * 100);
-    const labels = {
+    const phaseProgress = Math.max(0, Math.min(1, Number(progress.progress || 0)));
+    const pct = Math.round(ocrPhase.start + phaseProgress * ocrPhase.span);
+    const loadingLabels = {
       "loading tesseract core": "載入辨識核心",
       "initializing tesseract": "初始化辨識",
       "loading language traineddata": "載入數字辨識資料",
-      "initializing api": "準備辨識",
-      "recognizing text": "正在辨識打卡時間"
+      "initializing api": "準備辨識"
     };
-    $("#ocr-progress-label").textContent = labels[progress.status] || "處理照片";
+    $("#ocr-progress-label").textContent = loadingLabels[progress.status] || ocrPhase.label || "處理照片";
     $("#ocr-progress-percent").textContent = `${pct}%`;
     $("#ocr-progress-bar").value = pct;
   }
@@ -1092,80 +1109,462 @@
   }
 
   function normalizeOcrTime(text) {
-    const cleaned = String(text || "").trim();
-    let match = cleaned.match(/(\d{1,2})\s*[:.]\s*(\d{2})/);
-    let hour;
-    let minute;
-    if (match) {
-      hour = Number(match[1]);
-      minute = Number(match[2]);
-    } else {
-      const digits = cleaned.replace(/\D/g, "");
-      if (digits.length === 3) {
-        hour = Number(digits[0]);
-        minute = Number(digits.slice(1));
-      } else if (digits.length === 4) {
-        hour = Number(digits.slice(0, 2));
-        minute = Number(digits.slice(2));
-      } else {
-        return null;
-      }
+    const cleaned = String(text || "").replace(/[Oo]/g, "0").trim();
+    const colonCandidates = [...cleaned.matchAll(/(\d{1,2})\s*[:.]\s*(\d{2})/g)]
+      .map(match => ({ hour: Number(match[1]), minute: Number(match[2]), index: match.index || 0 }))
+      .filter(value => value.hour <= 23 && value.minute <= 59);
+    if (colonCandidates.length) {
+      const value = colonCandidates.at(-1);
+      return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`;
     }
-    if (hour > 23 || minute > 59) return null;
-    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+    const groups = cleaned.match(/\d+/g) || [];
+    const fourDigitCandidates = [];
+    const threeDigitCandidates = [];
+    groups.forEach(group => {
+      [4, 3].forEach(length => {
+        for (let index = Math.max(0, group.length - 7); index <= group.length - length; index += 1) {
+          const value = group.slice(index, index + length);
+          const hour = Number(value.slice(0, length - 2));
+          const minute = Number(value.slice(-2));
+          if (hour <= 23 && minute <= 59) {
+            (length === 4 ? fourDigitCandidates : threeDigitCandidates).push({ hour, minute, index });
+          }
+        }
+      });
+    });
+    const value = fourDigitCandidates.at(-1) || threeDigitCandidates.at(-1);
+    if (!value) return null;
+    return `${String(value.hour).padStart(2, "0")}:${String(value.minute).padStart(2, "0")}`;
   }
 
-  async function imageDimensions(file) {
-    const bitmap = await createImageBitmap(file);
-    const size = { width: bitmap.width, height: bitmap.height };
-    bitmap.close();
-    return size;
+  function linearFit(points, valueKey, startDay) {
+    if (!points.length) return { intercept: 0, slope: 0 };
+    const xs = points.map(point => point.day - startDay);
+    const ys = points.map(point => point[valueKey]);
+    const xMean = xs.reduce((sum, value) => sum + value, 0) / xs.length;
+    const yMean = ys.reduce((sum, value) => sum + value, 0) / ys.length;
+    const denominator = xs.reduce((sum, value) => sum + (value - xMean) ** 2, 0);
+    const slope = denominator
+      ? xs.reduce((sum, value, index) => sum + (value - xMean) * (ys[index] - yMean), 0) / denominator
+      : 0;
+    return { intercept: yMean - slope * xMean, slope };
   }
 
-  function extractOcrRows(words, half, width, height) {
+  function findGridGeometry(words, half, width, height) {
     const startDay = half === "first" ? 1 : 16;
     const count = half === "first" ? 15 : 16;
-    const startY = height * 0.39;
-    const endY = height * (half === "first" ? 0.82 : 0.86);
-    const groups = new Map();
+    const endDay = startDay + count - 1;
+    const candidates = (words || []).map(word => {
+      const digits = String(word.text || "").replace(/\D/g, "");
+      const day = digits.length <= 2 ? Number(digits) : 0;
+      const bbox = word.bbox || {};
+      return {
+        day,
+        x: ((bbox.x0 || 0) + (bbox.x1 || 0)) / 2,
+        y: ((bbox.y0 || 0) + (bbox.y1 || 0)) / 2,
+        confidence: Number(word.confidence || 0)
+      };
+    }).filter(item =>
+      item.day >= startDay &&
+      item.day <= endDay &&
+      item.x < width * 0.38 &&
+      item.y > height * 0.28 &&
+      item.y < height * 0.93
+    );
+
+    let best = { score: -Infinity, matches: [] };
+    candidates.forEach((first, firstIndex) => {
+      candidates.slice(firstIndex + 1).forEach(second => {
+        const dayDelta = second.day - first.day;
+        if (Math.abs(dayDelta) < 3) return;
+        const spacing = (second.y - first.y) / dayDelta;
+        if (spacing < height * 0.018 || spacing > height * 0.055) return;
+        const xSlope = (second.x - first.x) / dayDelta;
+        if (Math.abs(xSlope) > spacing * 0.35) return;
+        const matches = [];
+        let errorTotal = 0;
+        for (let day = startDay; day <= endDay; day += 1) {
+          const predictedY = first.y + (day - first.day) * spacing;
+          const predictedX = first.x + (day - first.day) * xSlope;
+          const options = candidates
+            .filter(item => item.day === day)
+            .map(item => ({
+              item,
+              yError: Math.abs(item.y - predictedY),
+              xError: Math.abs(item.x - predictedX)
+            }))
+            .filter(option => option.yError < spacing * 0.48 && option.xError < spacing * 0.9)
+            .sort((a, b) => (a.yError + a.xError * 0.4) - (b.yError + b.xError * 0.4));
+          if (options[0]) {
+            matches.push(options[0].item);
+            errorTotal += options[0].yError / spacing + options[0].xError / spacing;
+          }
+        }
+        const score = matches.length * 100 - errorTotal * 12;
+        if (score > best.score) best = { score, matches };
+      });
+    });
+
+    if (best.matches.length >= 4) {
+      const yFit = linearFit(best.matches, "y", startDay);
+      const xFit = linearFit(best.matches, "x", startDay);
+      const averageConfidence = best.matches.reduce((sum, item) => sum + item.confidence, 0) / best.matches.length;
+      return {
+        startDay,
+        count,
+        yStart: yFit.intercept,
+        spacing: yFit.slope,
+        xStart: xFit.intercept,
+        xSlope: xFit.slope,
+        confidence: Math.round(Math.min(100, averageConfidence * (0.65 + best.matches.length / count * 0.35))),
+        anchors: best.matches.length,
+        method: "日期欄自動校正"
+      };
+    }
+
+    const fallback = half === "first"
+      ? { yStart: height * 0.4, spacing: height * 0.029, xStart: width * 0.18 }
+      : { yStart: height * 0.395, spacing: height * 0.03, xStart: width * 0.19 };
+    return {
+      startDay,
+      count,
+      ...fallback,
+      xSlope: 0,
+      confidence: 25,
+      anchors: best.matches.length,
+      method: "版型預設校正"
+    };
+  }
+
+  function isColoredGridPixel(red, green, blue) {
+    const maximum = Math.max(red, green, blue);
+    const minimum = Math.min(red, green, blue);
+    return maximum - minimum > 18 && maximum > 55 && maximum < 250;
+  }
+
+  function findLocalBoundary(imageData, width, height, centerX, predictedY, spacing) {
+    const pixels = imageData.data;
+    const x0 = Math.max(0, Math.round(centerX - spacing * 0.72));
+    const x1 = Math.min(width - 1, Math.round(centerX + spacing * 0.72));
+    const y0 = Math.max(0, Math.round(predictedY - spacing * 0.55));
+    const y1 = Math.min(height - 1, Math.round(predictedY + spacing * 0.55));
+    let bestY = predictedY;
+    let bestScore = 0;
+    for (let y = y0; y <= y1; y += 1) {
+      let score = 0;
+      for (let x = x0; x <= x1; x += 2) {
+        const index = (y * width + x) * 4;
+        if (isColoredGridPixel(pixels[index], pixels[index + 1], pixels[index + 2])) score += 1;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestY = y;
+      }
+    }
+    return bestScore >= (x1 - x0) * 0.08 ? bestY : predictedY;
+  }
+
+  function preprocessOcrCell(context, x, y, width, height) {
+    const image = context.getImageData(x, y, width, height);
+    const pixels = image.data;
+    const histogram = new Uint32Array(256);
+    let sampleCount = 0;
+    for (let index = 0; index < pixels.length; index += 4) {
+      const red = pixels[index];
+      const green = pixels[index + 1];
+      const blue = pixels[index + 2];
+      if (isColoredGridPixel(red, green, blue)) continue;
+      const luminance = Math.round(red * 0.3 + green * 0.59 + blue * 0.11);
+      histogram[luminance] += 1;
+      sampleCount += 1;
+    }
+    let running = 0;
+    let median = 190;
+    for (let value = 0; value < histogram.length; value += 1) {
+      running += histogram[value];
+      if (running >= sampleCount * 0.5) {
+        median = value;
+        break;
+      }
+    }
+    const threshold = Math.max(85, Math.min(205, median - 28));
+    const raw = new Uint8Array(width * height);
+    for (let pixel = 0; pixel < raw.length; pixel += 1) {
+      const index = pixel * 4;
+      const red = pixels[index];
+      const green = pixels[index + 1];
+      const blue = pixels[index + 2];
+      const luminance = red * 0.3 + green * 0.59 + blue * 0.11;
+      raw[pixel] = !isColoredGridPixel(red, green, blue) && luminance < threshold ? 1 : 0;
+    }
+
+    const cleaned = new Uint8Array(raw.length);
+    for (let row = 1; row < height - 1; row += 1) {
+      for (let column = 1; column < width - 1; column += 1) {
+        const pixel = row * width + column;
+        if (!raw[pixel]) continue;
+        let neighbors = 0;
+        for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+          for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+            neighbors += raw[(row + offsetY) * width + column + offsetX];
+          }
+        }
+        if (neighbors < 2) continue;
+        for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+          for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+            cleaned[(row + offsetY) * width + column + offsetX] = 1;
+          }
+        }
+      }
+    }
+
+    for (let row = 0; row < height; row += 1) {
+      let count = 0;
+      for (let column = 0; column < width; column += 1) count += cleaned[row * width + column];
+      if (count > width * 0.55) {
+        for (let column = 0; column < width; column += 1) cleaned[row * width + column] = 0;
+      }
+    }
+    for (let column = 0; column < width; column += 1) {
+      let count = 0;
+      for (let row = 0; row < height; row += 1) count += cleaned[row * width + column];
+      if (count > height * 0.65) {
+        for (let row = 0; row < height; row += 1) cleaned[row * width + column] = 0;
+      }
+    }
+
+    let inkPixels = 0;
+    for (let pixel = 0; pixel < cleaned.length; pixel += 1) {
+      const value = cleaned[pixel] ? 0 : 255;
+      if (cleaned[pixel]) inkPixels += 1;
+      const index = pixel * 4;
+      pixels[index] = value;
+      pixels[index + 1] = value;
+      pixels[index + 2] = value;
+      pixels[index + 3] = 255;
+    }
+    context.putImageData(image, x, y);
+    return inkPixels / cleaned.length;
+  }
+
+  function buildNormalizedTimeSheet(bitmap, geometry) {
+    const source = document.createElement("canvas");
+    source.width = bitmap.width;
+    source.height = bitmap.height;
+    const sourceContext = source.getContext("2d", { willReadFrequently: true });
+    sourceContext.drawImage(bitmap, 0, 0);
+    const sourceData = sourceContext.getImageData(0, 0, source.width, source.height);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = OCR_CELL_WIDTH * OCR_COLUMN_COUNT;
+    canvas.height = OCR_ROW_HEIGHT * geometry.count;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const density = Array.from({ length: geometry.count }, () => Array(OCR_COLUMN_COUNT).fill(0));
+
+    for (let rowIndex = 0; rowIndex < geometry.count; rowIndex += 1) {
+      const dayOffset = rowIndex;
+      const rowCenterY = geometry.yStart + geometry.spacing * dayOffset;
+      const dayCenterX = geometry.xStart + geometry.xSlope * dayOffset;
+      const columnWidth = geometry.spacing * 2.02;
+      for (let column = 0; column < OCR_COLUMN_COUNT; column += 1) {
+        const cellLeft = dayCenterX + geometry.spacing * 0.52 + column * columnWidth;
+        const cellCenterX = cellLeft + columnWidth / 2;
+        const predictedBoundary = rowCenterY + geometry.spacing * 0.5;
+        const boundary = findLocalBoundary(
+          sourceData,
+          source.width,
+          source.height,
+          cellCenterX,
+          predictedBoundary,
+          geometry.spacing
+        );
+        const sourceX = cellLeft + columnWidth * 0.21;
+        const sourceY = boundary - geometry.spacing * 0.82;
+        const sourceWidth = columnWidth * 0.75;
+        const sourceHeight = geometry.spacing * 0.66;
+        const destinationX = column * OCR_CELL_WIDTH + 4;
+        const destinationY = rowIndex * OCR_ROW_HEIGHT + 6;
+        const destinationWidth = OCR_CELL_WIDTH - 8;
+        const destinationHeight = OCR_ROW_HEIGHT - 12;
+        const boundedX = Math.max(0, Math.min(source.width - 1, sourceX));
+        const boundedY = Math.max(0, Math.min(source.height - 1, sourceY));
+        const boundedWidth = Math.max(1, Math.min(source.width - boundedX, sourceWidth));
+        const boundedHeight = Math.max(1, Math.min(source.height - boundedY, sourceHeight));
+        context.drawImage(
+          bitmap,
+          boundedX,
+          boundedY,
+          boundedWidth,
+          boundedHeight,
+          destinationX,
+          destinationY,
+          destinationWidth,
+          destinationHeight
+        );
+        density[rowIndex][column] = preprocessOcrCell(
+          context,
+          destinationX,
+          destinationY,
+          destinationWidth,
+          destinationHeight
+        );
+      }
+    }
+    return { canvas, density, geometry };
+  }
+
+  function extractNormalizedRows(words, sheet) {
+    const rows = Array.from({ length: sheet.geometry.count }, (_, index) => ({
+      day: sheet.geometry.startDay + index,
+      cells: Array.from({ length: OCR_COLUMN_COUNT }, (_, column) => ({
+        textParts: [],
+        confidenceParts: [],
+        density: sheet.density[index][column]
+      }))
+    }));
 
     (words || []).forEach(word => {
       const bbox = word.bbox || {};
       const x = ((bbox.x0 || 0) + (bbox.x1 || 0)) / 2;
       const y = ((bbox.y0 || 0) + (bbox.y1 || 0)) / 2;
-      if (x < width * 0.16 || x > width * 0.62 || y < startY - height * 0.035 || y > endY + height * 0.035) return;
-
-      const index = Math.max(0, Math.min(count - 1, Math.round((y - startY) / (endY - startY) * (count - 1))));
-      const day = startDay + index;
-      if (!groups.has(day)) groups.set(day, { times: [], suspicious: [] });
-      const normalized = normalizeOcrTime(word.text);
-      if (normalized) {
-        groups.get(day).times.push({ time: normalized, x, confidence: Number(word.confidence || 0) });
-      } else if (/\d/.test(word.text || "") && String(word.text).replace(/\D/g, "").length >= 3) {
-        groups.get(day).suspicious.push(word.text);
-      }
+      const rowIndex = Math.floor(y / OCR_ROW_HEIGHT);
+      const column = Math.floor(x / OCR_CELL_WIDTH);
+      if (!rows[rowIndex]?.cells[column]) return;
+      rows[rowIndex].cells[column].textParts.push({ x, text: String(word.text || "") });
+      rows[rowIndex].cells[column].confidenceParts.push(Number(word.confidence || 0));
     });
 
-    return [...groups.entries()].map(([day, group]) => {
-      group.times.sort((a, b) => a.x - b.x);
-      const unique = group.times.filter((item, index, array) => index === 0 || item.time !== array[index - 1].time);
-      return { day, times: unique, suspicious: group.suspicious };
-    }).sort((a, b) => a.day - b.day);
+    return rows.map(row => {
+      row.cells = row.cells.map(cell => {
+        const rawText = cell.textParts.sort((a, b) => a.x - b.x).map(part => part.text).join("");
+        const confidence = cell.confidenceParts.length
+          ? cell.confidenceParts.reduce((sum, value) => sum + value, 0) / cell.confidenceParts.length
+          : 0;
+        return {
+          rawText,
+          time: normalizeOcrTime(rawText),
+          confidence,
+          hasInk: cell.density > 0.012
+        };
+      });
+      row.segments = [];
+      for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
+        const start = row.cells[column];
+        const end = row.cells[column + 1];
+        if (start.time && end.time) {
+          row.segments.push({ start: start.time, end: end.time });
+        }
+      }
+      row.hasPartial = row.cells.some((cell, index) => {
+        const partner = row.cells[index % 2 === 0 ? index + 1 : index - 1];
+        return (cell.time || cell.hasInk) && !(cell.time && partner?.time);
+      });
+      row.hasInk = row.cells.some(cell => cell.hasInk);
+      const recognizedCells = row.cells.filter(cell => cell.time);
+      row.confidence = recognizedCells.length
+        ? recognizedCells.reduce((sum, cell) => sum + cell.confidence, 0) / recognizedCells.length
+        : 0;
+      row.rawText = row.cells.map(cell => cell.rawText).filter(Boolean).join("／");
+      return row;
+    }).filter(row => row.segments.length || row.hasInk);
+  }
+
+  function createLabeledOcrPreview(sheet) {
+    const marginLeft = 58;
+    const headerHeight = 30;
+    const canvas = document.createElement("canvas");
+    canvas.width = sheet.canvas.width + marginLeft;
+    canvas.height = sheet.canvas.height + headerHeight;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(sheet.canvas, marginLeft, headerHeight);
+    context.fillStyle = "#1f5b45";
+    context.font = "bold 14px sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText("日期", marginLeft / 2, headerHeight / 2);
+    ["上午上班", "上午下班", "下午上班", "下午下班", "加班上班", "加班下班"].forEach((label, index) => {
+      context.fillText(label, marginLeft + OCR_CELL_WIDTH * (index + 0.5), headerHeight / 2);
+    });
+    context.strokeStyle = "#d8ddd9";
+    context.lineWidth = 1;
+    for (let row = 0; row <= sheet.geometry.count; row += 1) {
+      const y = headerHeight + row * OCR_ROW_HEIGHT;
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(canvas.width, y);
+      context.stroke();
+      if (row < sheet.geometry.count) {
+        context.fillStyle = "#26372f";
+        context.fillText(
+          String(sheet.geometry.startDay + row),
+          marginLeft / 2,
+          y + OCR_ROW_HEIGHT / 2
+        );
+      }
+    }
+    for (let column = 0; column <= OCR_COLUMN_COUNT; column += 1) {
+      const x = marginLeft + column * OCR_CELL_WIDTH;
+      context.beginPath();
+      context.moveTo(x, 0);
+      context.lineTo(x, canvas.height);
+      context.stroke();
+    }
+    return canvas;
+  }
+
+  function setUploadOcrPreview(upload, canvas) {
+    if (upload.ocrPreviewUrl) URL.revokeObjectURL(upload.ocrPreviewUrl);
+    canvas.toBlob(blob => {
+      if (!blob) return;
+      upload.ocrPreviewUrl = URL.createObjectURL(blob);
+      renderUploads();
+    }, "image/png");
   }
 
   async function recognizeUpload(uploadId) {
     if (!requireUnlockedMonth()) return;
     const upload = runtimeUploads.find(item => item.id === uploadId);
     if (!upload) return;
+    let bitmap = null;
     upload.status = "processing";
     upload.statusText = "辨識中";
     renderUploads();
 
     try {
       const worker = await getOcrWorker();
-      const size = await imageDimensions(upload.file);
-      const result = await worker.recognize(upload.file);
-      const rows = extractOcrRows(result.data.words || [], upload.half, size.width, size.height);
+      bitmap = await createImageBitmap(upload.file, { imageOrientation: "from-image" });
+      setOcrPhase("定位日期欄與表格", 5, 35);
+      await worker.setParameters({
+        tessedit_pageseg_mode: "11",
+        tessedit_char_whitelist: "0123456789",
+        classify_bln_numeric_mode: "1",
+        user_defined_dpi: "300"
+      });
+      const anchorResult = await worker.recognize(upload.file);
+      const geometry = findGridGeometry(
+        anchorResult.data.words || [],
+        upload.half,
+        bitmap.width,
+        bitmap.height
+      );
+
+      setOcrPhase("消除格線並逐格讀取正向時間", 45, 48);
+      const sheet = buildNormalizedTimeSheet(bitmap, geometry);
+      setUploadOcrPreview(upload, createLabeledOcrPreview(sheet));
+      await worker.setParameters({
+        tessedit_pageseg_mode: "11",
+        tessedit_char_whitelist: "0123456789:.",
+        classify_bln_numeric_mode: "1",
+        user_defined_dpi: "300",
+        tessedit_do_invert: "0"
+      });
+      const timeResult = await worker.recognize(sheet.canvas);
+      const rows = extractNormalizedRows(timeResult.data.words || [], sheet);
       let recognizedCount = 0;
       let unreadableCount = 0;
 
@@ -1175,47 +1574,59 @@
         const key = attendanceKey(upload.employeeId, date);
         if (state.attendance[key]?.status === "confirmed") return;
 
-        if (row.times.length >= 2) {
-          const confidence = Math.round((row.times[0].confidence + row.times[1].confidence) / 2);
+        const confidence = Math.round(row.confidence * 0.75 + geometry.confidence * 0.25);
+        if (row.segments.length) {
           state.attendance[key] = {
             employeeId: upload.employeeId,
             date,
-            segments: [{ start: row.times[0].time, end: row.times[1].time }],
+            segments: row.segments,
             status: "review",
             source: `OCR：${upload.file.name}`,
             confidence,
-            note: "OCR 初步辨識，請對照原圖後改為已確認。"
+            note: `點陣字逐格辨識；已忽略倒置日期。${row.hasPartial ? "另有一格時間不完整，請特別核對。" : "請對照原圖後改為已確認。"}${row.rawText ? ` 原始辨識：${row.rawText}` : ""}`
           };
           recognizedCount += 1;
-        } else if (row.times.length === 1 || row.suspicious.length) {
+        } else if (row.hasInk) {
+          const partialSegments = [];
+          for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
+            const start = row.cells[column]?.time || "";
+            const end = row.cells[column + 1]?.time || "";
+            if (start || end) partialSegments.push({ start, end });
+          }
           state.attendance[key] = {
             employeeId: upload.employeeId,
             date,
-            segments: row.times.length ? [{ start: row.times[0].time, end: "" }] : [],
+            segments: partialSegments,
             status: "unreadable",
             source: `OCR：${upload.file.name}`,
-            confidence: row.times[0]?.confidence || 0,
-            note: `${date} 打卡時間無法完整判斷，請人工輸入。`
+            confidence,
+            note: `${date} 有偵測到點陣印字，但正向上下班時間無法完整判斷。${row.rawText ? ` 原始辨識：${row.rawText}` : ""}`
           };
           unreadableCount += 1;
         }
       });
 
       upload.status = "done";
-      upload.statusText = `辨識 ${recognizedCount} 日・待人工確認${unreadableCount ? `・${unreadableCount} 日無法判斷` : ""}`;
+      upload.statusText = `${geometry.method}（日期錨點 ${geometry.anchors}）・辨識 ${recognizedCount} 日${unreadableCount ? `・${unreadableCount} 日需人工判斷` : ""}`;
       $("#attendance-employee").value = upload.employeeId;
       logAudit("匯入 OCR 打卡", `${getEmployee(upload.employeeId)?.name || "員工"}・${upload.file.name}・共 ${recognizedCount + unreadableCount} 日`);
       saveState("OCR 結果已儲存");
       renderAll();
       showView("attendance");
-      toast(recognizedCount || unreadableCount ? "辨識完成，請逐日對照原圖確認。" : "沒有可靠辨識到時間，請改用人工輸入。");
+      $("#ocr-progress-label").textContent = "辨識完成";
+      $("#ocr-progress-percent").textContent = "100%";
+      $("#ocr-progress-bar").value = 100;
+      toast(recognizedCount || unreadableCount
+        ? `辨識完成；已忽略倒置日期，請核對 ${recognizedCount + unreadableCount} 日結果。`
+        : "沒有偵測到正向時間；可查看辨識影像確認裁切範圍。");
     } catch (error) {
       console.warn("OCR failed", error);
       upload.status = "error";
-      upload.statusText = "辨識失敗，請人工輸入";
+      upload.statusText = "辨識失敗；請查看原圖或人工輸入";
       renderUploads();
       toast("OCR 無法完成；照片仍可查看，請人工輸入打卡時間。");
     } finally {
+      bitmap?.close();
       $("#ocr-progress").hidden = true;
     }
   }
@@ -1579,8 +1990,12 @@
       if (!upload) return;
       if (button.dataset.uploadAction === "recognize") recognizeUpload(upload.id);
       if (button.dataset.uploadAction === "view") window.open(upload.url, "_blank", "noopener");
+      if (button.dataset.uploadAction === "view-ocr" && upload.ocrPreviewUrl) {
+        window.open(upload.ocrPreviewUrl, "_blank", "noopener");
+      }
       if (button.dataset.uploadAction === "remove") {
         URL.revokeObjectURL(upload.url);
+        if (upload.ocrPreviewUrl) URL.revokeObjectURL(upload.ocrPreviewUrl);
         runtimeUploads = runtimeUploads.filter(item => item.id !== upload.id);
         renderUploads();
       }

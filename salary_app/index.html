@@ -181,6 +181,10 @@
                 <span>支援 JPG、PNG；一次可選多張</span>
               </button>
               <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
+              <div class="ocr-reading-tip">
+                <strong>新版點陣字辨識</strong>
+                <span>先用日期欄校正表格，再移除紅／藍格線；每格只讀取正向時間，倒著的日期不會當成上下班時間。檔名結尾為 1／2 時會自動判斷上下半月。</span>
+              </div>
               <div id="ocr-progress" class="progress-box" hidden>
                 <div><span id="ocr-progress-label">準備辨識</span><strong id="ocr-progress-percent">0%</strong></div>
                 <progress id="ocr-progress-bar" max="100" value="0"></progress>
