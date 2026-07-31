@@ -18,12 +18,14 @@ type SaveRequest = {
   state?: unknown;
   baseRevision?: unknown;
   force?: unknown;
+  auditEvents?: unknown;
 };
 
 const STORE_NAME = "breakfast-payroll";
 const STATE_KEY = "business/payroll-state";
 const PREVIOUS_STATE_KEY = "business/payroll-state-previous";
-const MAX_BODY_BYTES = 2_500_000;
+const AUDIT_KEY = "business/server-audit-log";
+const MAX_BODY_BYTES = 5_500_000;
 
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, {
@@ -59,6 +61,34 @@ async function readState() {
   return store.getWithMetadata(STATE_KEY, { type: "json", consistency: "strong" });
 }
 
+function accessRoles(state: unknown) {
+  if (!state || typeof state !== "object") return {} as Record<string, string>;
+  const settings = (state as PayrollState).settings;
+  const roles = settings?.accessRoles;
+  if (!roles || typeof roles !== "object" || Array.isArray(roles)) return {} as Record<string, string>;
+  return Object.fromEntries(
+    Object.entries(roles)
+      .filter(([email, role]) => email.includes("@") && ["owner", "payroll", "manager", "viewer"].includes(String(role)))
+      .map(([email, role]) => [email.toLowerCase(), String(role)])
+  );
+}
+
+function sanitizeAuditEvents(value: unknown, actor: string) {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, 50).map(entry => {
+    const item = entry && typeof entry === "object" ? entry as Record<string, unknown> : {};
+    return {
+      id: typeof item.id === "string" ? item.id.slice(0, 120) : crypto.randomUUID(),
+      month: typeof item.month === "string" ? item.month.slice(0, 7) : "",
+      action: typeof item.action === "string" ? item.action.slice(0, 120) : "更新資料",
+      detail: typeof item.detail === "string" ? item.detail.slice(0, 500) : "",
+      actor,
+      timestamp: typeof item.timestamp === "string" ? item.timestamp : new Date().toISOString(),
+      serverRecordedAt: new Date().toISOString()
+    };
+  });
+}
+
 export default async (req: Request, context: Context) => {
   let user = null;
   try {
@@ -88,12 +118,21 @@ export default async (req: Request, context: Context) => {
         user: { id: user.id, email: user.email || "" }
       });
     }
+    const email = String(user.email || "").toLowerCase();
+    const roles = accessRoles(saved.data);
+    const role = Object.keys(roles).length ? roles[email] : "owner";
+    if (!role) {
+      return jsonResponse({ error: "FORBIDDEN", message: "此帳號尚未被指派薪資 APP 權限。" }, 403);
+    }
+    const store = getStore({ name: STORE_NAME, consistency: "strong" });
+    const auditLog = await store.get(AUDIT_KEY, { type: "json", consistency: "strong" }) as unknown[] | null;
     return jsonResponse({
       state: saved.data,
+      auditLog: Array.isArray(auditLog) ? auditLog.slice(0, 500) : [],
       revision: saved.etag || "",
       updatedAt: typeof saved.metadata.updatedAt === "string" ? saved.metadata.updatedAt : "",
       updatedBy: typeof saved.metadata.updatedBy === "string" ? saved.metadata.updatedBy : "",
-      user: { id: user.id, email: user.email || "" }
+      user: { id: user.id, email: user.email || "", role }
     });
   }
 
@@ -122,11 +161,6 @@ export default async (req: Request, context: Context) => {
     return jsonResponse({ error: "INVALID_STATE", message: "薪資資料格式不正確。" }, 400);
   }
 
-  const serialized = JSON.stringify(payload.state);
-  if (new TextEncoder().encode(serialized).byteLength > MAX_BODY_BYTES) {
-    return jsonResponse({ error: "STATE_TOO_LARGE", message: "薪資資料超過可儲存大小。" }, 413);
-  }
-
   const store = getStore({ name: STORE_NAME, consistency: "strong" });
   const existing = await store.getWithMetadata(STATE_KEY, {
     type: "json",
@@ -134,6 +168,41 @@ export default async (req: Request, context: Context) => {
   });
   const baseRevision = typeof payload.baseRevision === "string" ? payload.baseRevision : "";
   const force = payload.force === true;
+  const email = String(user.email || user.id).toLowerCase();
+  const existingRoles = accessRoles(existing?.data);
+  const existingRole = Object.keys(existingRoles).length ? existingRoles[email] : "owner";
+  if (!existingRole || existingRole === "viewer") {
+    return jsonResponse({ error: "FORBIDDEN", message: "此帳號沒有寫入薪資資料的權限。" }, 403);
+  }
+  if (force && existingRole !== "owner") {
+    return jsonResponse({ error: "FORBIDDEN", message: "只有店主可以強制覆蓋雲端版本。" }, 403);
+  }
+  const incomingState = payload.state as PayrollState;
+  const incomingSettings = { ...(incomingState.settings || {}) };
+  const requestedRoles = accessRoles(incomingState);
+  if (!Object.keys(existingRoles).length && !Object.keys(requestedRoles).length) {
+    incomingSettings.accessRoles = { [email]: "owner" };
+  } else if (existingRole !== "owner" && Object.keys(existingRoles).length) {
+    incomingSettings.accessRoles = existingRoles;
+  } else {
+    incomingSettings.accessRoles = requestedRoles;
+  }
+  incomingState.settings = incomingSettings;
+  if (existingRole === "manager" && existing?.data && typeof existing.data === "object") {
+    const protectedState = existing.data as PayrollState;
+    incomingState.settings = protectedState.settings;
+    incomingState.employees = protectedState.employees;
+    incomingState.adjustments = protectedState.adjustments;
+    incomingState.specialDays = protectedState.specialDays;
+    incomingState.closedMonths = protectedState.closedMonths;
+    incomingState.leaveLedger = protectedState.leaveLedger;
+  }
+  const existingAudit = await store.get(AUDIT_KEY, { type: "json", consistency: "strong" }) as unknown[] | null;
+  incomingState.auditLog = Array.isArray(existingAudit) ? existingAudit.slice(0, 500) : [];
+  const serialized = JSON.stringify(incomingState);
+  if (new TextEncoder().encode(serialized).byteLength > MAX_BODY_BYTES) {
+    return jsonResponse({ error: "STATE_TOO_LARGE", message: "薪資資料超過可儲存大小。" }, 413);
+  }
 
   if (!force) {
     const currentRevision = existing?.etag || "";
@@ -168,7 +237,7 @@ export default async (req: Request, context: Context) => {
       ? { onlyIfMatch: existing.etag }
       : (!force && !existing ? { onlyIfNew: true } : {}))
   };
-  const result = await store.setJSON(STATE_KEY, payload.state, options);
+  const result = await store.setJSON(STATE_KEY, incomingState, options);
   if (!result.modified) {
     const latest = await store.getMetadata(STATE_KEY, { consistency: "strong" });
     return jsonResponse({
@@ -178,11 +247,50 @@ export default async (req: Request, context: Context) => {
     }, 409);
   }
 
+  const newAuditEvents = sanitizeAuditEvents(payload.auditEvents, email);
+  const serverAudit = [
+    {
+      id: crypto.randomUUID(),
+      month: typeof incomingState.settings.month === "string" ? incomingState.settings.month : "",
+      action: "雲端資料同步",
+      detail: `版本 ${result.etag || ""}`,
+      actor: email,
+      timestamp: updatedAt,
+      serverRecordedAt: updatedAt
+    },
+    ...newAuditEvents,
+    ...(Array.isArray(existingAudit) ? existingAudit : [])
+  ].slice(0, 2000);
+  await store.setJSON(AUDIT_KEY, serverAudit, {
+    metadata: { updatedAt, updatedBy: email }
+  });
+  const dayKey = updatedAt.slice(0, 10);
+  await store.setJSON(`backups/${dayKey}`, incomingState, {
+    metadata: { updatedAt, updatedBy: email, sourceRevision: result.etag || "" }
+  });
+  const closedMonths = incomingState.closedMonths || {};
+  const existingClosedMonths = existing?.data && typeof existing.data === "object"
+    ? ((existing.data as PayrollState).closedMonths || {})
+    : {};
+  await Promise.all(Object.entries(closedMonths)
+    .filter(([month, value]) => {
+      const monthState = value && typeof value === "object" ? value as Record<string, unknown> : {};
+      return (
+        monthState.locked === true &&
+        monthState.snapshot &&
+        JSON.stringify(value) !== JSON.stringify(existingClosedMonths[month])
+      );
+    })
+    .map(([month, value]) => store.setJSON(`snapshots/${month}`, value, {
+      metadata: { updatedAt, updatedBy: email }
+    })));
+
   return jsonResponse({
     ok: true,
     revision: result.etag || "",
     updatedAt,
-    updatedBy: user.email || user.id
+    updatedBy: user.email || user.id,
+    role: existingRole
   });
 };
 

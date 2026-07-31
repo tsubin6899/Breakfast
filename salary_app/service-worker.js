@@ -1,4 +1,4 @@
-const CACHE_NAME = "breakfast-payroll-shell-v15";
+const CACHE_NAME = "breakfast-payroll-shell-v16";
 const APP_SHELL = [
   "./",
   "./index.html",

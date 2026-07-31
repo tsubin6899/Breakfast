@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0e4b86" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>初一食午｜出勤薪資核對</title>
+  <link rel="icon" type="image/png" href="../salary_app/assets/favicon-32.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <main class="portal-shell">
+    <header class="portal-brand">
+      <img src="../salary_app/assets/app-icon-192.png" alt="" />
+      <div><strong>初一食午</strong><span>員工出勤薪資核對</span></div>
+    </header>
+    <section id="portal-loading" class="message-card">正在安全讀取明細…</section>
+    <section id="portal-error" class="message-card error" hidden></section>
+    <div id="portal-content" hidden>
+      <section class="hero">
+        <p>EMPLOYEE REVIEW</p>
+        <h1 id="employee-name">員工明細</h1>
+        <span id="month-label"></span>
+        <small id="expires-label"></small>
+      </section>
+      <section id="summary-cards" class="summary-grid"></section>
+      <section class="panel">
+        <h2>每日出勤</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>日期</th><th>時段</th><th>分鐘</th><th>狀態</th></tr></thead>
+            <tbody id="attendance-body"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>薪資計算</h2>
+        <div id="pay-lines" class="pay-lines"></div>
+      </section>
+      <section class="panel response-panel">
+        <h2>核對結果</h2>
+        <p>確認資料正確，或留下需要店內協助確認的問題。</p>
+        <textarea id="employee-message" rows="4" placeholder="若資料有疑問，請填寫日期與內容"></textarea>
+        <div class="button-row">
+          <button id="confirm-statement" class="primary" type="button">資料正確</button>
+          <button id="question-statement" type="button">提出問題</button>
+        </div>
+        <p id="response-result" class="result"></p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

@@ -190,6 +190,11 @@
                 <span>支援 JPG、PNG；一次可選多張</span>
               </button>
               <input id="card-files" type="file" accept="image/jpeg,image/png" multiple hidden />
+              <div class="button-row import-row">
+                <button class="secondary-btn" id="import-attendance-csv" type="button">匯入打卡鐘 CSV</button>
+                <input id="attendance-csv-file" type="file" accept=".csv,text/csv" hidden />
+                <small>欄位格式：員工、日期、上班、下班；同日多列會自動建立分段時段。</small>
+              </div>
               <div class="ocr-reading-tip">
                 <strong>雲端 AI 辨識＋快速人工核對</strong>
                 <span>APP 會先裁掉卡片上方的姓名區，只將打卡表格傳送至 Gemini 免費方案辨識，不會寫入 GitHub；低信心或模糊內容仍需人工確認。檔名結尾為 1／2 時會自動判斷上下半月。</span>
@@ -212,6 +217,23 @@
               </div>
             </article>
           </div>
+
+          <article class="panel punch-clock-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">STORE PUNCH CLOCK</p>
+                <h3>店內 PIN 快速打卡</h3>
+                <p class="panel-description">適合放在店內平板；第一次按下記錄上班，再次按下記錄下班。</p>
+              </div>
+              <strong id="punch-clock-now" class="punch-clock-now">--:--</strong>
+            </div>
+            <form id="punch-clock-form" class="inline-form punch-clock-form">
+              <label><span>員工</span><select id="punch-clock-employee"></select></label>
+              <label><span>打卡 PIN</span><input id="punch-clock-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" required /></label>
+              <button class="primary-btn" type="submit">現在打卡</button>
+            </form>
+            <p id="punch-clock-result" class="muted-text">打卡後會立即列入每日工時，並保留「店內 PIN 打卡」來源。</p>
+          </article>
 
           <article class="panel attendance-panel">
             <div class="panel-heading wrap-heading">
@@ -291,6 +313,10 @@
               <p>時薪精確至分鐘；月薪加班依每日分鐘與倍率分段計算。</p>
             </div>
             <div class="button-row">
+              <span id="payroll-workflow-status" class="workflow-pill">草稿</span>
+              <button class="secondary-btn" id="submit-payroll-review" type="button">提交覆核</button>
+              <button class="secondary-btn" id="approve-payroll" type="button">核准薪資</button>
+              <button class="secondary-btn" id="mark-payroll-paid" type="button">標記已發薪</button>
               <button class="secondary-btn" id="toggle-month-lock" type="button">鎖定本月</button>
               <button class="secondary-btn" id="export-csv" type="button">匯出 CSV</button>
               <button class="primary-btn" id="export-xlsx" type="button">匯出 Excel</button>
@@ -334,6 +360,18 @@
             </div>
           </article>
 
+          <article class="panel payroll-insights-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">MONTHLY INSIGHTS</p>
+                <h3>月度比較與人事成本</h3>
+              </div>
+              <label class="sales-input"><span>本月營業額</span><input id="monthly-sales" type="number" min="0" step="1" /></label>
+            </div>
+            <div id="payroll-insights" class="metric-grid compact-metrics"></div>
+            <div id="payroll-variance-list" class="variance-list"></div>
+          </article>
+
           <article class="panel adjustment-panel">
             <div class="panel-heading">
               <div>
@@ -370,8 +408,20 @@
                 </select>
               </label>
               <label>
-                <span>金額</span>
-                <input id="adjustment-amount" type="number" min="0" step="1" required />
+                <span>數量</span>
+                <input id="adjustment-quantity" type="number" min="0" step="0.01" value="1" required />
+              </label>
+              <label>
+                <span>單價</span>
+                <input id="adjustment-unit-rate" type="number" min="0" step="1" required />
+              </label>
+              <label>
+                <span>生效月份</span>
+                <input id="adjustment-effective-from" type="month" required />
+              </label>
+              <label>
+                <span>結束月份</span>
+                <input id="adjustment-effective-to" type="month" />
               </label>
               <label class="checkbox-label">
                 <input id="adjustment-recurring" type="checkbox" />
@@ -389,9 +439,20 @@
                 <p class="eyebrow">AUDIT TRAIL</p>
                 <h3>本月操作紀錄</h3>
               </div>
-              <span class="muted-text">本機使用者</span>
+              <span id="audit-actor-label" class="muted-text">本機使用者</span>
             </div>
             <div id="audit-list" class="audit-list"></div>
+          </article>
+
+          <article class="panel share-status-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">EMPLOYEE RESPONSES</p>
+                <h3>員工核對連結</h3>
+              </div>
+              <button id="refresh-share-status" class="secondary-btn" type="button">更新回覆狀態</button>
+            </div>
+            <div id="employee-share-list" class="audit-list"></div>
           </article>
         </section>
 
@@ -405,6 +466,24 @@
             <button class="primary-btn" id="add-employee" type="button">新增員工</button>
           </div>
           <div id="employee-grid" class="employee-grid"></div>
+
+          <article class="panel leave-ledger-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">LEAVE LEDGER</p>
+                <h3>年假取得與人工調整</h3>
+                <p class="panel-description">正數代表增加、負數代表扣回；實際請假會由每日紀錄自動累計。</p>
+              </div>
+            </div>
+            <form id="leave-ledger-form" class="inline-form leave-ledger-form">
+              <label><span>員工</span><select id="leave-ledger-employee"></select></label>
+              <label><span>日期</span><input id="leave-ledger-date" type="date" required /></label>
+              <label><span>調整天數</span><input id="leave-ledger-days" type="number" step="0.125" required /></label>
+              <label><span>原因</span><input id="leave-ledger-note" type="text" placeholder="例如：到職週年新增年假" required /></label>
+              <button class="primary-btn" type="submit">加入帳本</button>
+            </form>
+            <div id="leave-ledger-list" class="audit-list"></div>
+          </article>
         </section>
 
         <section class="view" id="view-settings" data-title="規則與備份">
@@ -428,6 +507,7 @@
               <div class="cloud-account">
                 <span>目前帳號</span>
                 <strong id="cloud-account-email">尚未登入</strong>
+                <span>權限：<b id="cloud-account-role">—</b></span>
                 <p id="cloud-panel-detail">登入後才會將薪資資料同步到網站。</p>
               </div>
               <div id="cloud-account-actions" class="button-row" hidden>
@@ -436,6 +516,7 @@
                 <button class="secondary-btn" id="cloud-download-local-backup" type="button">下載同步前備份</button>
                 <button class="danger-text-btn" id="cloud-logout" type="button">登出</button>
               </div>
+              <button id="cloud-panel-login" class="primary-btn cloud-panel-login" type="button">管理者登入</button>
               <div class="cloud-safety-note">
                 <strong>安全設定</strong>
                 <span>僅受邀的管理者可登入。原始打卡照片不會永久上傳，只同步薪資、工時、休假與規則資料。</span>
@@ -468,8 +549,49 @@
                     <option value="none">保留至小數二位</option>
                   </select>
                 </label>
+                <label>
+                  <span>每月排休基準</span>
+                  <input id="monthly-rest-quota" type="number" min="0" max="31" step="0.5" />
+                </label>
+                <label>
+                  <span>病假給薪比例</span>
+                  <input id="sick-pay-ratio" type="number" min="0" max="1" step="0.1" />
+                  <small>例如 0.5 代表病假日薪給付 50%。</small>
+                </label>
+                <label>
+                  <span>法規基準年度</span>
+                  <input id="rule-year" type="number" min="2026" max="2100" step="1" />
+                </label>
+                <label>
+                  <span>最低時薪警示基準</span>
+                  <input id="minimum-hourly-wage" type="number" min="0" step="1" />
+                </label>
+                <label>
+                  <span>最低月薪警示基準</span>
+                  <input id="minimum-monthly-wage" type="number" min="0" step="1" />
+                </label>
                 <button class="primary-btn" type="submit">儲存規則</button>
               </form>
+            </article>
+
+            <article class="panel access-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">ACCESS CONTROL</p>
+                  <h3>管理者角色與權限</h3>
+                </div>
+              </div>
+              <form id="access-role-form" class="compact-form">
+                <input id="access-role-email" type="email" placeholder="受邀管理者 Email" required />
+                <select id="access-role-value">
+                  <option value="owner">店主・完整權限</option>
+                  <option value="payroll">薪資管理者</option>
+                  <option value="manager">現場主管・出勤限定</option>
+                  <option value="viewer">唯讀會計</option>
+                </select>
+                <button class="secondary-btn" type="submit">設定角色</button>
+              </form>
+              <div id="access-role-list" class="access-role-list"></div>
             </article>
 
             <article class="panel">
@@ -516,9 +638,9 @@
               </div>
               <ul>
                 <li>無法判斷的打卡時間必須人工確認，不會自動猜測。</li>
-                <li>月休超過 7 天會自動納入本月年假使用試算，並顯示試算後餘額。</li>
+                <li>月休超過店內設定基準會列入年假使用試算，結算前仍須由主管確認。</li>
                 <li>國定假日、例假、休息日與颱風日應分別標記。</li>
-                <li>月薪員工加班基礎依月薪 ÷ 240，再套用法定倍率。</li>
+                <li>月薪員工提早與延後工時會以月薪 ÷ 240 為基礎分段試算，仍請依實際班別核對。</li>
               </ul>
               <p class="legal-links">
                 <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT09.aspx?flno=24&id=FL014930" target="_blank" rel="noreferrer">勞基法第 24 條</a>
@@ -530,6 +652,14 @@
       </main>
     </div>
   </div>
+
+  <nav class="mobile-bottom-nav" aria-label="手機快速選單">
+    <button class="is-active" type="button" data-view="dashboard"><span>總</span>總覽</button>
+    <button type="button" data-view="attendance"><span>卡</span>打卡</button>
+    <button type="button" data-view="payroll"><span>薪</span>薪資</button>
+    <button type="button" data-view="employees"><span>人</span>員工</button>
+    <button type="button" data-view="settings"><span>設</span>設定</button>
+  </nav>
 
   <dialog id="cloud-auth-dialog" class="cloud-dialog">
     <form id="cloud-login-form" class="dialog-form">
@@ -605,12 +735,31 @@
         <label class="hourly-field"><span>平日時薪</span><input id="employee-hourly-rate" type="number" min="0" /></label>
         <label class="hourly-field"><span>週末時薪</span><input id="employee-weekend-rate" type="number" min="0" /></label>
         <label class="hourly-field"><span>國定假日時薪基礎</span><input id="employee-holiday-rate" type="number" min="0" /></label>
+        <label class="hourly-field"><span>忙碌時段加強時薪</span><input id="employee-peak-rate" type="number" min="0" placeholder="未設定則使用一般費率" /></label>
+        <label class="hourly-field"><span>忙碌時段開始</span><input id="employee-peak-start" type="time" /></label>
+        <label class="hourly-field"><span>忙碌時段結束</span><input id="employee-peak-end" type="time" /></label>
         <label class="monthly-field"><span>月薪</span><input id="employee-monthly-salary" type="number" min="0" /></label>
         <label class="monthly-field"><span>固定上班時間</span><input id="employee-schedule-start" type="time" /></label>
         <label class="monthly-field"><span>固定下班時間</span><input id="employee-schedule-end" type="time" /></label>
+        <label><span>本次費率生效日</span><input id="employee-rate-effective" type="date" required /></label>
         <label><span>到職日</span><input id="employee-hire-date" type="date" /></label>
-        <label><span>目前年假餘額</span><input id="employee-annual-leave" type="number" min="0" step="0.5" /></label>
+        <label><span>離職日</span><input id="employee-end-date" type="date" /></label>
+        <label><span>年度年假基準</span><input id="employee-annual-leave" type="number" min="0" step="0.125" /></label>
+        <label><span>設定／更換打卡 PIN</span><input id="employee-punch-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" placeholder="留白表示不變更" /></label>
       </div>
+      <fieldset class="workday-fieldset monthly-field">
+        <legend>每週預定上班日（用於缺卡檢查）</legend>
+        <div class="workday-options">
+          <label data-workday="1"><span><input type="checkbox" name="employee-workday" value="1" />週一</span><input class="workday-start" type="time" aria-label="週一上班" /><input class="workday-end" type="time" aria-label="週一下班" /></label>
+          <label data-workday="2"><span><input type="checkbox" name="employee-workday" value="2" />週二</span><input class="workday-start" type="time" aria-label="週二上班" /><input class="workday-end" type="time" aria-label="週二下班" /></label>
+          <label data-workday="3"><span><input type="checkbox" name="employee-workday" value="3" />週三</span><input class="workday-start" type="time" aria-label="週三上班" /><input class="workday-end" type="time" aria-label="週三下班" /></label>
+          <label data-workday="4"><span><input type="checkbox" name="employee-workday" value="4" />週四</span><input class="workday-start" type="time" aria-label="週四上班" /><input class="workday-end" type="time" aria-label="週四下班" /></label>
+          <label data-workday="5"><span><input type="checkbox" name="employee-workday" value="5" />週五</span><input class="workday-start" type="time" aria-label="週五上班" /><input class="workday-end" type="time" aria-label="週五下班" /></label>
+          <label data-workday="6"><span><input type="checkbox" name="employee-workday" value="6" />週六</span><input class="workday-start" type="time" aria-label="週六上班" /><input class="workday-end" type="time" aria-label="週六下班" /></label>
+          <label data-workday="0"><span><input type="checkbox" name="employee-workday" value="0" />週日</span><input class="workday-start" type="time" aria-label="週日上班" /><input class="workday-end" type="time" aria-label="週日下班" /></label>
+        </div>
+      </fieldset>
+      <div id="employee-rate-history" class="rate-history-list"></div>
       <label class="checkbox-label">
         <input id="employee-active" type="checkbox" checked />
         <span>目前在職並參與計薪</span>
@@ -654,6 +803,17 @@
             <option value="review">待確認</option>
             <option value="unreadable">無法判斷</option>
           </select>
+        </label>
+        <label>
+          <span>請假／排休天數</span>
+          <input id="attendance-leave-days" type="number" min="0.125" max="1" step="0.125" value="1" />
+        </label>
+        <label>
+          <span>當日臨時班別</span>
+          <span class="inline-time-fields">
+            <input id="attendance-shift-start" type="time" aria-label="臨時上班時間" />
+            <input id="attendance-shift-end" type="time" aria-label="臨時下班時間" />
+          </span>
         </label>
       </div>
       <label>
@@ -702,6 +862,7 @@
       <div id="payslip-content"></div>
       <div class="dialog-actions">
         <button class="secondary-btn" type="button" data-close-dialog>關閉</button>
+        <button class="secondary-btn" id="create-employee-share" type="button">建立員工核對連結</button>
         <button class="primary-btn" id="download-statement-jpg" type="button">儲存為 JPG</button>
       </div>
     </div>

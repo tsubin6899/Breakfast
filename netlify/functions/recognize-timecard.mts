@@ -1,4 +1,5 @@
 import type { Config, Context } from "@netlify/functions";
+import { getUser } from "@netlify/identity";
 
 type TimecardRequest = {
   images?: unknown;
@@ -371,13 +372,14 @@ export default async (req: Request, context: Context) => {
 
   const expectedToken = Netlify.env.get("TIME_CARD_API_TOKEN") || "";
   const suppliedToken = req.headers.get("x-timecard-token") || "";
-  if (!expectedToken) {
+  const identityUser = await getUser();
+  if (!identityUser && !expectedToken) {
     return jsonResponse({
       error: "SERVER_NOT_CONFIGURED",
-      message: "Netlify 尚未設定 TIME_CARD_API_TOKEN。"
+      message: "請先登入管理者帳號，或在 Netlify 設定 TIME_CARD_API_TOKEN。"
     }, 503);
   }
-  if (!suppliedToken || !constantTimeEqual(suppliedToken, expectedToken)) {
+  if (!identityUser && (!suppliedToken || !constantTimeEqual(suppliedToken, expectedToken))) {
     return jsonResponse({ error: "INVALID_ACCESS_TOKEN", message: "AI 辨識連線密碼不正確。" }, 401);
   }
 
