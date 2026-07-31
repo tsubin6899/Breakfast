@@ -1,9 +1,10 @@
-const CACHE_NAME = "breakfast-payroll-shell-v16";
+const CACHE_NAME = "breakfast-payroll-shell-v17";
 const APP_SHELL = [
   "./",
   "./index.html",
   "./styles.css",
   "./identity-client.js",
+  "./data/salary-history-2026-h1.js",
   "./app.js",
   "./manifest.webmanifest",
   "./assets/app-icon-192.png",

@@ -3087,3 +3087,24 @@ tfoot th {
     font-size: 14px;
   }
 }
+
+.history-import-status {
+  display: grid;
+  gap: 3px;
+  margin: 14px 0;
+  padding: 13px 15px;
+  border: 1px solid #b9dccb;
+  border-radius: 12px;
+  color: #245743;
+  background: #edf8f2;
+}
+
+.history-import-status strong,
+.history-import-status span {
+  display: block;
+}
+
+.history-import-status span {
+  color: var(--muted);
+  font-size: 13px;
+}

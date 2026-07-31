@@ -5,7 +5,7 @@
     "dev": "netlify dev",
     "build": "pnpm run build:identity",
     "build:identity": "esbuild salary_app/identity-entry.js --bundle --format=iife --global-name=PayrollIdentityBundle --outfile=salary_app/identity-client.js --minify",
-    "check": "node --check salary_app/app.js && node --check employee_portal/app.js && tsc --noEmit --target es2022 --module nodenext --moduleResolution nodenext --types node netlify/functions/payroll-state.mts netlify/functions/recognize-timecard.mts netlify/functions/employee-share.mts"
+    "check": "node --check salary_app/data/salary-history-2026-h1.js && node --check salary_app/app.js && node --check employee_portal/app.js && tsc --noEmit --target es2022 --module nodenext --moduleResolution nodenext --types node netlify/functions/payroll-state.mts netlify/functions/recognize-timecard.mts netlify/functions/employee-share.mts"
   },
   "devDependencies": {
     "@netlify/functions": "5.3.0",

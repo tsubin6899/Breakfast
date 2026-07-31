@@ -5,7 +5,9 @@
   const AI_TOKEN_STORAGE_KEY = "breakfast-payroll-ai-token";
   const CLOUD_LOCAL_BACKUP_KEY = "breakfast-payroll-before-cloud";
   const CLOUD_SAVE_DELAY = 900;
-  const APP_VERSION = 2;
+  const APP_VERSION = 3;
+  const BUNDLED_HISTORY = window.BREAKFAST_SALARY_HISTORY_2026_H1 || null;
+  const BUNDLED_HISTORY_ID = BUNDLED_HISTORY?.id || "";
   const MINIMUM_HOURLY_WAGE_2026 = 196;
   const MINIMUM_MONTHLY_WAGE_2026 = 29500;
 
@@ -52,7 +54,8 @@
         minimumMonthlyWage: MINIMUM_MONTHLY_WAGE_2026,
         shareExpiryDays: 7,
         monthlySales: {},
-        accessRoles: {}
+        accessRoles: {},
+        importedSources: {}
       },
       employees: [
         { id: "shangqi", name: "上齊", payType: "hourly", hourlyRate: 200, weekendRate: 200, holidayRate: 200, monthlySalary: 0, scheduleStart: "", scheduleEnd: "", hireDate: "", annualLeave: 0, active: true },
@@ -144,9 +147,161 @@
     };
   }
 
+  function importedProfileForMonth(employee, month) {
+    const target = `${month}-31`;
+    return (employee.payHistory || [])
+      .filter(profile => !profile.effectiveFrom || profile.effectiveFrom <= target)
+      .sort((a, b) => String(a.effectiveFrom).localeCompare(String(b.effectiveFrom)))
+      .at(-1) || employee;
+  }
+
+  function applyBundledHistory(normalized) {
+    if (!BUNDLED_HISTORY_ID || normalized.settings.importedSources?.[BUNDLED_HISTORY_ID]) {
+      return normalized;
+    }
+
+    const employeeByName = new Map(normalized.employees.map(employee => [employee.name, employee]));
+    (BUNDLED_HISTORY.employees || []).forEach(definition => {
+      const {
+        name,
+        id,
+        effectiveFrom,
+        hireDate = "",
+        endDate = "",
+        active,
+        ...rateFields
+      } = definition;
+      let employee = employeeByName.get(name);
+      const profile = {
+        id: `imported-rate-${id}-${effectiveFrom}`,
+        effectiveFrom,
+        ...rateFields,
+        expectedWorkdays: [],
+        weeklySchedule: {}
+      };
+      if (!employee) {
+        employee = normalizeEmployee({
+          id,
+          name,
+          hireDate,
+          endDate,
+          annualLeave: 0,
+          active: active ?? true,
+          ...rateFields,
+          payHistory: [profile]
+        });
+        normalized.employees.push(employee);
+        employeeByName.set(name, employee);
+      } else {
+        if (hireDate && !employee.hireDate) employee.hireDate = hireDate;
+        if (endDate && !employee.endDate) employee.endDate = endDate;
+        if (typeof active === "boolean" && !employee.active) employee.active = active;
+        if (!(employee.payHistory || []).some(item => item.effectiveFrom === effectiveFrom)) {
+          employee.payHistory = [...(employee.payHistory || []), profile]
+            .sort((a, b) => String(a.effectiveFrom).localeCompare(String(b.effectiveFrom)));
+        }
+      }
+    });
+
+    (BUNDLED_HISTORY.attendance || []).forEach(sourceRecord => {
+      const employee = employeeByName.get(sourceRecord.employeeName);
+      if (!employee) return;
+      const key = `${employee.id}|${sourceRecord.date}`;
+      if (normalized.attendance[key] || normalized.leaveRecords[key]) return;
+      normalized.attendance[key] = {
+        employeeId: employee.id,
+        date: sourceRecord.date,
+        segments: sourceRecord.segments,
+        status: "confirmed",
+        source: `匯入：${BUNDLED_HISTORY.source}`,
+        confidence: 100,
+        note: `原工資簿 ${sourceRecord.sourceMinutes} 分鐘・${sourceRecord.sourceCells}`
+      };
+    });
+
+    Object.entries(BUNDLED_HISTORY.payroll || {}).forEach(([month, sourceRows]) => {
+      if (normalized.closedMonths[month]?.snapshot) return;
+      const rows = sourceRows.map(sourceRow => {
+        const employee = employeeByName.get(sourceRow.employeeName);
+        if (!employee) return null;
+        const profile = importedProfileForMonth(employee, month);
+        const snapshotEmployee = {
+          ...employee,
+          ...profile,
+          id: employee.id,
+          name: employee.name
+        };
+        const adjustments = (sourceRow.adjustments || []).map((adjustment, index) => ({
+          id: `imported-${month}-${employee.id}-${index}`,
+          employeeId: employee.id,
+          name: adjustment.name,
+          amount: adjustment.amount,
+          quantity: 1,
+          unitRate: adjustment.amount,
+          type: adjustment.type,
+          category: adjustment.category,
+          recurring: false,
+          month,
+          effectiveFrom: month,
+          effectiveTo: month
+        }));
+        return {
+          ...sourceRow,
+          employee: snapshotEmployee,
+          adjustments,
+          leaves: [],
+          leaveSummary: {
+            restDays: 0,
+            recordedAnnualDays: 0,
+            convertedAnnualDays: 0,
+            ledgerAdjustment: 0,
+            entitlement: Number(employee.annualLeave || 0),
+            annualUsed: 0,
+            annualRemaining: Number(employee.annualLeave || 0)
+          }
+        };
+      }).filter(Boolean);
+      normalized.closedMonths[month] = {
+        ...(normalized.closedMonths[month] || {}),
+        locked: true,
+        workflowStatus: "paid",
+        lockedAt: `${month}-28T12:00:00.000+08:00`,
+        paidAt: `${month}-28T12:00:00.000+08:00`,
+        paidBy: "2026 工資簿匯入",
+        importedSource: BUNDLED_HISTORY_ID,
+        snapshot: {
+          createdAt: `${month}-28T12:00:00.000+08:00`,
+          source: BUNDLED_HISTORY.source,
+          rows
+        }
+      };
+    });
+
+    normalized.settings.importedSources = {
+      ...(normalized.settings.importedSources || {}),
+      [BUNDLED_HISTORY_ID]: {
+        source: BUNDLED_HISTORY.source,
+        months: BUNDLED_HISTORY.sourceMonths,
+        importedAt: "2026-07-31"
+      }
+    };
+    normalized.auditLog = [
+      {
+        id: `import-${BUNDLED_HISTORY_ID}`,
+        month: "2026-06",
+        action: "匯入 2026 年 1～6 月工資簿",
+        detail: "已匯入每日出勤、費率、薪資總額與加扣款；歷史月份以工資簿快照鎖定。",
+        actor: "系統資料移轉",
+        timestamp: "2026-07-31T12:00:00.000+08:00"
+      },
+      ...(normalized.auditLog || [])
+    ];
+    return normalized;
+  }
+
   function normalizeState(saved) {
     const defaults = createDefaultState();
-    return {
+    const normalized = {
       ...defaults,
       ...(saved || {}),
       version: APP_VERSION,
@@ -154,7 +309,8 @@
         ...defaults.settings,
         ...(saved?.settings || {}),
         monthlySales: { ...defaults.settings.monthlySales, ...(saved?.settings?.monthlySales || {}) },
-        accessRoles: { ...defaults.settings.accessRoles, ...(saved?.settings?.accessRoles || {}) }
+        accessRoles: { ...defaults.settings.accessRoles, ...(saved?.settings?.accessRoles || {}) },
+        importedSources: { ...defaults.settings.importedSources, ...(saved?.settings?.importedSources || {}) }
       },
       employees: (Array.isArray(saved?.employees) ? saved.employees : defaults.employees).map(normalizeEmployee),
       attendance: saved?.attendance || {},
@@ -167,13 +323,15 @@
       shiftOverrides: saved?.shiftOverrides || {},
       employeeShares: Array.isArray(saved?.employeeShares) ? saved.employeeShares : []
     };
+    return applyBundledHistory(normalized);
   }
 
   function loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return normalizeState(createDefaultState());
-      return normalizeState(JSON.parse(raw));
+      const normalized = normalizeState(raw ? JSON.parse(raw) : createDefaultState());
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+      return normalized;
     } catch (error) {
       console.warn("Unable to load saved payroll data", error);
       return normalizeState(createDefaultState());
@@ -471,15 +629,30 @@
         await pushCloudState({ notify: true });
         return;
       }
+      const needsBundledHistoryMigration = Boolean(
+        BUNDLED_HISTORY_ID &&
+        !result.state?.settings?.importedSources?.[BUNDLED_HISTORY_ID]
+      );
       const normalized = normalizeState(result.state);
       normalized.settings.month = state.settings.month;
-      if (Array.isArray(result.auditLog)) normalized.auditLog = result.auditLog;
+      if (Array.isArray(result.auditLog)) {
+        const migrationEntries = needsBundledHistoryMigration
+          ? normalized.auditLog.filter(entry => entry.id === `import-${BUNDLED_HISTORY_ID}`)
+          : [];
+        normalized.auditLog = [...migrationEntries, ...result.auditLog];
+      }
       const currentText = JSON.stringify(state);
       const cloudText = JSON.stringify(normalized);
       if (currentText !== cloudText) {
         localStorage.setItem(CLOUD_LOCAL_BACKUP_KEY, currentText);
       }
       state = normalized;
+      if (needsBundledHistoryMigration) {
+        const migrationEntry = state.auditLog.find(entry => entry.id === `import-${BUNDLED_HISTORY_ID}`);
+        if (migrationEntry && !pendingAuditEvents.some(entry => entry.id === migrationEntry.id)) {
+          pendingAuditEvents.push(migrationEntry);
+        }
+      }
       cloudRevision = result.revision || "";
       cloudReady = true;
       localStorage.setItem(STORAGE_KEY, cloudText);
@@ -490,6 +663,9 @@
         "ready",
         `${result.updatedBy || "管理者"}・${result.updatedAt ? new Date(result.updatedAt).toLocaleString("zh-TW") : "已載入"}`
       );
+      if (needsBundledHistoryMigration && hasPermission("payroll")) {
+        scheduleCloudSave();
+      }
       if (notify) toast("已下載雲端最新資料；原本本機內容已保留備份。");
     } catch (error) {
       cloudReady = false;
@@ -1123,8 +1299,13 @@
     const activeEmployees = state.employees.filter(employee => employee.active);
     const monthStart = `${state.settings.month}-01`;
     const monthEnd = `${state.settings.month}-${String(daysInMonth(state.settings.month)).padStart(2, "0")}`;
+    const historicalEmployeeIds = new Set(
+      Object.values(state.attendance)
+        .filter(record => record.date.startsWith(state.settings.month))
+        .map(record => record.employeeId)
+    );
     const monthEmployees = state.employees.filter(employee => (
-      (employee.active || employee.endDate) &&
+      (employee.active || employee.endDate || historicalEmployeeIds.has(employee.id)) &&
       (!employee.hireDate || employee.hireDate <= monthEnd) &&
       (!employee.endDate || employee.endDate >= monthStart)
     ));
@@ -1601,6 +1782,10 @@
     $("#rule-year").value = state.settings.ruleYear;
     $("#minimum-hourly-wage").value = state.settings.minimumHourlyWage;
     $("#minimum-monthly-wage").value = state.settings.minimumMonthlyWage;
+    const importedHistory = state.settings.importedSources?.[BUNDLED_HISTORY_ID];
+    $("#historical-import-status").innerHTML = importedHistory
+      ? `<strong>歷史資料已匯入</strong><span>${escapeHtml(importedHistory.source)}・2026 年 1～6 月</span>`
+      : "<strong>尚未匯入歷史工資</strong><span>請重新整理頁面或確認歷史資料檔是否已部署。</span>";
     const monthYear = state.settings.month.slice(0, 4);
     const days = state.specialDays
       .filter(day => day.date.startsWith(monthYear))

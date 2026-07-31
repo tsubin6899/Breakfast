@@ -13,6 +13,7 @@
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="./identity-client.js"></script>
+  <script defer src="./data/salary-history-2026-h1.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body>
@@ -621,6 +622,7 @@
                 </div>
               </div>
               <p>更換電腦或瀏覽器前，請先下載完整 JSON 備份。照片本身不會寫入備份。</p>
+              <p id="historical-import-status" class="history-import-status">正在確認歷史工資資料…</p>
               <div class="button-row">
                 <button class="secondary-btn" id="download-backup" type="button">下載備份</button>
                 <button class="secondary-btn" id="restore-backup" type="button">還原備份</button>
