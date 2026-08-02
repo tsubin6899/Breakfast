@@ -1,6 +1,7 @@
 {
   "name": "breakfast-payroll-app",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "node scripts/local-server.mjs",
     "local": "node scripts/local-server.mjs",
