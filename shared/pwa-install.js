@@ -11,7 +11,7 @@
       .breakfast-install-app{position:fixed;z-index:9999;right:max(16px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;min-height:46px;padding:10px 16px;border:1px solid rgba(255,255,255,.35);border-radius:999px;color:#fff;background:linear-gradient(135deg,#0e4b86,#1766a5);box-shadow:0 12px 30px rgba(8,52,95,.28);font:800 14px/1 "Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;cursor:pointer}
       .breakfast-install-app::before{content:"＋";display:grid;width:24px;height:24px;place-items:center;border-radius:8px;color:#0e4b86;background:#ffd20a;font-size:17px}
       .breakfast-install-app:hover{transform:translateY(-1px)}
-      @media(max-width:520px){.breakfast-install-app{right:12px;bottom:max(12px,env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:13px}}
+      @media(max-width:860px){body.salary-system .breakfast-install-app,body.accounting-system .breakfast-install-app,body.analytics-system .breakfast-install-app{right:12px;bottom:calc(86px + env(safe-area-inset-bottom));min-height:44px;padding:9px 13px;font-size:13px}}
       @media(display-mode:standalone){.breakfast-install-app{display:none!important}}
     `;
     document.head.appendChild(style);

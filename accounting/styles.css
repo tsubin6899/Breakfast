@@ -993,3 +993,152 @@ tbody tr:hover { background:#faf8f2; }
   .import-actions button { width: 100%; min-height: 48px; }
   .import-table-wrap { max-height: 360px; }
 }
+
+/* Phone navigation: the desktop sidebar becomes a five-button translucent
+   bottom rail, matching the payroll app. */
+@media (max-width: 860px) {
+  body.accounting-menu-open { overflow: auto; }
+
+  .accounting-workspace {
+    width: min(100% - 22px, 1440px);
+    margin: auto;
+    padding-top: 30px;
+    padding-bottom: calc(94px + env(safe-area-inset-bottom));
+  }
+
+  .accounting-sidebar {
+    position: fixed;
+    z-index: 80;
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: block;
+    width: 100%;
+    height: auto;
+    padding: 6px max(6px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+    color: #08345f;
+    background: transparent;
+    box-shadow: none;
+    transform: none;
+    transition: none;
+    pointer-events: none;
+  }
+
+  .accounting-sidebar-heading,
+  .accounting-sidebar-note,
+  .accounting-sidebar-backdrop,
+  .accounting-mobile-menu {
+    display: none !important;
+  }
+
+  .accounting-page-tabs {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    overflow: visible;
+    pointer-events: auto;
+  }
+
+  .accounting-page-tab {
+    display: grid;
+    width: 100%;
+    min-width: 0;
+    min-height: 62px;
+    place-items: center;
+    align-content: center;
+    gap: 2px;
+    padding: 5px 2px;
+    border: 1px solid rgba(8, 52, 95, .1);
+    border-radius: 13px;
+    color: #486379;
+    background: rgba(255, 255, 255, .82);
+    box-shadow: 0 7px 20px rgba(8, 52, 95, .1);
+    text-align: center;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  .accounting-page-tab > i {
+    width: 28px;
+    height: 28px;
+    flex-basis: 28px;
+    border-radius: 9px;
+    color: #08345f;
+    background: #e6f0f9;
+    font-size: 11px;
+  }
+
+  .accounting-page-tab > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .accounting-page-tab::after {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    font-weight: 900;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .accounting-page-tab:nth-child(1)::after { content: "新增"; }
+  .accounting-page-tab:nth-child(2)::after { content: "月明細"; }
+  .accounting-page-tab:nth-child(3)::after { content: "匯入"; }
+  .accounting-page-tab:nth-child(4)::after { content: "分類"; }
+  .accounting-page-tab:nth-child(5)::after { content: "安全"; }
+
+  .accounting-page-tab[aria-selected="true"] {
+    border-color: rgba(8, 52, 95, .18);
+    color: #08345f;
+    background: rgba(255, 210, 10, .92);
+    box-shadow: 0 8px 22px rgba(8, 52, 95, .16);
+  }
+
+  .accounting-page-tab[aria-selected="true"] > i {
+    color: #fff;
+    background: #08345f;
+  }
+
+  .mobile-quick-add {
+    right: 14px;
+    bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .toast {
+    bottom: calc(88px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 640px) {
+  body.accounting-system .hero {
+    gap: 14px;
+    padding: 16px 16px 18px;
+  }
+
+  body.accounting-system .hero h1 {
+    margin-top: 5px;
+    font-size: clamp(26px, 7.7vw, 31px);
+    line-height: 1.2;
+  }
+
+  body.accounting-system .hero .eyebrow {
+    font-size: 10px;
+    letter-spacing: .15em;
+  }
+
+  body.accounting-system .hero-title-block > div > p:last-child {
+    margin-top: 10px;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+}

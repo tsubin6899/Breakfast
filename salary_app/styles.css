@@ -3039,12 +3039,25 @@ tfoot th {
   }
 
   .hero-strip {
-    padding: 23px;
+    gap: 18px;
+    padding: 18px;
     border-radius: 19px;
   }
 
   .hero-strip h2 {
-    font-size: 30px;
+    margin-top: 6px;
+    font-size: clamp(25px, 7.5vw, 29px);
+    line-height: 1.25;
+  }
+
+  .hero-strip p:not(.eyebrow) {
+    margin-top: 10px;
+    font-size: 14px;
+    line-height: 1.65;
+  }
+
+  .hero-strip .eyebrow {
+    font-size: 10px;
   }
 
   .metric-grid,
@@ -3615,10 +3628,11 @@ tfoot th {
     grid-template-columns: repeat(5, 1fr);
     min-height: 68px;
     padding: 6px max(5px, env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(5px, env(safe-area-inset-left));
-    border-top: 1px solid var(--line);
-    background: rgba(255, 255, 255, .97);
-    box-shadow: 0 -12px 30px rgba(28, 45, 37, .12);
-    backdrop-filter: blur(14px);
+    gap: 5px;
+    border-top: 0;
+    background: transparent;
+    box-shadow: none;
+    pointer-events: none;
   }
 
   .mobile-bottom-nav button {
@@ -3631,9 +3645,14 @@ tfoot th {
     border: 0;
     border-radius: 11px;
     color: var(--muted);
-    background: transparent;
+    border: 1px solid rgba(8, 52, 95, .1);
+    background: rgba(255, 255, 255, .82);
+    box-shadow: 0 7px 20px rgba(8, 52, 95, .1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     font-size: 12px;
     font-weight: 900;
+    pointer-events: auto;
   }
 
   .mobile-bottom-nav button span {
@@ -3649,7 +3668,8 @@ tfoot th {
 
   .mobile-bottom-nav button.is-active {
     color: var(--navy);
-    background: var(--navy-soft);
+    border-color: rgba(8, 52, 95, .16);
+    background: rgba(228, 240, 251, .92);
   }
 
   .punch-clock-form,

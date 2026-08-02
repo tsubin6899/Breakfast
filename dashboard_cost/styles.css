@@ -237,3 +237,146 @@ body {
   .target-control-grid,.target-result-grid { grid-template-columns:1fr; }
 }
 @media(max-width:640px) { .vendor-trend-row { grid-template-columns:1fr auto; }.vendor-trend-bars { grid-column:1 / -1; }.vendor-change { grid-column:2; }.analytics-hero-title>div>p:last-child { font-size:15px; } }
+
+/* Phone navigation: keep five analysis destinations always available at the
+   bottom without the old off-canvas menu. */
+@media(max-width:860px) {
+  body.analytics-menu-open { overflow:auto; }
+
+  .analytics-workspace {
+    width:min(100% - 22px,1440px);
+    margin:auto;
+    padding-top:30px;
+    padding-bottom:calc(94px + env(safe-area-inset-bottom));
+  }
+
+  .analytics-sidebar {
+    position:fixed;
+    z-index:80;
+    top:auto;
+    right:0;
+    bottom:0;
+    left:0;
+    display:block;
+    width:100%;
+    height:auto;
+    padding:6px max(6px,env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) max(6px,env(safe-area-inset-left));
+    color:#08345f;
+    background:transparent;
+    box-shadow:none;
+    transform:none;
+    transition:none;
+    pointer-events:none;
+  }
+
+  .analytics-sidebar-heading,
+  .analytics-sidebar-note,
+  .analytics-sidebar-backdrop,
+  .analytics-mobile-menu { display:none !important; }
+
+  .analytics-section-nav {
+    display:grid;
+    width:100%;
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:5px;
+    pointer-events:auto;
+  }
+
+  .analytics-section-nav a,
+  .analytics-section-nav a:hover {
+    display:grid;
+    width:100%;
+    min-width:0;
+    min-height:62px;
+    place-items:center;
+    align-content:center;
+    gap:2px;
+    padding:5px 2px;
+    border:1px solid rgba(8,52,95,.1);
+    border-radius:13px;
+    color:#486379;
+    background:rgba(255,255,255,.82);
+    box-shadow:0 7px 20px rgba(8,52,95,.1);
+    text-align:center;
+    transform:none;
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+  }
+
+  .analytics-section-nav a i {
+    width:28px;
+    height:28px;
+    flex-basis:28px;
+    border-color:transparent;
+    border-radius:9px;
+    color:#08345f;
+    background:#e6f0f9;
+    font-size:11px;
+  }
+
+  .analytics-section-nav a span {
+    position:absolute;
+    width:1px;
+    height:1px;
+    overflow:hidden;
+    clip:rect(0 0 0 0);
+    clip-path:inset(50%);
+    white-space:nowrap;
+  }
+
+  .analytics-section-nav a::after {
+    display:block;
+    width:100%;
+    overflow:hidden;
+    font-size:10px;
+    font-weight:900;
+    line-height:1.25;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+
+  .analytics-section-nav a:nth-child(1)::after { content:"總覽"; }
+  .analytics-section-nav a:nth-child(2)::after { content:"趨勢"; }
+  .analytics-section-nav a:nth-child(3)::after { content:"成本"; }
+  .analytics-section-nav a:nth-child(4)::after { content:"通路"; }
+  .analytics-section-nav a:nth-child(5)::after { content:"預警"; }
+
+  .analytics-section-nav a.is-active,
+  .analytics-section-nav a.is-active:hover {
+    border-color:rgba(8,52,95,.18);
+    color:#08345f;
+    background:rgba(255,210,10,.92);
+    box-shadow:0 8px 22px rgba(8,52,95,.16);
+  }
+
+  .analytics-section-nav a.is-active i {
+    color:#fff;
+    background:#08345f;
+  }
+
+  .toast { bottom:calc(88px + env(safe-area-inset-bottom)); }
+}
+
+@media(max-width:640px) {
+  body.analytics-system .hero {
+    gap:14px;
+    padding:16px 16px 18px;
+  }
+
+  body.analytics-system .hero h1 {
+    margin-top:5px;
+    font-size:clamp(26px,7.7vw,31px);
+    line-height:1.2;
+  }
+
+  body.analytics-system .hero .eyebrow {
+    font-size:10px;
+    letter-spacing:.15em;
+  }
+
+  body.analytics-system .analytics-hero-title>div>p:last-child {
+    margin-top:10px;
+    font-size:13px;
+    line-height:1.65;
+  }
+}

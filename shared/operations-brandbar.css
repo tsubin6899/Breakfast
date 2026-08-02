@@ -573,6 +573,46 @@ body.has-suite-brandbar .workspace > .topbar { top: var(--suite-brandbar-height)
   .analytics-system .hero { padding: 20px; border-radius: 17px; }
 }
 
+/* Keep the three-system switcher on one horizontal rail on phones.  The
+   accounting and analytics styles also contain generic `nav` rules, so these
+   deliberately specific overrides prevent those rules from turning the brand
+   switcher into a multi-row menu. */
+@media (max-width: 700px) {
+  body.has-suite-brandbar .suite-brandbar .suite-system-nav {
+    display: flex !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    flex-flow: row nowrap !important;
+    grid-column: 1 / -1;
+    grid-template-columns: none !important;
+    justify-content: flex-start !important;
+    gap: 6px;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    padding: 8px 0 10px;
+    scrollbar-width: none;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  body.has-suite-brandbar .suite-brandbar .suite-system-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.has-suite-brandbar .suite-brandbar .suite-system-nav > a {
+    display: flex !important;
+    width: auto !important;
+    min-width: 142px !important;
+    min-height: 50px;
+    flex: 1 0 142px !important;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 6px 9px;
+    text-align: left !important;
+    white-space: nowrap;
+  }
+}
+
 /* Compact hero copy and unified sans-serif typography. */
 body.salary-system *,
 body.accounting-system *,
