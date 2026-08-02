@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const output = resolve(root, "public");
-const directories = ["salary_app", "employee_portal", "accounting", "dashboard_cost", "shared"];
+const directories = ["salary_app", "employee_portal", "accounting", "dashboard_cost", "shared", "login"];
 const files = ["index.html", "manifest.webmanifest", "service-worker.js", "offline.html", ".nojekyll"];
 
 await rm(output, { recursive: true, force: true });

@@ -22,7 +22,8 @@ const PUBLIC_DIRECTORIES = new Set([
   "shared",
   "employee_portal",
   "dashboard",
-  "dashboard_cost"
+  "dashboard_cost",
+  "login"
 ]);
 
 const MIME_TYPES = {

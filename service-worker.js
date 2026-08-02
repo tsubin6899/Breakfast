@@ -1,9 +1,12 @@
-const CACHE_NAME = "breakfast-operations-pwa-v1";
+const CACHE_NAME = "breakfast-operations-pwa-v2-public-only";
 const OFFLINE_URL = "/offline.html";
 const CORE_FILES = [
   "/",
   OFFLINE_URL,
   "/manifest.webmanifest",
+  "/login/",
+  "/login/styles.css",
+  "/login/app.js",
   "/salary_app/assets/app-icon-192.png",
   "/salary_app/assets/app-icon-512.png",
   "/salary_app/assets/app-icon-180.png"
@@ -29,6 +32,15 @@ self.addEventListener("fetch", event => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
+
+  const isProtected = ["/salary_app/", "/accounting/", "/dashboard_cost/"]
+    .some(prefix => url.pathname.startsWith(prefix)) &&
+    !url.pathname.startsWith("/salary_app/assets/") &&
+    url.pathname !== "/salary_app/service-worker.js";
+  if (isProtected) {
+    event.respondWith(fetch(new Request(request, { cache: "no-store" })));
+    return;
+  }
 
   event.respondWith((async () => {
     try {

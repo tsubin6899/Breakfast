@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0e4b86" />
+  <meta name="robots" content="noindex,nofollow,noarchive" />
+  <title>管理者登入｜初一食午</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/salary_app/assets/favicon-32.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/salary_app/assets/app-icon-180.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <main class="login-shell">
+    <section class="brand-panel" aria-label="初一食午營運管理系統">
+      <div class="brand-lockup">
+        <img src="/salary_app/assets/app-icon-192.png" alt="初一食午" />
+        <div><strong>初一食午</strong><span>營運管理系統</span></div>
+      </div>
+      <div class="brand-copy">
+        <p>BREAKFAST・BRUNCH・OPERATIONS</p>
+        <h1>店務資料，登入後才能查看。</h1>
+        <span>薪資、記帳與收入支出分析資料均由管理者帳號保護。</span>
+      </div>
+      <div class="privacy-row"><i aria-hidden="true">鎖</i><span>未登入不載入任何店務數字或歷史資料</span></div>
+    </section>
+
+    <section class="login-card" aria-labelledby="login-title">
+      <p class="eyebrow">VERCEL SECURE SIGN IN</p>
+      <h2 id="login-title">管理者登入</h2>
+      <p class="intro">請使用已列入白名單的 Vercel 帳號。系統不會保存您的密碼。</p>
+      <div id="login-status" class="status" data-tone="working" role="status" aria-live="polite">
+        正在確認登入狀態…
+      </div>
+      <button id="login-button" class="login-button" type="button" hidden>前往 Vercel 安全登入</button>
+      <a class="home-link" href="/">返回營運首頁</a>
+      <div class="scope-list" aria-label="登入後可用功能">
+        <span><b>薪</b>薪資與出勤</span>
+        <span><b>帳</b>收入與支出</span>
+        <span><b>析</b>成本與圖表</span>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

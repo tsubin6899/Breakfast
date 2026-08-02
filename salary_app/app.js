@@ -4201,6 +4201,10 @@
     });
     $("#cloud-logout").addEventListener("click", async () => {
       window.clearTimeout(cloudSaveTimer);
+      if (typeof window.breakfastSignOut === "function") {
+        await window.breakfastSignOut("/salary_app/");
+        return;
+      }
       try {
         await fetch("/api/auth/signout", { method: "POST", credentials: "same-origin" });
       } catch (error) {

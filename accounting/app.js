@@ -1438,6 +1438,10 @@
       window.location.href = `/api/auth/authorize?returnTo=${encodeURIComponent("/accounting/?view=safety")}`;
     });
     $("#accounting-cloud-signout").addEventListener("click", async () => {
+      if (typeof window.breakfastSignOut === "function") {
+        await window.breakfastSignOut("/accounting/");
+        return;
+      }
       await fetch("/api/auth/signout", { method: "POST", credentials: "same-origin" }).catch(() => null);
       cloudUser = null;
       cloudReady = false;
