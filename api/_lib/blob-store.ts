@@ -2,6 +2,18 @@ import { get, put } from "@vercel/blob";
 
 export type StoredJson<T> = { value: T; etag: string; url: string };
 
+function isAlreadyExists(error: unknown) {
+  const item = error as { status?: number; statusCode?: number; code?: string; name?: string; message?: string };
+  const message = String(item?.message || "").toLowerCase();
+  return item?.status === 409 ||
+    item?.statusCode === 409 ||
+    item?.name === "BlobAlreadyExistsError" ||
+    item?.code === "blob_already_exists" ||
+    item?.code === "already_exists" ||
+    message.includes("this blob already exists") ||
+    message.includes("allowoverwrite");
+}
+
 function isMissing(error: unknown) {
   const item = error as { status?: number; statusCode?: number; code?: string; name?: string };
   return item?.status === 404 || item?.statusCode === 404 || item?.code === "not_found" || item?.name === "BlobNotFoundError";
@@ -36,8 +48,7 @@ export async function writeImmutableJson(pathname: string, value: unknown) {
   try {
     return await writeJson(pathname, value);
   } catch (error) {
-    const item = error as { status?: number; statusCode?: number; code?: string; name?: string };
-    if (item?.status === 409 || item?.statusCode === 409 || item?.name === "BlobAlreadyExistsError") return null;
+    if (isAlreadyExists(error)) return null;
     throw error;
   }
 }
