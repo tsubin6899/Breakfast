@@ -34,6 +34,7 @@ const paths = [
   "/accounting/data/uber-statement-2026-07-24.js",
   "/accounting/backup-importer.js",
   "/accounting/uber-statement-importer.js",
+  "/accounting/foodpanda-statement-importer.js",
   "/accounting/vendor/sql-wasm.js",
   "/accounting/vendor/sql-wasm.wasm",
   "/shared/operations-brandbar.css",

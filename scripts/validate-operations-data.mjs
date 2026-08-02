@@ -175,6 +175,7 @@ const featureChecks = [
     "accounting-tab-entry", "accounting-tab-ledger", "accounting-tab-import", "accounting-tab-catalog", "accounting-tab-safety",
     "accounting-page-title", "entry-receipt", "entry-recurring", "daily-reconciliation-form", "accounting-exceptions",
     "uber-statement-file", "uber-import-review", "uber-import-confirm",
+    "foodpanda-statement-file", "foodpanda-import-review", "foodpanda-import-confirm",
     "catalog-item-form", "catalog-item-type", "catalog-item-group", "catalog-item-name", "catalog-groups",
     "copy-yesterday", "copy-last-week", "quick-entry-presets", "mobile-quick-add",
     "toggle-daily-close", "daily-close-status", "month-close-checklist", "toggle-accounting-month-lock",

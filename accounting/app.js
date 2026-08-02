@@ -143,6 +143,7 @@
   let selectedLedgerDate = "";
   let pendingBackupImport = null;
   let pendingUberImport = null;
+  let pendingFoodpandaImport = null;
   let cloudUser = null;
   let cloudReady = false;
   let cloudApplying = false;
@@ -1372,6 +1373,83 @@
     }
   }
 
+  function resetFoodpandaImport(message = "尚未選擇 foodpanda XLSX 檔。") {
+    pendingFoodpandaImport = null;
+    $("#foodpanda-import-review").hidden = true;
+    $("#foodpanda-import-progress").className = "import-progress";
+    $("#foodpanda-import-progress").textContent = message;
+    $("#foodpanda-import-confirm").disabled = true;
+    $("#foodpanda-import-confirm").textContent = "確認寫入 0 天";
+  }
+
+  function renderFoodpandaImportReview(analysis) {
+    const summary = analysis.summary;
+    $("#foodpanda-import-review").hidden = false;
+    $("#foodpanda-import-file-name").textContent = analysis.file.name;
+    $("#foodpanda-import-period").textContent = `${analysis.period.from} ～ ${analysis.period.through}`;
+    $("#foodpanda-import-fingerprint").textContent = shortFingerprint(analysis.file.fingerprint);
+    $("#foodpanda-import-source-rows").textContent = summary.sourceRows.toLocaleString("zh-TW");
+    $("#foodpanda-import-net").textContent = money(summary.statementNet);
+    $("#foodpanda-import-fees").textContent = money(summary.periodFees);
+    $("#foodpanda-import-payout").textContent = money(summary.estimatedPayout);
+    $("#foodpanda-import-matched").textContent = summary.matchedDays.toLocaleString("zh-TW");
+    $("#foodpanda-import-replaced").textContent = summary.replacedDays.toLocaleString("zh-TW");
+    $("#foodpanda-import-new").textContent = summary.newDays.toLocaleString("zh-TW");
+    $("#foodpanda-import-confirm").disabled = summary.importedRows === 0;
+    $("#foodpanda-import-confirm").textContent = `確認寫入 ${summary.importedRows.toLocaleString("zh-TW")} 天`;
+
+    const warnings = [];
+    if (analysis.previousBatch) warnings.push(`<p class="is-warning"><b>這份檔案曾於 ${escapeHtml(new Date(analysis.previousBatch.importedAt).toLocaleString("zh-TW"))} 匯入。</b>系統仍會重新逐日核對，不會重複寫入。</p>`);
+    if (summary.invalidRows) warnings.push(`<p class="is-warning"><b>${summary.invalidRows} 列無法讀取。</b>日期或應付(應收)金額格式不正確，未納入每日彙總。</p>`);
+    if (summary.duplicateOrderRows) warnings.push(`<p class="is-warning"><b>發現 ${summary.duplicateOrderRows} 筆重複訂單編號。</b>請先下載核對報告確認來源檔內容。</p>`);
+    if (summary.periodFees) warnings.push(`<p class="is-warning"><b>附件另列整期費用 ${money(summary.periodFees)}。</b>此金額不會任意分攤到某一天；對帳單每日淨收入 ${money(summary.statementNet)}，扣除後預估撥款 ${money(summary.estimatedPayout)}。</p>`);
+    if (summary.replacedDays) warnings.push(`<p class="is-warning"><b>${summary.replacedDays} 天與系統既有 foodpanda 金額不同。</b>確認後會先建立安全備份，再以官方對帳單的每日淨收入取代舊值。</p>`);
+    if (!summary.importedRows) warnings.push('<p class="is-pass"><b>所有日期都已存在且金額相同。</b>不需要再次匯入，系統沒有修改任何資料。</p>');
+    else warnings.push(`<p class="is-pass"><b>對帳單已完成逐日核對。</b>共 ${summary.sourceRows} 筆訂單彙總為 ${summary.dailyRows} 天，確認前尚未更動資料。</p>`);
+    $("#foodpanda-import-warnings").innerHTML = warnings.join("");
+
+    $("#foodpanda-import-preview-body").innerHTML = analysis.auditRows.map(row => {
+      const status = row.status === "new" ? "預計新增" : row.status === "replace" ? "取代舊值" : "同額略過";
+      const difference = row.amount - row.existingAmount;
+      return `<tr class="import-row-${escapeHtml(row.status)}"><td><span class="import-status ${escapeHtml(row.status)}">${status}</span></td><td>${escapeHtml(row.date)}</td><td>${row.detailRows}</td><td class="amount income">${money(row.amount)}</td><td>${row.existingRows ? money(row.existingAmount) : "—"}</td><td class="amount ${Math.abs(difference) < .01 ? "" : difference > 0 ? "income" : "expense"}">${row.existingRows ? money(difference) : "—"}</td><td>${escapeHtml(row.reason)}</td></tr>`;
+    }).join("");
+  }
+
+  function foodpandaImportErrorMessage(error) {
+    const code = String(error?.message || error || "");
+    if (code.includes("INVALID_EXTENSION")) return "請選擇 foodpanda 後台下載的 XLSX 對帳單。";
+    if (code.includes("HEADER_MISSING")) return "找不到「訂單日期」或「foodpanda 應付(應收)金額」欄位，請確認檔案格式。";
+    if (code.includes("NO_VALID_ROWS")) return "檔案中沒有可用的訂單日期與應付(應收)金額。";
+    if (code.includes("DECOMPRESSION") || code.includes("XLSX_ZIP") || code.includes("XLSX_PART")) return "無法開啟這份 XLSX，請重新從 foodpanda 後台下載後再試。";
+    return "無法解析這份 foodpanda 對帳單，原有記帳資料沒有被修改。";
+  }
+
+  async function analyzeSelectedFoodpandaStatement() {
+    const file = $("#foodpanda-statement-file").files[0];
+    if (!file) return resetFoodpandaImport();
+    if (file.size > 30 * 1024 * 1024) {
+      resetFoodpandaImport("檔案超過 30MB，請確認是否選到正確的 foodpanda XLSX。");
+      return;
+    }
+    pendingFoodpandaImport = null;
+    $("#foodpanda-import-review").hidden = true;
+    $("#foodpanda-import-progress").className = "import-progress is-working";
+    $("#foodpanda-import-progress").textContent = `正在本機解析 ${file.name} 的每日 foodpanda 淨收入…`;
+    try {
+      const importer = window.BreakfastFoodpandaStatementImporter;
+      if (!importer) throw new Error("IMPORTER_MISSING");
+      const analysis = await importer.analyzeFile({ file, transactions: state.transactions, importBatches: state.importBatches });
+      pendingFoodpandaImport = analysis;
+      renderFoodpandaImportReview(analysis);
+      $("#foodpanda-import-progress").className = "import-progress is-ready";
+      $("#foodpanda-import-progress").textContent = `核對完成：${analysis.summary.dailyRows} 天、對帳單每日淨收入 ${money(analysis.summary.statementNet)}；確認前尚未更動資料。`;
+    } catch (error) {
+      console.warn("Unable to analyze foodpanda statement", error);
+      resetFoodpandaImport(foodpandaImportErrorMessage(error));
+      $("#foodpanda-import-progress").classList.add("is-error");
+    }
+  }
+
   function csvCell(value) {
     const text = String(value ?? "");
     return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
@@ -1938,6 +2016,73 @@
       $("#uber-import-progress").classList.add("is-success");
       toast(`已寫入 ${importedRows.length} 天 Uber 淨收入。`);
     });
+    $("#foodpanda-statement-file").addEventListener("change", analyzeSelectedFoodpandaStatement);
+    $("#foodpanda-import-report").addEventListener("click", () => {
+      if (!pendingFoodpandaImport) return;
+      const basename = pendingFoodpandaImport.file.name.replace(/\.xlsx$/i, "");
+      download(JSON.stringify(pendingFoodpandaImport.report, null, 2), `${basename}_foodpanda每日收入核對報告.json`, "application/json;charset=utf-8");
+      toast("foodpanda 每日收入核對報告已下載。");
+    });
+    $("#foodpanda-import-cancel").addEventListener("click", () => {
+      $("#foodpanda-statement-file").value = "";
+      resetFoodpandaImport("已取消，本次沒有修改任何 foodpanda 收入。");
+    });
+    $("#foodpanda-import-confirm").addEventListener("click", async () => {
+      const analysis = pendingFoodpandaImport;
+      if (!analysis?.transactions?.length) return;
+      const lockedMonths = [...new Set(analysis.transactions.map(row => row.date.slice(0, 7)).filter(isMonthLocked))];
+      if (lockedMonths.length) { toast(`${lockedMonths.join("、")} 已月結鎖定，無法匯入。`); return; }
+      const summary = analysis.summary;
+      const prompt = `確定寫入 ${summary.importedRows} 天 foodpanda 淨收入？\n每日淨收入合計 ${money(summary.statementNet)}。${summary.periodFees ? `\n另有整期費用 ${money(summary.periodFees)}，本次不分攤到每日收入。` : ""}${summary.replacedDays ? `\n其中 ${summary.replacedDays} 天會取代系統舊金額。` : ""}\n\n系統會先下載一份匯入前的 JSON 安全備份。`;
+      if (!window.confirm(prompt)) return;
+
+      const importedAt = new Date().toISOString();
+      const batchId = uid("foodpanda-import");
+      await createSafetySnapshot("foodpanda 匯入前快照", analysis.file.name);
+      download(JSON.stringify(state, null, 2), `初一食午記帳_foodpanda匯入前備份_${importedAt.slice(0, 19).replaceAll(":", "-")}.json`, "application/json;charset=utf-8");
+      const replacedIds = new Set(analysis.replacedTransactionIds || []);
+      state.transactions = state.transactions.filter(row => !replacedIds.has(row.id));
+      const importedRows = applyCatalogMappings(analysis.transactions).map(row => ({ ...row, importBatchId: batchId, importedAt }));
+      state.transactions.push(...importedRows);
+      syncCategoryCatalog(importedRows);
+      state.importBatches.push({
+        id: batchId,
+        kind: "foodpanda-statement",
+        fileName: analysis.file.name,
+        fingerprint: analysis.file.fingerprint,
+        period: analysis.period,
+        importedAt,
+        sourceRows: summary.sourceRows,
+        rowCount: importedRows.length,
+        replacedDays: summary.replacedDays,
+        replacedTransactionIds: [...replacedIds],
+        netAmount: summary.statementNet,
+        periodFees: summary.periodFees,
+        estimatedPayout: summary.estimatedPayout,
+        transactionIds: importedRows.map(row => row.id)
+      });
+      state.importedSources[`foodpanda:${analysis.file.fingerprint}`] = {
+        source: analysis.file.name,
+        importedAt,
+        rowCount: importedRows.length,
+        replacedDays: summary.replacedDays,
+        periodFees: summary.periodFees
+      };
+      logAudit("匯入 foodpanda 對帳單", `${analysis.file.name}・${importedRows.length} 天・${money(summary.statementNet)}`);
+      const lastDate = importedRows.map(row => row.date).sort().at(-1);
+      if (lastDate) {
+        state.selectedMonth = lastDate.slice(0, 7);
+        selectedLedgerDate = lastDate;
+      }
+      saveState(`已寫入 ${importedRows.length} 天 foodpanda 收入`);
+      renderMonthOptions();
+      setFormDates();
+      renderAll();
+      $("#foodpanda-statement-file").value = "";
+      resetFoodpandaImport(`匯入完成：${analysis.file.name} 寫入 ${importedRows.length} 天，安全備份也已下載。`);
+      $("#foodpanda-import-progress").classList.add("is-success");
+      toast(`已寫入 ${importedRows.length} 天 foodpanda 淨收入。`);
+    });
     $("#accounting-backup-file").addEventListener("change", analyzeSelectedBackup);
     $("#backup-import-start").addEventListener("change", () => {
       if ($("#accounting-backup-file").files[0]) analyzeSelectedBackup();
@@ -2062,6 +2207,7 @@
     $("#backup-import-start").value = latestBackupImportDate();
     resetBackupImport();
     resetUberImport();
+    resetFoodpandaImport();
     setFormDates();
     installEvents();
     renderAll();

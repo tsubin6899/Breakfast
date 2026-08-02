@@ -27,6 +27,7 @@
   <script defer src="./vendor/sql-wasm.js"></script>
   <script defer src="./backup-importer.js"></script>
   <script defer src="./uber-statement-importer.js"></script>
+  <script defer src="./foodpanda-statement-importer.js"></script>
   <script defer src="./app.js"></script>
 </head>
 <body class="has-suite-brandbar accounting-system">
@@ -57,7 +58,7 @@
       <nav class="accounting-page-tabs" role="tablist" aria-label="記帳系統分頁">
         <button id="accounting-tab-entry" class="accounting-page-tab" type="button" role="tab" aria-selected="true" data-accounting-tab="entry"><i aria-hidden="true">＋</i><span><strong>新增收入／支出</strong><small>一般記帳・日薪・固定收支</small></span></button>
         <button id="accounting-tab-ledger" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="ledger"><i aria-hidden="true">曆</i><span><strong>月份收支明細</strong><small>月曆・每日明細・收支摘要</small></span></button>
-        <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true">匯</i><span><strong>匯入中心</strong><small>記帳備份・Uber CSV・資料還原</small></span></button>
+        <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true">匯</i><span><strong>匯入中心</strong><small>記帳備份・平台對帳單・資料還原</small></span></button>
         <button id="accounting-tab-catalog" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="catalog"><i aria-hidden="true">類</i><span><strong>分類與項目設定</strong><small>收入項目・支出廠商・新增項目</small></span></button>
         <button id="accounting-tab-safety" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="safety"><i aria-hidden="true">安</i><span><strong>關帳與資料安全</strong><small>每日關帳・月結・版本救援</small></span></button>
       </nav>
@@ -168,6 +169,45 @@
           <button class="secondary-btn" id="uber-import-report" type="button">下載核對報告</button>
           <button class="secondary-btn" id="uber-import-cancel" type="button">取消</button>
           <button class="primary-btn" id="uber-import-confirm" type="button" disabled>確認寫入 0 天</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel backup-import-panel uber-import-panel foodpanda-import-panel" aria-labelledby="foodpanda-import-title" data-accounting-page="import">
+      <div class="panel-heading import-heading">
+        <div><p class="eyebrow">FOODPANDA STATEMENT IMPORT</p><h2 id="foodpanda-import-title">foodpanda 對帳單匯入</h2><p class="panel-copy">選擇 foodpanda 後台下載的 XLSX 對帳單。系統會依「訂單日期」分組，加總「foodpanda 應付(應收)金額」，逐日核對既有 foodpanda 外送收入。</p></div>
+        <span class="panel-chip import-chip">本機解析・不需 AI</span>
+      </div>
+      <div class="import-picker-grid uber-picker-grid">
+        <div class="import-file-field">
+          <span>選擇 foodpanda 對帳單</span>
+          <label class="file-btn import-file-btn" for="foodpanda-statement-file"><b aria-hidden="true">＋</b> 選擇 XLSX 檔</label>
+          <input id="foodpanda-statement-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" />
+        </div>
+        <div class="import-policy-note"><b aria-hidden="true">淨</b><span><strong>採「應付(應收)金額」</strong><small>佣金、促銷與退款已反映在每筆訂單淨額，不會把商品原價誤當收入。</small></span></div>
+        <div class="import-policy-note"><b aria-hidden="true">費</b><span><strong>整期費用獨立揭露</strong><small>平台期租費不任意分攤到某一天；核對畫面會另外列出預估撥款。</small></span></div>
+      </div>
+      <div id="foodpanda-import-progress" class="import-progress" aria-live="polite">尚未選擇 foodpanda XLSX 檔。</div>
+      <div id="foodpanda-import-review" class="import-review" hidden>
+        <div class="import-file-summary"><div><span>檔案</span><strong id="foodpanda-import-file-name">—</strong></div><div><span>訂單日期範圍</span><strong id="foodpanda-import-period">—</strong></div><div><span>檔案指紋</span><strong id="foodpanda-import-fingerprint">—</strong></div></div>
+        <div class="import-kpis uber-import-kpis">
+          <article><span>原始訂單</span><strong id="foodpanda-import-source-rows">0</strong><small>有效訂單明細</small></article>
+          <article class="income"><span>每日淨收入合計</span><strong id="foodpanda-import-net">$0</strong><small>應付(應收)金額</small></article>
+          <article class="expense"><span>整期額外費用</span><strong id="foodpanda-import-fees">$0</strong><small>不拆入每日收入</small></article>
+          <article class="income"><span>預估撥款</span><strong id="foodpanda-import-payout">$0</strong><small>淨收入減整期費用</small></article>
+          <article class="matched"><span>同日同額</span><strong id="foodpanda-import-matched">0</strong><small>安全略過，不重複</small></article>
+          <article class="replace"><span>取代舊值</span><strong id="foodpanda-import-replaced">0</strong><small>同日金額不同</small></article>
+          <article class="new"><span>新增日期</span><strong id="foodpanda-import-new">0</strong><small>原本尚無收入</small></article>
+        </div>
+        <div id="foodpanda-import-warnings" class="import-warnings"></div>
+        <details class="import-details" open>
+          <summary>逐日 foodpanda 淨收入核對</summary>
+          <div class="import-table-wrap"><table><thead><tr><th>處理</th><th>日期</th><th>訂單筆數</th><th>對帳單淨收入</th><th>系統既有</th><th>差額</th><th>說明</th></tr></thead><tbody id="foodpanda-import-preview-body"></tbody></table></div>
+        </details>
+        <div class="import-actions">
+          <button class="secondary-btn" id="foodpanda-import-report" type="button">下載核對報告</button>
+          <button class="secondary-btn" id="foodpanda-import-cancel" type="button">取消</button>
+          <button class="primary-btn" id="foodpanda-import-confirm" type="button" disabled>確認寫入 0 天</button>
         </div>
       </div>
     </section>
