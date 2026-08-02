@@ -15,7 +15,7 @@ const PORT = Number(process.env.BREAKFAST_LOCAL_PORT || 4173);
 const LOCAL_URL = `http://${HOST}:${PORT}/`;
 const MAX_REQUEST_BYTES = 5_900_000;
 
-const ROOT_FILES = new Set(["index.html"]);
+const ROOT_FILES = new Set(["index.html", "manifest.webmanifest", "service-worker.js", "offline.html"]);
 const PUBLIC_DIRECTORIES = new Set([
   "salary_app",
   "accounting",

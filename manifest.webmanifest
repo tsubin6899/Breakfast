@@ -1,0 +1,49 @@
+{
+  "id": "/",
+  "name": "初一食午營運管理系統",
+  "short_name": "初一食午",
+  "description": "初一食午薪資、記帳與收入支出分析系統",
+  "lang": "zh-Hant",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#f5f0e5",
+  "theme_color": "#0e4b86",
+  "categories": ["business", "finance", "productivity"],
+  "icons": [
+    {
+      "src": "/salary_app/assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/salary_app/assets/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "薪資管理",
+      "short_name": "薪資",
+      "url": "/salary_app/",
+      "icons": [{ "src": "/salary_app/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "記帳系統",
+      "short_name": "記帳",
+      "url": "/accounting/",
+      "icons": [{ "src": "/salary_app/assets/app-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "收入支出分析",
+      "short_name": "分析",
+      "url": "/dashboard_cost/",
+      "icons": [{ "src": "/salary_app/assets/app-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

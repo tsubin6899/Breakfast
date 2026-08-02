@@ -31,6 +31,7 @@ export default {
       headers.append("Set-Cookie", serializeCookie("breakfast_oauth_return", safeReturnPath(requestUrl.searchParams.get("returnTo")), cookieOptions));
       return new Response(null, { status: 302, headers });
     } catch (error) {
+      console.error("Vercel OAuth authorize initialization failed", error);
       return Response.json({ error: "AUTH_NOT_CONFIGURED", message: "Vercel 登入尚未完成設定。", detail: error instanceof Error ? error.message : "" }, { status: 503 });
     }
   }

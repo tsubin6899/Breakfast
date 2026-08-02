@@ -5148,8 +5148,8 @@
           .then(keys => Promise.all(keys.filter(key => key.startsWith("breakfast-payroll-shell-")).map(key => caches.delete(key))))
           .catch(() => {});
       }
-    } else if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-      navigator.serviceWorker.register("./service-worker.js").catch(() => {});
+    } else if ("serviceWorker" in navigator && location.protocol === "https:") {
+      navigator.serviceWorker.register("/service-worker.js", { scope: "/" }).catch(() => {});
     }
   }
 

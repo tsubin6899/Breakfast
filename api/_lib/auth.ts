@@ -11,7 +11,12 @@ export type CloudUser = {
 const SESSION_COOKIE = "breakfast_session";
 const SESSION_ISSUER = "breakfast-operations";
 const SESSION_AUDIENCE = "breakfast-admin";
-const VERCEL_JWKS = createRemoteJWKSet(new URL("https://vercel.com/.well-known/jwks"));
+let vercelJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+
+function getVercelJwks() {
+  vercelJwks ||= createRemoteJWKSet(new URL("https://vercel.com/.well-known/jwks"));
+  return vercelJwks;
+}
 
 function envList(name: string) {
   return new Set((process.env[name] || "").split(/[;,\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean));
@@ -49,7 +54,7 @@ export function userFromClaims(payload: JWTPayload): CloudUser {
 }
 
 export async function verifyVercelIdToken(idToken: string, nonce: string) {
-  const { payload } = await jwtVerify(idToken, VERCEL_JWKS, {
+  const { payload } = await jwtVerify(idToken, getVercelJwks(), {
     issuer: "https://vercel.com",
     audience: [clientId()]
   });

@@ -57,7 +57,7 @@ pnpm run build
 ## Vercel 上線設定
 
 1. 在 Vercel 建立 Blob Store，選擇 Private，並連結到本專案。Vercel 會自動提供 `BLOB_READ_WRITE_TOKEN`。
-2. 建立 Sign in with Vercel App，Callback URL 設為 `https://你的正式網域/api/auth/callback`。
+2. 建立 Sign in with Vercel App，Callback URL 設為 `https://你的正式網域/api/auth/callback`；Client authentication 勾選 `client_secret_post`，Permissions 啟用 `openid`、`email`、`profile`，並產生 Client Secret。
 3. 在 Project Settings → Environment Variables 設定：
    - `VERCEL_APP_CLIENT_ID`、`VERCEL_APP_CLIENT_SECRET`
    - `VERCEL_ALLOWED_EMAILS`：允許登入的 Email，使用逗號分隔
