@@ -41,6 +41,10 @@ export default {
       return new Response(null, { status: 302, headers });
     } catch (error) {
       const reason = error instanceof Error && error.message === "EMAIL_NOT_ALLOWED" ? "forbidden" : "failed";
+      console.error("[auth/callback] Sign in with Vercel failed", {
+        reason,
+        message: error instanceof Error ? error.message : String(error)
+      });
       return Response.redirect(redirectResult(requestUrl.origin, returnTo, reason), 302);
     }
   }

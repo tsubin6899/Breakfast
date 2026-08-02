@@ -1,4 +1,4 @@
-import { SignJWT, createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import type { JWTPayload } from "jose";
 import { parseCookies, serializeCookie } from "./http.js";
 
 export type CloudUser = {
@@ -11,9 +11,19 @@ export type CloudUser = {
 const SESSION_COOKIE = "breakfast_session";
 const SESSION_ISSUER = "breakfast-operations";
 const SESSION_AUDIENCE = "breakfast-admin";
-let vercelJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+type JoseModule = typeof import("jose");
+type RemoteJwkSet = ReturnType<JoseModule["createRemoteJWKSet"]>;
 
-function getVercelJwks() {
+let joseModulePromise: Promise<JoseModule> | null = null;
+let vercelJwks: RemoteJwkSet | null = null;
+
+function loadJose() {
+  joseModulePromise ||= import("jose");
+  return joseModulePromise;
+}
+
+async function getVercelJwks() {
+  const { createRemoteJWKSet } = await loadJose();
   vercelJwks ||= createRemoteJWKSet(new URL("https://vercel.com/.well-known/jwks"));
   return vercelJwks;
 }
@@ -54,7 +64,8 @@ export function userFromClaims(payload: JWTPayload): CloudUser {
 }
 
 export async function verifyVercelIdToken(idToken: string, nonce: string) {
-  const { payload } = await jwtVerify(idToken, getVercelJwks(), {
+  const { jwtVerify } = await loadJose();
+  const { payload } = await jwtVerify(idToken, await getVercelJwks(), {
     issuer: "https://vercel.com",
     audience: [clientId()]
   });
@@ -63,6 +74,7 @@ export async function verifyVercelIdToken(idToken: string, nonce: string) {
 }
 
 export async function createSession(user: CloudUser) {
+  const { SignJWT } = await loadJose();
   return new SignJWT({ email: user.email, name: user.name, role: user.role })
     .setProtectedHeader({ alg: "HS256" })
     .setSubject(user.id)
@@ -77,6 +89,7 @@ export async function getSession(request: Request): Promise<CloudUser | null> {
   const token = parseCookies(request)[SESSION_COOKIE];
   if (!token) return null;
   try {
+    const { jwtVerify } = await loadJose();
     const { payload } = await jwtVerify(token, sessionSecret(), {
       issuer: SESSION_ISSUER,
       audience: SESSION_AUDIENCE
