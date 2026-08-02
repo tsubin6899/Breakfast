@@ -1,0 +1,1376 @@
+{
+  "generatedAt": "2026-08-02",
+  "period": "2022-01～2025-12",
+  "totals": {
+    "transactions": 14617,
+    "attendance": 4151,
+    "payrollMonths": 48,
+    "payrollRows": 389,
+    "income": 45107406.4,
+    "operatingExpenseExcludingPayroll": 22897664,
+    "salarySnapshots": 10555716.800006
+  },
+  "months": [
+    {
+      "period": "2022-01",
+      "sourceSheet": "店收入統計1月份＋店支出統計1月份",
+      "expectedIncome": 719531,
+      "importedIncome": 719531,
+      "incomeDelta": 0,
+      "expectedOperating": 398352,
+      "importedOperating": 398352,
+      "expenseDelta": 0,
+      "sourcePayroll": 216500,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計1月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 31500,
+          "sourceCell": "店收入統計1月份 51:9"
+        },
+        {
+          "name": "宥臻",
+          "amount": 12000,
+          "sourceCell": "店收入統計1月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 34000,
+          "sourceCell": "店收入統計1月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 9200,
+          "sourceCell": "店收入統計1月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計1月份 55:9"
+        },
+        {
+          "name": "蝌蚪",
+          "amount": 18500,
+          "sourceCell": "店收入統計1月份 57:8"
+        },
+        {
+          "name": "年終",
+          "amount": 28200,
+          "sourceCell": "店收入統計1月份 57:9"
+        },
+        {
+          "name": "楊阿姨",
+          "amount": 3100,
+          "sourceCell": "店收入統計1月份 57:10"
+        }
+      ],
+      "salarySnapshotTotal": 188300,
+      "payrollDelta": -28200,
+      "transactionCount": 301,
+      "attendanceCount": 110,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-02",
+      "sourceSheet": "店收入統計2月份＋店支出統計2月份",
+      "expectedIncome": 612037,
+      "importedIncome": 612037,
+      "incomeDelta": 0,
+      "expectedOperating": 293420,
+      "importedOperating": 293420,
+      "expenseDelta": 0,
+      "sourcePayroll": 166200,
+      "sourcePayrollDetails": [],
+      "salarySnapshotTotal": 81164.666666,
+      "payrollDelta": -85035.333334,
+      "transactionCount": 240,
+      "attendanceCount": 59,
+      "payrollEmployeeCount": 4
+    },
+    {
+      "period": "2022-03",
+      "sourceSheet": "店收入統計3月份＋店支出統計3月份",
+      "expectedIncome": 655926,
+      "importedIncome": 655926,
+      "incomeDelta": 0,
+      "expectedOperating": 362357,
+      "importedOperating": 362357,
+      "expenseDelta": 0,
+      "sourcePayroll": 169000,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計3月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 31300,
+          "sourceCell": "店收入統計3月份 51:9"
+        },
+        {
+          "name": "宥臻",
+          "amount": 8000,
+          "sourceCell": "店收入統計3月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 33100,
+          "sourceCell": "店收入統計3月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 7200,
+          "sourceCell": "店收入統計3月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計3月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 9400,
+          "sourceCell": "店收入統計3月份 57:8"
+        }
+      ],
+      "salarySnapshotTotal": 169000,
+      "payrollDelta": 0,
+      "transactionCount": 303,
+      "attendanceCount": 72,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2022-04",
+      "sourceSheet": "店收入統計4月份＋店支出統計4月份",
+      "expectedIncome": 750169,
+      "importedIncome": 750169,
+      "incomeDelta": 0,
+      "expectedOperating": 391802,
+      "importedOperating": 391802,
+      "expenseDelta": 0,
+      "sourcePayroll": 196660,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 50000,
+          "sourceCell": "店收入統計4月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 31026,
+          "sourceCell": "店收入統計4月份 51:9"
+        },
+        {
+          "name": "宥臻",
+          "amount": 10000,
+          "sourceCell": "店收入統計4月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 34582,
+          "sourceCell": "店收入統計4月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 9200,
+          "sourceCell": "店收入統計4月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 50000,
+          "sourceCell": "店收入統計4月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 11852,
+          "sourceCell": "店收入統計4月份 57:8"
+        }
+      ],
+      "salarySnapshotTotal": 196660,
+      "payrollDelta": 0,
+      "transactionCount": 294,
+      "attendanceCount": 78,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2022-05",
+      "sourceSheet": "店收入統計5月份＋店支出統計5月份",
+      "expectedIncome": 832048,
+      "importedIncome": 832048,
+      "incomeDelta": 0,
+      "expectedOperating": 461108,
+      "importedOperating": 461108,
+      "expenseDelta": 0,
+      "sourcePayroll": 171015,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計5月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 28050,
+          "sourceCell": "店收入統計5月份 51:9"
+        },
+        {
+          "name": "宥臻",
+          "amount": 10400,
+          "sourceCell": "店收入統計5月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 29000,
+          "sourceCell": "店收入統計5月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 3065,
+          "sourceCell": "店收入統計5月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計5月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 11500,
+          "sourceCell": "店收入統計5月份 57:8"
+        },
+        {
+          "name": "家禎",
+          "amount": 9000,
+          "sourceCell": "店收入統計5月份 57:9"
+        }
+      ],
+      "salarySnapshotTotal": 171015,
+      "payrollDelta": 0,
+      "transactionCount": 275,
+      "attendanceCount": 71,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-06",
+      "sourceSheet": "店收入統計6月份＋店支出統計6月份",
+      "expectedIncome": 828718,
+      "importedIncome": 828718,
+      "incomeDelta": 0,
+      "expectedOperating": 432864,
+      "importedOperating": 432864,
+      "expenseDelta": 0,
+      "sourcePayroll": 184200,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計6月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 32500,
+          "sourceCell": "店收入統計6月份 51:9"
+        },
+        {
+          "name": "宥臻",
+          "amount": 8000,
+          "sourceCell": "店收入統計6月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 37200,
+          "sourceCell": "店收入統計6月份 53:9"
+        },
+        {
+          "name": "VIKA",
+          "amount": 6200,
+          "sourceCell": "店收入統計6月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計6月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 10900,
+          "sourceCell": "店收入統計6月份 57:8"
+        },
+        {
+          "name": "佳禎",
+          "amount": 9400,
+          "sourceCell": "店收入統計6月份 57:9"
+        }
+      ],
+      "salarySnapshotTotal": 184200,
+      "payrollDelta": 0,
+      "transactionCount": 285,
+      "attendanceCount": 82,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-07",
+      "sourceSheet": "店收入統計7月份＋店支出統計7月份",
+      "expectedIncome": 880087,
+      "importedIncome": 880087,
+      "incomeDelta": 0,
+      "expectedOperating": 446994,
+      "importedOperating": 446994,
+      "expenseDelta": 0,
+      "sourcePayroll": 192611,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計7月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 30400,
+          "sourceCell": "店收入統計7月份 51:9"
+        },
+        {
+          "name": "采葳",
+          "amount": 11900,
+          "sourceCell": "店收入統計7月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 36400,
+          "sourceCell": "店收入統計7月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 7100,
+          "sourceCell": "店收入統計7月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計7月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 11352,
+          "sourceCell": "店收入統計7月份 57:8"
+        },
+        {
+          "name": "VIKA",
+          "amount": 15459,
+          "sourceCell": "店收入統計7月份 57:9"
+        }
+      ],
+      "salarySnapshotTotal": 192611,
+      "payrollDelta": 0,
+      "transactionCount": 291,
+      "attendanceCount": 85,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-08",
+      "sourceSheet": "店收入統計8月份＋店支出統計8月份",
+      "expectedIncome": 870996,
+      "importedIncome": 870996,
+      "incomeDelta": 0,
+      "expectedOperating": 466141,
+      "importedOperating": 466141,
+      "expenseDelta": 0,
+      "sourcePayroll": 179587,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計8月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 29685,
+          "sourceCell": "店收入統計8月份 51:9"
+        },
+        {
+          "name": "采葳",
+          "amount": 13356,
+          "sourceCell": "店收入統計8月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 34227,
+          "sourceCell": "店收入統計8月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 6500,
+          "sourceCell": "店收入統計8月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計8月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 9546,
+          "sourceCell": "店收入統計8月份 57:8"
+        },
+        {
+          "name": "VIKA",
+          "amount": 6273,
+          "sourceCell": "店收入統計8月份 57:9"
+        }
+      ],
+      "salarySnapshotTotal": 179587,
+      "payrollDelta": 0,
+      "transactionCount": 300,
+      "attendanceCount": 77,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-09",
+      "sourceSheet": "店收入統計9月份＋店支出統計9月份",
+      "expectedIncome": 798677,
+      "importedIncome": 798677,
+      "incomeDelta": 0,
+      "expectedOperating": 487856,
+      "importedOperating": 487856,
+      "expenseDelta": 0,
+      "sourcePayroll": 181434,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計9月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 31826,
+          "sourceCell": "店收入統計9月份 51:9"
+        },
+        {
+          "name": "采葳",
+          "amount": 11881,
+          "sourceCell": "店收入統計9月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 38965,
+          "sourceCell": "店收入統計9月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 8285,
+          "sourceCell": "店收入統計9月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計9月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 10477,
+          "sourceCell": "店收入統計9月份 57:8"
+        }
+      ],
+      "salarySnapshotTotal": 181434,
+      "payrollDelta": 0,
+      "transactionCount": 295,
+      "attendanceCount": 77,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2022-10",
+      "sourceSheet": "店收入統計10月份＋店支出統計10月份",
+      "expectedIncome": 881443,
+      "importedIncome": 881443,
+      "incomeDelta": 0,
+      "expectedOperating": 442831,
+      "importedOperating": 442831,
+      "expenseDelta": 0,
+      "sourcePayroll": 199131,
+      "sourcePayrollDetails": [
+        {
+          "name": "以馨",
+          "amount": 40000,
+          "sourceCell": "店收入統計10月份 51:8"
+        },
+        {
+          "name": "小亘",
+          "amount": 27718,
+          "sourceCell": "店收入統計10月份 51:9"
+        },
+        {
+          "name": "采葳",
+          "amount": 14326,
+          "sourceCell": "店收入統計10月份 53:8"
+        },
+        {
+          "name": "明琦",
+          "amount": 42364,
+          "sourceCell": "店收入統計10月份 53:9"
+        },
+        {
+          "name": "丁丁",
+          "amount": 7413,
+          "sourceCell": "店收入統計10月份 55:8"
+        },
+        {
+          "name": "媽媽",
+          "amount": 40000,
+          "sourceCell": "店收入統計10月份 55:9"
+        },
+        {
+          "name": "怡文",
+          "amount": 12423,
+          "sourceCell": "店收入統計10月份 57:8"
+        },
+        {
+          "name": "VIKA",
+          "amount": 14887,
+          "sourceCell": "店收入統計10月份 57:9"
+        }
+      ],
+      "salarySnapshotTotal": 199131,
+      "payrollDelta": 0,
+      "transactionCount": 292,
+      "attendanceCount": 85,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-11",
+      "sourceSheet": "11月營業表",
+      "expectedIncome": 815317,
+      "importedIncome": 815317,
+      "incomeDelta": 0,
+      "expectedOperating": 429117,
+      "importedOperating": 429117,
+      "expenseDelta": 0,
+      "sourcePayroll": 177867.666667,
+      "salarySnapshotTotal": 177867.666667,
+      "payrollDelta": 0,
+      "transactionCount": 290,
+      "attendanceCount": 72,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2022-12",
+      "sourceSheet": "12月營業表",
+      "expectedIncome": 891280,
+      "importedIncome": 891280,
+      "incomeDelta": 0,
+      "expectedOperating": 468949,
+      "importedOperating": 468949,
+      "expenseDelta": 0,
+      "sourcePayroll": 187235.166667,
+      "salarySnapshotTotal": 187235.166666,
+      "payrollDelta": -1e-06,
+      "transactionCount": 312,
+      "attendanceCount": 80,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-01",
+      "sourceSheet": "1月營業表",
+      "expectedIncome": 903111,
+      "importedIncome": 903111,
+      "incomeDelta": 0,
+      "expectedOperating": 436628,
+      "importedOperating": 436628,
+      "expenseDelta": 0,
+      "sourcePayroll": 252791.433333,
+      "salarySnapshotTotal": 215798.6,
+      "payrollDelta": -36992.833333,
+      "transactionCount": 278,
+      "attendanceCount": 78,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2023-02",
+      "sourceSheet": "2月營業表",
+      "expectedIncome": 894250,
+      "importedIncome": 894250,
+      "incomeDelta": 0,
+      "expectedOperating": 477906,
+      "importedOperating": 477906,
+      "expenseDelta": 0,
+      "sourcePayroll": 176780.966667,
+      "salarySnapshotTotal": 216131.466666,
+      "payrollDelta": 39350.499999,
+      "transactionCount": 284,
+      "attendanceCount": 81,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2023-03",
+      "sourceSheet": "3月營業表",
+      "expectedIncome": 881653,
+      "importedIncome": 881653,
+      "incomeDelta": 0,
+      "expectedOperating": 488355,
+      "importedOperating": 488355,
+      "expenseDelta": 0,
+      "sourcePayroll": 162706.4,
+      "salarySnapshotTotal": 199437.733333,
+      "payrollDelta": 36731.333333,
+      "transactionCount": 276,
+      "attendanceCount": 71,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-04",
+      "sourceSheet": "4月營業表",
+      "expectedIncome": 1049384,
+      "importedIncome": 1049384,
+      "incomeDelta": 0,
+      "expectedOperating": 521654,
+      "importedOperating": 521654,
+      "expenseDelta": 0,
+      "sourcePayroll": 198740.966667,
+      "salarySnapshotTotal": 234114.3,
+      "payrollDelta": 35373.333333,
+      "transactionCount": 297,
+      "attendanceCount": 96,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2023-05",
+      "sourceSheet": "5月營業表",
+      "expectedIncome": 982381,
+      "importedIncome": 982381,
+      "incomeDelta": 0,
+      "expectedOperating": 488098,
+      "importedOperating": 488098,
+      "expenseDelta": 0,
+      "sourcePayroll": 163060.833333,
+      "salarySnapshotTotal": 196790.5,
+      "payrollDelta": 33729.666667,
+      "transactionCount": 317,
+      "attendanceCount": 69,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2023-06",
+      "sourceSheet": "6月營業表",
+      "expectedIncome": 983416,
+      "importedIncome": 983416,
+      "incomeDelta": 0,
+      "expectedOperating": 516473,
+      "importedOperating": 516473,
+      "expenseDelta": 0,
+      "sourcePayroll": 181205.033333,
+      "salarySnapshotTotal": 210370.033333,
+      "payrollDelta": 29165,
+      "transactionCount": 304,
+      "attendanceCount": 78,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-07",
+      "sourceSheet": "7月營業表",
+      "expectedIncome": 1066341,
+      "importedIncome": 1066341,
+      "incomeDelta": 0,
+      "expectedOperating": 511175,
+      "importedOperating": 511175,
+      "expenseDelta": 0,
+      "sourcePayroll": 183583.166667,
+      "salarySnapshotTotal": 212989.166667,
+      "payrollDelta": 29406,
+      "transactionCount": 308,
+      "attendanceCount": 86,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-08",
+      "sourceSheet": "8月營業表",
+      "expectedIncome": 1030694,
+      "importedIncome": 1030694,
+      "incomeDelta": 0,
+      "expectedOperating": 552341,
+      "importedOperating": 552341,
+      "expenseDelta": 0,
+      "sourcePayroll": 165234.133333,
+      "salarySnapshotTotal": 196842.133334,
+      "payrollDelta": 31608.000001,
+      "transactionCount": 310,
+      "attendanceCount": 67,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2023-09",
+      "sourceSheet": "9月營業表",
+      "expectedIncome": 934566,
+      "importedIncome": 934566,
+      "incomeDelta": 0,
+      "expectedOperating": 479023,
+      "importedOperating": 479023,
+      "expenseDelta": 0,
+      "sourcePayroll": 187694.866667,
+      "salarySnapshotTotal": 223969.866667,
+      "payrollDelta": 36275,
+      "transactionCount": 294,
+      "attendanceCount": 81,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-10",
+      "sourceSheet": "10月營業表",
+      "expectedIncome": 998807,
+      "importedIncome": 998807,
+      "incomeDelta": 0,
+      "expectedOperating": 525841,
+      "importedOperating": 525841,
+      "expenseDelta": 0,
+      "sourcePayroll": 197830.5,
+      "salarySnapshotTotal": 230201.5,
+      "payrollDelta": 32371,
+      "transactionCount": 309,
+      "attendanceCount": 95,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2023-11",
+      "sourceSheet": "11月營業表",
+      "expectedIncome": 940419,
+      "importedIncome": 940419,
+      "incomeDelta": 0,
+      "expectedOperating": 492714,
+      "importedOperating": 492714,
+      "expenseDelta": 0,
+      "sourcePayroll": 190273.083333,
+      "salarySnapshotTotal": 220624.083334,
+      "payrollDelta": 30351.000001,
+      "transactionCount": 319,
+      "attendanceCount": 91,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2023-12",
+      "sourceSheet": "12月營業表",
+      "expectedIncome": 987931,
+      "importedIncome": 987931,
+      "incomeDelta": 0,
+      "expectedOperating": 474794,
+      "importedOperating": 474794,
+      "expenseDelta": 0,
+      "sourcePayroll": 197216,
+      "salarySnapshotTotal": 233480.999999,
+      "payrollDelta": 36264.999999,
+      "transactionCount": 307,
+      "attendanceCount": 99,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-01",
+      "sourceSheet": "1月營業表",
+      "expectedIncome": 961890,
+      "importedIncome": 961890,
+      "incomeDelta": 0,
+      "expectedOperating": 704134,
+      "importedOperating": 704134,
+      "expenseDelta": 0,
+      "sourcePayroll": 282994.916667,
+      "salarySnapshotTotal": 238631.916667,
+      "payrollDelta": -44363,
+      "transactionCount": 315,
+      "attendanceCount": 102,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-02",
+      "sourceSheet": "2月營業表",
+      "expectedIncome": 797498,
+      "importedIncome": 797498,
+      "incomeDelta": 0,
+      "expectedOperating": 411064,
+      "importedOperating": 411064,
+      "expenseDelta": 0,
+      "sourcePayroll": 182468.666667,
+      "salarySnapshotTotal": 215120.666667,
+      "payrollDelta": 32652,
+      "transactionCount": 240,
+      "attendanceCount": 78,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2024-03",
+      "sourceSheet": "3月營業表",
+      "expectedIncome": 997620,
+      "importedIncome": 997620,
+      "incomeDelta": 0,
+      "expectedOperating": 497258,
+      "importedOperating": 497258,
+      "expenseDelta": 0,
+      "sourcePayroll": 196656.75,
+      "salarySnapshotTotal": 217095.500001,
+      "payrollDelta": 20438.750001,
+      "transactionCount": 335,
+      "attendanceCount": 84,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-04",
+      "sourceSheet": "4月營業表",
+      "expectedIncome": 939395,
+      "importedIncome": 939395,
+      "incomeDelta": 0,
+      "expectedOperating": 472729,
+      "importedOperating": 472729,
+      "expenseDelta": 0,
+      "sourcePayroll": 192497.833333,
+      "salarySnapshotTotal": 226229.750001,
+      "payrollDelta": 33731.916668,
+      "transactionCount": 329,
+      "attendanceCount": 84,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-05",
+      "sourceSheet": "5月營業表",
+      "expectedIncome": 985515,
+      "importedIncome": 985515,
+      "incomeDelta": 0,
+      "expectedOperating": 492269,
+      "importedOperating": 492269,
+      "expenseDelta": 0,
+      "sourcePayroll": 180372.583333,
+      "salarySnapshotTotal": 216540.250001,
+      "payrollDelta": 36167.666668,
+      "transactionCount": 329,
+      "attendanceCount": 72,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-06",
+      "sourceSheet": "6月營業表",
+      "expectedIncome": 1013291,
+      "importedIncome": 1013291,
+      "incomeDelta": 0,
+      "expectedOperating": 469337,
+      "importedOperating": 469337,
+      "expenseDelta": 0,
+      "sourcePayroll": 192617.166667,
+      "salarySnapshotTotal": 222801.166667,
+      "payrollDelta": 30184,
+      "transactionCount": 310,
+      "attendanceCount": 77,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-07",
+      "sourceSheet": "7月營業表",
+      "expectedIncome": 1006572,
+      "importedIncome": 1006572,
+      "incomeDelta": 0,
+      "expectedOperating": 484662,
+      "importedOperating": 484662,
+      "expenseDelta": 0,
+      "sourcePayroll": 198428.333333,
+      "salarySnapshotTotal": 217689,
+      "payrollDelta": 19260.666667,
+      "transactionCount": 319,
+      "attendanceCount": 79,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2024-08",
+      "sourceSheet": "8月營業表",
+      "expectedIncome": 1051171,
+      "importedIncome": 1051171,
+      "incomeDelta": 0,
+      "expectedOperating": 506038,
+      "importedOperating": 506038,
+      "expenseDelta": 0,
+      "sourcePayroll": 244923.666667,
+      "salarySnapshotTotal": 234923.666667,
+      "payrollDelta": -10000,
+      "transactionCount": 331,
+      "attendanceCount": 89,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2024-09",
+      "sourceSheet": "9月營業表",
+      "expectedIncome": 985129,
+      "importedIncome": 985129,
+      "incomeDelta": 0,
+      "expectedOperating": 467600,
+      "importedOperating": 467600,
+      "expenseDelta": 0,
+      "sourcePayroll": 252266.083333,
+      "salarySnapshotTotal": 244766.083333,
+      "payrollDelta": -7500,
+      "transactionCount": 317,
+      "attendanceCount": 90,
+      "payrollEmployeeCount": 10
+    },
+    {
+      "period": "2024-10",
+      "sourceSheet": "10月營業表",
+      "expectedIncome": 986350,
+      "importedIncome": 986350,
+      "incomeDelta": 0,
+      "expectedOperating": 484196,
+      "importedOperating": 484196,
+      "expenseDelta": 0,
+      "sourcePayroll": 254117.333333,
+      "salarySnapshotTotal": 247117.333334,
+      "payrollDelta": -6999.999999,
+      "transactionCount": 328,
+      "attendanceCount": 96,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2024-11",
+      "sourceSheet": "11月營業表",
+      "expectedIncome": 937416,
+      "importedIncome": 937416,
+      "incomeDelta": 0,
+      "expectedOperating": 450938,
+      "importedOperating": 450938,
+      "expenseDelta": 0,
+      "sourcePayroll": 246701.666667,
+      "salarySnapshotTotal": 243701.666666,
+      "payrollDelta": -3000.000001,
+      "transactionCount": 304,
+      "attendanceCount": 93,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2024-12",
+      "sourceSheet": "12月營業表",
+      "expectedIncome": 944599,
+      "importedIncome": 944599,
+      "incomeDelta": 0,
+      "expectedOperating": 444550,
+      "importedOperating": 444550,
+      "expenseDelta": 0,
+      "sourcePayroll": 247372.416667,
+      "salarySnapshotTotal": 245872.416667,
+      "payrollDelta": -1500,
+      "transactionCount": 310,
+      "attendanceCount": 96,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-01",
+      "sourceSheet": "1月營業表",
+      "expectedIncome": 994131.5,
+      "importedIncome": 994131.5,
+      "incomeDelta": 0,
+      "expectedOperating": 443219,
+      "importedOperating": 443219,
+      "expenseDelta": 0,
+      "sourcePayroll": 310993.5,
+      "salarySnapshotTotal": 224893.500001,
+      "payrollDelta": -86099.999999,
+      "transactionCount": 308,
+      "attendanceCount": 86,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-02",
+      "sourceSheet": "2月營業表",
+      "expectedIncome": 887016,
+      "importedIncome": 887016,
+      "incomeDelta": 0,
+      "expectedOperating": 465380,
+      "importedOperating": 465380,
+      "expenseDelta": 0,
+      "sourcePayroll": 224775.166667,
+      "salarySnapshotTotal": 217975.166666,
+      "payrollDelta": -6800.000001,
+      "transactionCount": 299,
+      "attendanceCount": 70,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2025-03",
+      "sourceSheet": "3月營業表",
+      "expectedIncome": 1039071.65,
+      "importedIncome": 1039071.65,
+      "incomeDelta": 0,
+      "expectedOperating": 491654,
+      "importedOperating": 491654,
+      "expenseDelta": 0,
+      "sourcePayroll": 250423.5,
+      "salarySnapshotTotal": 239057.166667,
+      "payrollDelta": -11366.333333,
+      "transactionCount": 329,
+      "attendanceCount": 86,
+      "payrollEmployeeCount": 7
+    },
+    {
+      "period": "2025-04",
+      "sourceSheet": "4月營業表",
+      "expectedIncome": 1023095.25,
+      "importedIncome": 1023095.25,
+      "incomeDelta": 0,
+      "expectedOperating": 485355,
+      "importedOperating": 485355,
+      "expenseDelta": 0,
+      "sourcePayroll": 274714.333333,
+      "salarySnapshotTotal": 269714.333334,
+      "payrollDelta": -4999.999999,
+      "transactionCount": 328,
+      "attendanceCount": 99,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2025-05",
+      "sourceSheet": "5月營業表",
+      "expectedIncome": 1074664,
+      "importedIncome": 1074664,
+      "incomeDelta": 0,
+      "expectedOperating": 484131,
+      "importedOperating": 484131,
+      "expenseDelta": 0,
+      "sourcePayroll": 272034.5,
+      "salarySnapshotTotal": 272034.500001,
+      "payrollDelta": 1e-06,
+      "transactionCount": 347,
+      "attendanceCount": 105,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2025-06",
+      "sourceSheet": "6月營業表",
+      "expectedIncome": 1043065,
+      "importedIncome": 1043065,
+      "incomeDelta": 0,
+      "expectedOperating": 475534,
+      "importedOperating": 475534,
+      "expenseDelta": 0,
+      "sourcePayroll": 286135.5,
+      "salarySnapshotTotal": 271350.5,
+      "payrollDelta": -14785,
+      "transactionCount": 335,
+      "attendanceCount": 110,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-07",
+      "sourceSheet": "7月營業表",
+      "expectedIncome": 1131983,
+      "importedIncome": 1131983,
+      "incomeDelta": 0,
+      "expectedOperating": 524129,
+      "importedOperating": 524129,
+      "expenseDelta": 0,
+      "sourcePayroll": 297096.5,
+      "salarySnapshotTotal": 282896.500001,
+      "payrollDelta": -14199.999999,
+      "transactionCount": 316,
+      "attendanceCount": 114,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-08",
+      "sourceSheet": "8月營業表",
+      "expectedIncome": 1165323,
+      "importedIncome": 1165323,
+      "incomeDelta": 0,
+      "expectedOperating": 597889,
+      "importedOperating": 597889,
+      "expenseDelta": 0,
+      "sourcePayroll": 304497.166667,
+      "salarySnapshotTotal": 296997.166666,
+      "payrollDelta": -7500.000001,
+      "transactionCount": 312,
+      "attendanceCount": 124,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-09",
+      "sourceSheet": "9月營業表",
+      "expectedIncome": 954827,
+      "importedIncome": 954827,
+      "incomeDelta": 0,
+      "expectedOperating": 525287,
+      "importedOperating": 525287,
+      "expenseDelta": 0,
+      "sourcePayroll": 275559.833333,
+      "salarySnapshotTotal": 273059.833333,
+      "payrollDelta": -2500,
+      "transactionCount": 289,
+      "attendanceCount": 105,
+      "payrollEmployeeCount": 10
+    },
+    {
+      "period": "2025-10",
+      "sourceSheet": "10月營業表",
+      "expectedIncome": 1012010,
+      "importedIncome": 1012010,
+      "incomeDelta": 0,
+      "expectedOperating": 505362,
+      "importedOperating": 505362,
+      "expenseDelta": 0,
+      "sourcePayroll": 285589.666667,
+      "salarySnapshotTotal": 283089.666667,
+      "payrollDelta": -2500,
+      "transactionCount": 321,
+      "attendanceCount": 109,
+      "payrollEmployeeCount": 9
+    },
+    {
+      "period": "2025-11",
+      "sourceSheet": "11月營業表",
+      "expectedIncome": 1017739,
+      "importedIncome": 1017739,
+      "incomeDelta": 0,
+      "expectedOperating": 473437,
+      "importedOperating": 473437,
+      "expenseDelta": 0,
+      "sourcePayroll": 238473.666667,
+      "salarySnapshotTotal": 235973.666666,
+      "payrollDelta": -2500.000001,
+      "transactionCount": 295,
+      "attendanceCount": 88,
+      "payrollEmployeeCount": 8
+    },
+    {
+      "period": "2025-12",
+      "sourceSheet": "12月營業表",
+      "expectedIncome": 968853,
+      "importedIncome": 968853,
+      "incomeDelta": 0,
+      "expectedOperating": 494719,
+      "importedOperating": 494719,
+      "expenseDelta": 0,
+      "sourcePayroll": 225729.5,
+      "salarySnapshotTotal": 219229.500001,
+      "payrollDelta": -6499.999999,
+      "transactionCount": 290,
+      "attendanceCount": 75,
+      "payrollEmployeeCount": 8
+    }
+  ],
+  "warnings": [
+    {
+      "period": "2022-01",
+      "type": "payroll-reconciliation",
+      "difference": -28200,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2022-02",
+      "type": "payroll-reconciliation",
+      "difference": -85035.333334,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-01",
+      "type": "payroll-reconciliation",
+      "difference": -36992.833333,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-02",
+      "type": "payroll-reconciliation",
+      "difference": 39350.499999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-03",
+      "type": "payroll-reconciliation",
+      "difference": 36731.333333,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-04",
+      "type": "payroll-reconciliation",
+      "difference": 35373.333333,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-05",
+      "type": "payroll-reconciliation",
+      "difference": 33729.666667,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-06",
+      "type": "payroll-reconciliation",
+      "difference": 29165,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-07",
+      "type": "payroll-reconciliation",
+      "difference": 29406,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-08",
+      "type": "payroll-reconciliation",
+      "difference": 31608.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-09",
+      "type": "payroll-reconciliation",
+      "difference": 36275,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-10",
+      "type": "payroll-reconciliation",
+      "difference": 32371,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-11",
+      "type": "payroll-reconciliation",
+      "difference": 30351.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2023-12",
+      "type": "payroll-reconciliation",
+      "difference": 36264.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-01",
+      "type": "payroll-reconciliation",
+      "difference": -44363,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-02",
+      "type": "payroll-reconciliation",
+      "difference": 32652,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-03",
+      "type": "payroll-reconciliation",
+      "difference": 20438.750001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-04",
+      "type": "payroll-reconciliation",
+      "difference": 33731.916668,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-05",
+      "type": "payroll-reconciliation",
+      "difference": 36167.666668,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-06",
+      "type": "payroll-reconciliation",
+      "difference": 30184,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-07",
+      "type": "payroll-reconciliation",
+      "difference": 19260.666667,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-08",
+      "type": "payroll-reconciliation",
+      "difference": -10000,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-09",
+      "type": "payroll-reconciliation",
+      "difference": -7500,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-10",
+      "type": "payroll-reconciliation",
+      "difference": -6999.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-11",
+      "type": "payroll-reconciliation",
+      "difference": -3000.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2024-12",
+      "type": "payroll-reconciliation",
+      "difference": -1500,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-01",
+      "type": "payroll-reconciliation",
+      "difference": -86099.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-02",
+      "type": "payroll-reconciliation",
+      "difference": -6800.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-03",
+      "type": "payroll-reconciliation",
+      "difference": -11366.333333,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-04",
+      "type": "payroll-reconciliation",
+      "difference": -4999.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-06",
+      "type": "payroll-reconciliation",
+      "difference": -14785,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-07",
+      "type": "payroll-reconciliation",
+      "difference": -14199.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-08",
+      "type": "payroll-reconciliation",
+      "difference": -7500.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-09",
+      "type": "payroll-reconciliation",
+      "difference": -2500,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-10",
+      "type": "payroll-reconciliation",
+      "difference": -2500,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-11",
+      "type": "payroll-reconciliation",
+      "difference": -2500.000001,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    },
+    {
+      "period": "2025-12",
+      "type": "payroll-reconciliation",
+      "difference": -6499.999999,
+      "message": "薪資簿實領合計與營業額檔薪資支出欄不同；系統採薪資簿快照。"
+    }
+  ]
+}

@@ -1,6 +1,3 @@
-import type { Config, Context } from "@netlify/functions";
-import { getUser } from "@netlify/identity";
-
 type TimecardRequest = {
   images?: unknown;
   month?: unknown;
@@ -199,7 +196,7 @@ async function recognizeWithGemini(
   signal: AbortSignal,
   requestId: string
 ): Promise<ProviderResult> {
-  const model = Netlify.env.get("GEMINI_VISION_MODEL") || "gemini-3.6-flash";
+  const model = process.env.GEMINI_VISION_MODEL || "gemini-3.6-flash";
   const imageLabels = [
     "影像 A｜正向彩色原圖：只從這張或 B 讀取正向時間。",
     "影像 B｜正向溫和點陣強化圖：只輔助確認 A 中的正向時間。",
@@ -283,7 +280,7 @@ async function recognizeWithOpenAi(
   signal: AbortSignal,
   requestId: string
 ): Promise<ProviderResult> {
-  const model = Netlify.env.get("OPENAI_VISION_MODEL") || "gpt-5.6-sol";
+  const model = process.env.OPENAI_VISION_MODEL || "gpt-5.6-sol";
   const imageLabels = [
     "影像 A｜正向彩色原圖：只從這張或 B 讀取正向時間。",
     "影像 B｜正向溫和點陣強化圖：只輔助確認 A 中的正向時間。",
@@ -360,7 +357,14 @@ async function recognizeWithOpenAi(
   };
 }
 
-export default async (req: Request, context: Context) => {
+export async function handleTimecardRecognition(req: Request, options: {
+  requestId?: string;
+  localMode?: boolean;
+  authenticated?: boolean;
+} = {}) {
+  const requestId = options.requestId || crypto.randomUUID();
+  const localMode = options.localMode === true;
+  const authenticated = options.authenticated === true;
   if (req.method !== "POST") {
     return jsonResponse({ error: "METHOD_NOT_ALLOWED", message: "只接受 POST 請求。" }, 405);
   }
@@ -370,25 +374,26 @@ export default async (req: Request, context: Context) => {
     return jsonResponse({ error: "IMAGE_TOO_LARGE", message: "照片資料過大，請縮小後重試。" }, 413);
   }
 
-  const expectedToken = Netlify.env.get("TIME_CARD_API_TOKEN") || "";
+  const expectedToken = process.env.TIME_CARD_API_TOKEN || "";
   const suppliedToken = req.headers.get("x-timecard-token") || "";
-  const identityUser = await getUser();
-  if (!identityUser && !expectedToken) {
+  if (!localMode && !authenticated && !expectedToken) {
     return jsonResponse({
       error: "SERVER_NOT_CONFIGURED",
-      message: "請先登入管理者帳號，或在 Netlify 設定 TIME_CARD_API_TOKEN。"
+      message: "請先登入管理者帳號，或在 Vercel 設定 TIME_CARD_API_TOKEN。"
     }, 503);
   }
-  if (!identityUser && (!suppliedToken || !constantTimeEqual(suppliedToken, expectedToken))) {
+  if (!localMode && !authenticated && (!suppliedToken || !constantTimeEqual(suppliedToken, expectedToken))) {
     return jsonResponse({ error: "INVALID_ACCESS_TOKEN", message: "AI 辨識連線密碼不正確。" }, 401);
   }
 
-  const geminiApiKey = Netlify.env.get("GEMINI_API_KEY") || "";
-  const openAiApiKey = Netlify.env.get("OPENAI_API_KEY") || "";
+  const geminiApiKey = process.env.GEMINI_API_KEY || "";
+  const openAiApiKey = process.env.OPENAI_API_KEY || "";
   if (!geminiApiKey && !openAiApiKey) {
     return jsonResponse({
       error: "SERVER_NOT_CONFIGURED",
-      message: "Netlify 尚未設定 GEMINI_API_KEY 或 OPENAI_API_KEY。"
+      message: localMode
+        ? "本機尚未設定 GEMINI_API_KEY 或 OPENAI_API_KEY；薪資與出勤功能仍可正常使用。"
+        : "Vercel 尚未設定 GEMINI_API_KEY 或 OPENAI_API_KEY。"
     }, 503);
   }
 
@@ -425,7 +430,7 @@ export default async (req: Request, context: Context) => {
         month,
         half,
         controller.signal,
-        context.requestId
+        requestId
       )
       : await recognizeWithOpenAi(
         openAiApiKey,
@@ -433,18 +438,18 @@ export default async (req: Request, context: Context) => {
         month,
         half,
         controller.signal,
-        context.requestId
+        requestId
       );
     return jsonResponse({
       result: recognition.result,
       model: recognition.model,
       provider: recognition.provider,
-      requestId: context.requestId
+      requestId
     });
   } catch (error) {
     const isTimeout = error instanceof Error && error.name === "AbortError";
     console.error("Timecard recognition failed", {
-      requestId: context.requestId,
+      requestId,
       error: error instanceof Error ? error.message : "unknown"
     });
     if (error instanceof ProviderRequestError) {
@@ -456,10 +461,10 @@ export default async (req: Request, context: Context) => {
         message: isRateLimit
           ? `${providerName} 免費辨識額度暫時達到上限，請稍後再試。`
           : isCredentialsError
-            ? `${providerName} API Key 無效或沒有使用權限，請檢查 Netlify 環境變數。`
+            ? `${providerName} API Key 無效或沒有使用權限，請檢查 Vercel 環境變數。`
             : `${providerName} 暫時無法完成辨識，請稍後重試。`,
         provider: error.provider,
-        requestId: context.requestId
+        requestId
       }, isRateLimit ? 429 : 502);
     }
     return jsonResponse({
@@ -467,14 +472,9 @@ export default async (req: Request, context: Context) => {
       message: isTimeout
         ? "AI 辨識超過等待時間，請重試一次。"
         : "AI 回傳內容無法讀取，請重試或改用人工核對。",
-      requestId: context.requestId
+      requestId
     }, isTimeout ? 504 : 502);
   } finally {
     clearTimeout(timeout);
   }
-};
-
-export const config: Config = {
-  path: "/api/recognize-timecard",
-  method: ["POST"]
-};
+}

@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0e4b86" />
+  <meta name="description" content="初一食午記帳系統，整合營業收入、日常支出、正式員工薪資與日薪工讀。" />
+  <title>初一食午｜記帳系統</title>
+  <link rel="icon" type="image/png" href="../salary_app/assets/favicon-32.png" />
+  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="../shared/operations-brandbar.css" />
+  <script src="../shared/operations-store.js"></script>
+  <script defer src="./data/revenue-history-2022-2025.js"></script>
+  <script defer src="./data/revenue-history-2026.js"></script>
+  <script defer src="./data/accounting-backup-2026-07-22.js"></script>
+  <script defer src="./data/uber-statement-2026-07-24.js"></script>
+  <script defer src="../salary_app/data/salary-history-2022-2025.js"></script>
+  <script defer src="../salary_app/data/salary-history-2026-h1.js"></script>
+  <script defer src="./vendor/sql-wasm.js"></script>
+  <script defer src="./backup-importer.js"></script>
+  <script defer src="./uber-statement-importer.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body class="has-suite-brandbar accounting-system">
+  <header class="suite-brandbar">
+    <a class="suite-logo" href="../" aria-label="回到初一食午營運首頁">
+      <img src="../salary_app/assets/app-icon-192.png" alt="" />
+      <span><strong>初一食午</strong><small>營運管理系統</small></span>
+    </a>
+    <div class="suite-brand-copy">
+      <p>BREAKFAST · BRUNCH · OPERATIONS</p>
+      <strong>初一食午營運資料中心</strong>
+      <small>HEALTHY · FULL · DELICIOUS｜薪資、記帳與收支分析一站管理</small>
+    </div>
+    <nav class="suite-system-nav" aria-label="三大管理系統">
+      <a href="../salary_app/"><i aria-hidden="true">薪</i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
+      <a href="./" aria-current="page"><i aria-hidden="true">帳</i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
+      <a href="../dashboard_cost/"><i aria-hidden="true">析</i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
+    </nav>
+    <a class="suite-home-link" href="../"><b aria-hidden="true">⌂</b><span>營運首頁</span></a>
+  </header>
+
+  <div class="accounting-shell">
+    <aside class="accounting-sidebar" aria-label="記帳系統選單">
+      <div class="accounting-sidebar-heading">
+        <span aria-hidden="true">帳</span>
+        <div><strong>記帳系統</strong><small>收入・支出與日薪</small></div>
+      </div>
+      <nav class="accounting-page-tabs" role="tablist" aria-label="記帳系統分頁">
+        <button id="accounting-tab-entry" class="accounting-page-tab" type="button" role="tab" aria-selected="true" data-accounting-tab="entry"><i aria-hidden="true">＋</i><span><strong>新增收入／支出</strong><small>一般記帳・日薪・固定收支</small></span></button>
+        <button id="accounting-tab-ledger" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="ledger"><i aria-hidden="true">曆</i><span><strong>月份收支明細</strong><small>月曆・每日明細・收支摘要</small></span></button>
+        <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true">匯</i><span><strong>匯入中心</strong><small>記帳備份・Uber CSV・資料還原</small></span></button>
+        <button id="accounting-tab-catalog" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="catalog"><i aria-hidden="true">類</i><span><strong>分類與項目設定</strong><small>收入項目・支出廠商・新增項目</small></span></button>
+        <button id="accounting-tab-safety" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="safety"><i aria-hidden="true">安</i><span><strong>關帳與資料安全</strong><small>每日關帳・月結・版本救援</small></span></button>
+      </nav>
+      <div class="accounting-sidebar-note">
+        <strong>本機優先・雲端備份</strong>
+        <p>每次操作先存本機；登入後會延遲 60 秒同步至 Vercel 私有雲端。</p>
+      </div>
+    </aside>
+    <button class="accounting-sidebar-backdrop" type="button" aria-label="關閉記帳選單" tabindex="-1"></button>
+
+    <main class="accounting-workspace">
+    <section class="hero">
+      <div class="hero-title-block">
+        <button class="accounting-mobile-menu" type="button" aria-label="開啟記帳選單" aria-expanded="false">☰</button>
+        <div>
+        <p class="eyebrow" id="accounting-page-eyebrow">NEW ENTRY</p>
+        <h1 id="accounting-page-title">新增今天的收入與支出。</h1>
+        <p id="accounting-page-description">一般收支、臨時工讀日薪與每月固定項目集中在這裡登錄，儲存後會立即反映到月份明細與分析系統。</p>
+        </div>
+      </div>
+      <div class="hero-controls">
+        <label>查看月份
+          <select id="month-filter"></select>
+        </label>
+        <span id="save-status" class="save-status">已儲存於本機</span>
+      </div>
+    </section>
+
+    <section class="source-banner" id="source-banner" aria-live="polite" data-accounting-page="ledger"></section>
+
+    <section class="summary-grid" aria-label="月份摘要" data-accounting-page="ledger">
+      <article class="summary-card income"><i class="summary-icon" aria-hidden="true">收</i><span>營業收入</span><strong id="summary-income">$0</strong><small>每日收入合計</small></article>
+      <article class="summary-card expense"><i class="summary-icon" aria-hidden="true">支</i><span>一般營運支出</span><strong id="summary-operating">$0</strong><small>不含薪資</small></article>
+      <article class="summary-card payroll"><i class="summary-icon" aria-hidden="true">薪</i><span>正式員工薪資</span><strong id="summary-payroll">$0</strong><small id="summary-payroll-source">等待薪資資料</small></article>
+      <article class="summary-card labor"><i class="summary-icon" aria-hidden="true">工</i><span>臨時工讀日薪</span><strong id="summary-labor">$0</strong><small>獨立計入人事成本</small></article>
+      <article class="summary-card net"><i class="summary-icon" aria-hidden="true">餘</i><span>本月收支結餘</span><strong id="summary-net">$0</strong><small id="summary-net-ratio">淨利率 0%</small></article>
+    </section>
+
+    <section class="panel backup-import-panel" aria-labelledby="backup-import-title" data-accounting-page="import">
+      <div class="panel-heading import-heading">
+        <div><p class="eyebrow">ACCOUNTING BACKUP IMPORT</p><h2 id="backup-import-title">記帳備份匯入中心</h2><p class="panel-copy">上傳「初一食午_日期.back」，系統會在這台裝置內解析、排除帳戶互轉並比對重複資料。看到核對結果後，按下確認才會寫入。</p></div>
+        <span class="panel-chip import-chip">免 AI・不耗雲端額度</span>
+      </div>
+      <div class="import-picker-grid">
+        <label>匯入起始日<input id="backup-import-start" type="date" /></label>
+        <div class="import-file-field">
+          <span>選擇記帳備份檔</span>
+          <label class="file-btn import-file-btn" for="accounting-backup-file"><b aria-hidden="true">＋</b> 選擇 .back 檔</label>
+          <input id="accounting-backup-file" type="file" accept=".back,application/octet-stream" />
+        </div>
+        <div class="import-policy-note"><b aria-hidden="true">安</b><span><strong>檔案只在瀏覽器內處理</strong><small>不會傳給 AI 或外部辨識服務；帳戶互轉、餘額調整及正式員工薪資會自動排除。</small></span></div>
+      </div>
+      <div id="backup-import-progress" class="import-progress" aria-live="polite">尚未選擇檔案。</div>
+      <div id="backup-import-review" class="import-review" hidden>
+        <div class="import-file-summary"><div><span>檔案</span><strong id="backup-import-file-name">—</strong></div><div><span>資料期間</span><strong id="backup-import-period">—</strong></div><div><span>檔案識別碼</span><strong id="backup-import-fingerprint">—</strong></div></div>
+        <div class="import-kpis">
+          <article><span>有效收支</span><strong id="backup-import-eligible">0</strong><small>可核對的原始明細</small></article>
+          <article class="matched"><span>已存在</span><strong id="backup-import-matched">0</strong><small>不會重複匯入</small></article>
+          <article class="new"><span>預計新增</span><strong id="backup-import-new">0</strong><small>確認後才會寫入</small></article>
+          <article class="excluded"><span>已排除</span><strong id="backup-import-excluded">0</strong><small>互轉、調整或薪資</small></article>
+          <article class="income"><span>新增收入</span><strong id="backup-import-income">$0</strong><small>正規化後合計</small></article>
+          <article class="expense"><span>新增支出</span><strong id="backup-import-expense">$0</strong><small>正規化後合計</small></article>
+        </div>
+        <div id="backup-import-warnings" class="import-warnings"></div>
+        <details class="import-details">
+          <summary>查看預計新增與排除明細</summary>
+          <div class="import-table-wrap"><table><thead><tr><th>狀態</th><th>日期</th><th>類型</th><th>分類</th><th>項目</th><th>金額</th><th>說明</th></tr></thead><tbody id="backup-import-preview-body"></tbody></table></div>
+        </details>
+        <div class="import-actions">
+          <button class="secondary-btn" id="backup-import-report" type="button">下載核對報告</button>
+          <button class="secondary-btn" id="backup-import-cancel" type="button">取消本次匯入</button>
+          <button class="primary-btn" id="backup-import-confirm" type="button">確認匯入 0 筆</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel backup-import-panel uber-import-panel" aria-labelledby="uber-import-title" data-accounting-page="import">
+      <div class="panel-heading import-heading">
+        <div><p class="eyebrow">UBER STATEMENT IMPORT</p><h2 id="uber-import-title">Uber 對帳單匯入</h2><p class="panel-copy">直接選擇 Uber Eats 管理後台下載的台灣 CSV。系統會用「訂單日期」分組、加總已扣除平台費與退款調整的「總金額」，再寫入該日的 Uber eat 外送收入。</p></div>
+        <span class="panel-chip import-chip">本機解析・不需 AI</span>
+      </div>
+      <div class="import-picker-grid uber-picker-grid">
+        <div class="import-file-field">
+          <span>選擇 Uber 對帳單</span>
+          <label class="file-btn import-file-btn" for="uber-statement-file"><b aria-hidden="true">＋</b> 選擇 CSV 檔</label>
+          <input id="uber-statement-file" type="file" accept=".csv,text/csv" />
+        </div>
+        <div class="import-policy-note"><b aria-hidden="true">淨</b><span><strong>採店家實收的「總金額」</strong><small>包含平台服務費、退款與退款爭議；不會把餐點原價誤當成實收收入。</small></span></div>
+        <div class="import-policy-note"><b aria-hidden="true">核</b><span><strong>先核對、確認後才寫入</strong><small>同日同額自動略過；同日不同額會標示為「取代舊值」，避免重複計算。</small></span></div>
+      </div>
+      <div id="uber-import-progress" class="import-progress" aria-live="polite">尚未選擇 Uber CSV 檔。</div>
+      <div id="uber-import-review" class="import-review" hidden>
+        <div class="import-file-summary"><div><span>檔案</span><strong id="uber-import-file-name">—</strong></div><div><span>訂單日期範圍</span><strong id="uber-import-period">—</strong></div><div><span>檔案指紋</span><strong id="uber-import-fingerprint">—</strong></div></div>
+        <div class="import-kpis uber-import-kpis">
+          <article><span>原始明細</span><strong id="uber-import-source-rows">0</strong><small>含退款與爭議列</small></article>
+          <article class="income"><span>對帳單淨收入</span><strong id="uber-import-net">$0</strong><small>每日總金額合計</small></article>
+          <article class="expense"><span>平台服務費</span><strong id="uber-import-fees">$0</strong><small>已反映在淨收入</small></article>
+          <article class="matched"><span>同日同額</span><strong id="uber-import-matched">0</strong><small>安全略過，不重複</small></article>
+          <article class="replace"><span>取代舊值</span><strong id="uber-import-replaced">0</strong><small>同日金額不同</small></article>
+          <article class="new"><span>新增日期</span><strong id="uber-import-new">0</strong><small>原本尚無 Uber 收入</small></article>
+        </div>
+        <div id="uber-import-warnings" class="import-warnings"></div>
+        <details class="import-details" open>
+          <summary>逐日 Uber 淨收入核對</summary>
+          <div class="import-table-wrap"><table><thead><tr><th>處理</th><th>日期</th><th>明細筆數</th><th>對帳單淨收入</th><th>系統既有</th><th>退款／爭議</th><th>說明</th></tr></thead><tbody id="uber-import-preview-body"></tbody></table></div>
+        </details>
+        <div class="import-actions">
+          <button class="secondary-btn" id="uber-import-report" type="button">下載核對報告</button>
+          <button class="secondary-btn" id="uber-import-cancel" type="button">取消</button>
+          <button class="primary-btn" id="uber-import-confirm" type="button" disabled>確認寫入 0 天</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace-grid" data-accounting-page="entry">
+      <article class="panel entry-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">NEW ENTRY</p><h2>新增收入／支出</h2></div>
+          <div class="entry-heading-actions"><button class="secondary-btn compact-btn" id="copy-yesterday" type="button">複製昨日</button><button class="secondary-btn compact-btn" id="copy-last-week" type="button">複製上週同日</button><span class="panel-chip">一般記帳</span></div>
+        </div>
+        <div id="quick-entry-presets" class="quick-entry-presets" aria-label="常用記帳項目"></div>
+        <form id="transaction-form" class="entry-form">
+          <label>日期<input id="entry-date" type="date" required /></label>
+          <label>類型<select id="entry-type"><option value="expense">支出</option><option value="income">收入</option></select></label>
+          <label>分類<select id="entry-group" required></select></label>
+          <label>項目<input id="entry-category" list="category-options" required placeholder="例如：蛋商" /></label>
+          <label>金額<input id="entry-amount" type="number" min="0.01" step="0.01" required inputmode="decimal" /></label>
+          <label>付款方式<select id="entry-payment"><option>現金</option><option>銀行轉帳</option><option>信用卡</option><option>電子支付</option><option>平台入帳</option><option>其他</option></select></label>
+          <label>往來對象<input id="entry-counterparty" type="text" list="counterparty-options" placeholder="供應商／客戶（選填）" /></label>
+          <label class="wide">備註<input id="entry-note" type="text" placeholder="發票、用途或其他說明（選填）" /></label>
+          <label class="wide receipt-field">發票／收據照片<input id="entry-receipt" type="file" accept="image/jpeg,image/png,image/webp" /><small>照片會壓縮後保存在這台電腦的備份中。</small></label>
+          <label class="checkbox-entry checkbox-field"><input id="entry-recurring" type="checkbox" /><span>設為每月固定收支</span></label>
+          <button class="primary-btn wide" type="submit">儲存這筆記帳</button>
+        </form>
+        <datalist id="category-options"></datalist>
+        <datalist id="counterparty-options"></datalist>
+      </article>
+
+      <article class="panel labor-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">PART-TIME DAY PAY</p><h2>臨時工讀日薪</h2></div>
+          <span class="panel-chip gold">獨立人事成本</span>
+        </div>
+        <p class="panel-copy">週六、週日臨時支援的人員記在這裡，不需建立正式員工與打卡資料。</p>
+        <form id="labor-form" class="labor-form">
+          <label>工作日期<input id="labor-date" type="date" required /></label>
+          <label>工讀生姓名<input id="labor-name" type="text" required placeholder="姓名或暱稱" /></label>
+          <label>日薪類型<select id="labor-rate-type"><option value="1000">日薪 $1,000</option><option value="1500">日薪 $1,500</option><option value="custom">自訂日薪</option></select></label>
+          <label id="custom-rate-field" hidden>自訂日薪<input id="labor-custom-rate" type="number" min="1" step="1" inputmode="numeric" /></label>
+          <label>天數<input id="labor-days" type="number" min="0.5" step="0.5" value="1" required /></label>
+          <label>備註<input id="labor-note" type="text" placeholder="例如：週日外場支援" /></label>
+          <button class="gold-btn" type="submit">加入日薪紀錄</button>
+        </form>
+        <div id="labor-list" class="labor-list"></div>
+      </article>
+    </section>
+
+    <section class="panel catalog-panel" data-accounting-page="catalog" aria-labelledby="catalog-title">
+      <div class="panel-heading catalog-heading">
+        <div><p class="eyebrow">CATEGORY & ITEM SETTINGS</p><h2 id="catalog-title">分類與項目設定</h2><p class="panel-copy">分類依店內管理口徑固定；項目已從 2022 年開業至今的記帳資料整理，支出項目包含歷史廠商名稱。新增後會立即出現在一般記帳表單。</p></div>
+        <span class="panel-chip catalog-chip">自動帶入歷史資料</span>
+      </div>
+      <form id="catalog-item-form" class="catalog-item-form">
+        <label>收支類型<select id="catalog-item-type"><option value="expense">支出</option><option value="income">收入</option></select></label>
+        <label>分類<select id="catalog-item-group"></select></label>
+        <label class="catalog-name-field">新項目／廠商名稱<input id="catalog-item-name" type="text" required maxlength="60" placeholder="例如：新的食材供應商" /></label>
+        <button class="primary-btn" type="submit">新增項目</button>
+      </form>
+      <div class="catalog-toolbar">
+        <div class="catalog-guide"><i aria-hidden="true">i</i><span><strong>分類固定、項目可以增加</strong><small>歷史廠商不會因刪除記帳而消失；新增項目會跟著 JSON 記帳備份保存。</small></span></div>
+        <label>搜尋項目<input id="catalog-search" type="search" placeholder="搜尋廠商或收入項目" /></label>
+      </div>
+      <div id="catalog-groups" class="catalog-groups"></div>
+    </section>
+
+    <section class="panel safety-panel" data-accounting-page="safety" aria-labelledby="safety-title">
+      <div class="panel-heading safety-heading">
+        <div><p class="eyebrow">CLOSE & RECOVERY CENTER</p><h2 id="safety-title">關帳與資料安全中心</h2><p class="panel-copy">每日核對、月底鎖定、修改歷程與安全快照集中在這裡。大量匯入與還原前也會先留下可回復版本。</p></div>
+        <span id="month-lock-status" class="panel-chip safety-chip">本月尚未鎖定</span>
+      </div>
+      <div class="safety-kpi-grid">
+        <article><span>本月已關帳日</span><strong id="daily-closed-count">0 天</strong><small>有營收日逐日核對</small></article>
+        <article><span>重要待辦</span><strong id="month-close-blocker-count">0 項</strong><small>完成後即可月結</small></article>
+        <article><span>可救援版本</span><strong id="safety-snapshot-count">0 版</strong><small>自動保留最近 30 版</small></article>
+        <article><span>修改歷程</span><strong id="safety-audit-count">0 筆</strong><small>新增、刪除與關帳紀錄</small></article>
+      </div>
+      <div class="safety-action-row">
+        <button class="primary-btn" id="toggle-accounting-month-lock" type="button">完成本月月結並鎖定</button>
+        <button class="secondary-btn" id="create-snapshot-now" type="button">立即建立安全快照</button>
+        <button class="secondary-btn" id="undo-accounting-action" type="button">復原上一個動作</button>
+        <button class="secondary-btn" id="safety-download-backup" type="button">下載完整 JSON 備份</button>
+      </div>
+      <article class="accounting-cloud-card">
+        <div>
+          <p class="eyebrow">VERCEL PRIVATE CLOUD</p>
+          <h3>雲端同步與跨裝置備份</h3>
+          <p id="accounting-cloud-status" data-tone="waiting">正在檢查 Vercel 雲端登入…</p>
+        </div>
+        <div class="accounting-cloud-actions">
+          <button class="secondary-btn" id="accounting-cloud-login" type="button">登入 Vercel</button>
+          <button class="secondary-btn" id="accounting-cloud-signout" type="button" hidden>登出</button>
+          <button class="primary-btn" id="accounting-cloud-sync" type="button">立即同步</button>
+        </div>
+        <div id="accounting-cloud-conflict-actions" class="accounting-cloud-conflict" hidden>
+          <strong>本機與雲端版本不同，系統不會自動覆蓋。</strong>
+          <button class="secondary-btn" id="accounting-cloud-use-remote" type="button">採用雲端資料</button>
+          <button class="danger-btn" id="accounting-cloud-use-local" type="button">以本機資料覆蓋雲端</button>
+        </div>
+      </article>
+      <div class="safety-grid">
+        <article class="safety-section">
+          <div class="safety-section-heading"><div><p class="eyebrow">MONTH-END CHECKLIST</p><h3>月底結帳檢查</h3></div><span id="month-close-progress">0 / 0</span></div>
+          <div id="month-close-checklist" class="month-close-checklist"></div>
+        </article>
+        <article class="safety-section">
+          <div class="safety-section-heading"><div><p class="eyebrow">RECOVERY VERSIONS</p><h3>版本救援</h3></div><button class="secondary-btn compact-btn" id="refresh-snapshots" type="button">重新讀取</button></div>
+          <div id="snapshot-list" class="snapshot-list"><p class="empty-state">正在讀取安全快照…</p></div>
+        </article>
+      </div>
+      <article class="safety-section audit-section">
+        <div class="safety-section-heading"><div><p class="eyebrow">CHANGE HISTORY</p><h3>最近修改歷程</h3></div><span>保留最近 300 筆</span></div>
+        <div id="accounting-audit-log" class="accounting-audit-log"></div>
+      </article>
+    </section>
+
+    <section class="panel ledger-panel" data-accounting-page="ledger">
+      <div class="panel-heading ledger-heading">
+        <div><p class="eyebrow">MONTHLY LEDGER</p><h2>月份收支明細</h2></div>
+        <div class="ledger-actions">
+          <select id="type-filter" aria-label="篩選類型"><option value="all">全部類型</option><option value="income">只看收入</option><option value="expense">只看支出</option></select>
+          <input id="search-filter" type="search" placeholder="搜尋分類、項目或備註" aria-label="搜尋明細" />
+          <button class="secondary-btn" id="export-csv" type="button">匯出 CSV</button>
+        </div>
+      </div>
+      <div class="calendar-navigation">
+        <button class="calendar-nav-btn" id="calendar-prev-month" type="button" aria-label="上一個月">‹</button>
+        <div>
+          <strong id="ledger-calendar-month">月份月曆</strong>
+          <span>點選日期即可查看當日收入、支出與明細</span>
+        </div>
+        <button class="secondary-btn calendar-today-btn" id="calendar-today" type="button">本月</button>
+        <button class="calendar-nav-btn" id="calendar-next-month" type="button" aria-label="下一個月">›</button>
+      </div>
+      <div class="ledger-calendar-layout">
+        <div class="calendar-card">
+          <div class="calendar-weekdays" aria-hidden="true">
+            <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span class="weekend">六</span><span class="weekend">日</span>
+          </div>
+          <div id="ledger-calendar" class="ledger-calendar" role="grid" aria-label="月份收支月曆"></div>
+          <div class="calendar-color-guide">
+            <span><i class="income-dot"></i>收入</span>
+            <span><i class="expense-dot"></i>支出（含當日日薪工讀）</span>
+            <span>正式員工薪資屬整月月結，顯示於上方月薪卡片。</span>
+          </div>
+        </div>
+        <aside class="ledger-day-panel" aria-live="polite">
+          <div class="ledger-day-heading">
+            <div><p class="eyebrow">DAILY DETAILS</p><h3 id="ledger-day-title">選擇日期</h3></div>
+            <span id="ledger-day-count" class="day-count">0 筆</span>
+          </div>
+          <div class="day-summary-grid">
+            <article class="day-summary income"><span>當日收入</span><strong id="ledger-day-income">$0</strong></article>
+            <article class="day-summary expense"><span>當日支出</span><strong id="ledger-day-expense">$0</strong></article>
+            <article class="day-summary net"><span>當日結餘</span><strong id="ledger-day-net">$0</strong></article>
+          </div>
+          <div id="ledger-day-list" class="ledger-day-list"></div>
+          <p id="ledger-empty" class="empty-state">這一天目前沒有符合條件的收支明細。</p>
+          <form id="daily-reconciliation-form" class="daily-reconciliation-form">
+            <div class="wide"><p class="eyebrow">DAILY RECONCILIATION</p><h3>每日現金／入帳核對</h3></div>
+            <label>實際現金<input id="reconcile-cash" type="number" min="0" step="1" /></label>
+            <label>銀行／電子支付實際入帳<input id="reconcile-noncash" type="number" min="0" step="1" /></label>
+            <label class="wide">核對備註<input id="reconcile-note" type="text" placeholder="例如：平台款隔日入帳" /></label>
+            <button class="secondary-btn wide" type="submit">儲存當日對帳</button>
+            <button class="primary-btn wide" id="toggle-daily-close" type="button">完成當日關帳</button>
+            <p id="reconcile-result" class="reconcile-result"></p>
+            <p id="daily-close-status" class="daily-close-status wide"></p>
+          </form>
+        </aside>
+      </div>
+    </section>
+
+    <section class="operations-grid" data-accounting-page="entry">
+      <article class="panel recurring-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">RECURRING ENTRIES</p><h2>每月固定收支</h2><p class="panel-copy">房租、電話費或固定服務費可建立一次，切換月份時自動產生。</p></div>
+          <button class="secondary-btn" id="apply-recurring" type="button">套用到本月</button>
+        </div>
+        <div id="recurring-list" class="recurring-list"></div>
+      </article>
+    </section>
+    <section class="operations-grid operations-grid-single" data-accounting-page="ledger">
+      <article class="panel vendor-panel">
+        <div class="panel-heading"><div><p class="eyebrow">VENDORS & EXCEPTIONS</p><h2>供應商與待處理提醒</h2></div></div>
+        <div id="accounting-exceptions" class="accounting-exceptions"></div>
+        <div id="vendor-summary" class="vendor-summary"></div>
+      </article>
+    </section>
+
+    <section class="bottom-grid bottom-grid-single" data-accounting-page="entry">
+      <article class="panel policy-panel">
+        <p class="eyebrow">ACCOUNTING POLICY</p>
+        <h2>三種人事成本，清楚分開</h2>
+        <ul>
+          <li><strong>正式員工薪資：</strong>由薪資管理 APP 帶入月結總額。</li>
+          <li><strong>臨時工讀日薪：</strong>在本頁依姓名、日期與日薪輸入。</li>
+          <li><strong>一般勞務費：</strong>若不是員工或日薪工讀，可用一般支出另行登錄。</li>
+        </ul>
+      </article>
+    </section>
+    <section class="bottom-grid bottom-grid-single" data-accounting-page="import">
+      <article class="panel backup-panel">
+        <p class="eyebrow">BACKUP</p>
+        <h2>記帳資料備份</h2>
+        <p>資料目前只存在這個瀏覽器。每次完成大量登錄後，建議下載 JSON 備份。</p>
+        <div class="button-row">
+          <button class="secondary-btn" id="download-backup" type="button">下載記帳備份</button>
+          <label class="file-btn" for="restore-file">選擇備份還原</label>
+          <input id="restore-file" type="file" accept=".json,application/json" />
+        </div>
+        <p id="restore-status" class="restore-status" aria-live="polite"></p>
+      </article>
+    </section>
+    </main>
+  </div>
+
+  <button id="mobile-quick-add" class="mobile-quick-add" type="button" aria-label="快速新增收入或支出">＋</button>
+
+  <dialog id="catalog-manage-dialog" class="catalog-manage-dialog">
+    <form id="catalog-manage-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">ITEM MANAGEMENT</p><h2>管理分類項目</h2></div><button class="dialog-close" type="button" data-close-dialog="catalog-manage-dialog" aria-label="關閉">×</button></div>
+      <input id="catalog-manage-original-type" type="hidden" />
+      <input id="catalog-manage-original-group" type="hidden" />
+      <input id="catalog-manage-original-name" type="hidden" />
+      <div class="catalog-manage-grid">
+        <label>分類<select id="catalog-manage-group"></select></label>
+        <label>項目／廠商名稱<input id="catalog-manage-name" type="text" required maxlength="60" /></label>
+        <label>常用付款方式<select id="catalog-manage-payment"><option value="">不預設</option><option>現金</option><option>銀行轉帳</option><option>信用卡</option><option>電子支付</option><option>平台入帳</option><option>其他</option></select></label>
+        <label>使用狀態<select id="catalog-manage-active"><option value="true">啟用</option><option value="false">停用（保留歷史）</option></select></label>
+        <label class="wide">別名／匯入轉換名稱<textarea id="catalog-manage-aliases" rows="3" placeholder="每行一個，例如：熊貓"></textarea></label>
+        <label class="wide">合併到其他項目<select id="catalog-manage-merge"><option value="">不合併</option></select><small>合併會將歷史記帳一併改成目標項目，原項目則停用。</small></label>
+      </div>
+      <div class="dialog-actions"><button class="secondary-btn" type="button" data-close-dialog="catalog-manage-dialog">取消</button><button class="primary-btn" type="submit">儲存項目設定</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

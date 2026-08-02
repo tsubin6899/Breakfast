@@ -10,23 +10,36 @@
   <link rel="apple-touch-icon" sizes="180x180" href="./assets/app-icon-180.png" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="../shared/operations-brandbar.css" />
+  <script src="./local-mode.js"></script>
+  <script src="../shared/operations-store.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script defer src="./identity-client.js"></script>
+  <script defer src="./data/salary-history-2022-2025.js"></script>
   <script defer src="./data/salary-history-2026-h1.js"></script>
+  <script defer src="./special-overtime-rules.js"></script>
   <script defer src="./app.js"></script>
 </head>
-<body>
+<body class="has-suite-brandbar salary-system">
+  <header class="suite-brandbar">
+    <a class="suite-logo" href="../" aria-label="回到初一食午營運首頁">
+      <img src="./assets/app-icon-192.png" alt="" />
+      <span><strong>初一食午</strong><small>營運管理系統</small></span>
+    </a>
+    <div class="suite-brand-copy">
+      <p>BREAKFAST · BRUNCH · OPERATIONS</p>
+      <strong>初一食午營運資料中心</strong>
+      <small>HEALTHY · FULL · DELICIOUS｜薪資、記帳與收支分析一站管理</small>
+    </div>
+    <nav class="suite-system-nav" aria-label="三大管理系統">
+      <a href="./" aria-current="page"><i aria-hidden="true">薪</i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
+      <a href="../accounting/"><i aria-hidden="true">帳</i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
+      <a href="../dashboard_cost/"><i aria-hidden="true">析</i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
+    </nav>
+    <a class="suite-home-link" href="../"><b aria-hidden="true">⌂</b><span>營運首頁</span></a>
+  </header>
   <div class="app-shell">
     <aside class="sidebar" aria-label="主要選單">
-      <a class="brand" href="../" aria-label="回到初一食午首頁">
-        <span class="brand-mark"><img src="./assets/app-icon-192.png" alt="" /></span>
-        <span>
-          <strong>初一食午</strong>
-          <small>薪資管理</small>
-        </span>
-      </a>
-
       <nav class="nav-list">
         <button class="nav-item is-active" type="button" data-view="dashboard">
           <span aria-hidden="true">總</span>總覽
@@ -183,7 +196,7 @@
               </div>
               <label class="ai-access-field">
                 <span>AI 辨識連線密碼</span>
-                <input id="ai-access-token" type="password" autocomplete="current-password" placeholder="輸入 Netlify 設定的連線密碼" />
+                <input id="ai-access-token" type="password" autocomplete="current-password" placeholder="輸入網站管理者設定的連線密碼" />
                 <small>這不是 Gemini／OpenAI API Key，只是保護辨識服務的店內密碼；僅儲存在這台裝置。</small>
               </label>
               <button class="drop-zone" id="drop-zone" type="button">
@@ -247,6 +260,7 @@
                   <span>檢視員工</span>
                   <select id="attendance-employee"></select>
                 </label>
+                <button class="primary-btn keyboard-entry-btn" id="open-attendance-keyin" type="button">⌨ 整月快速 Key-in</button>
                 <button class="secondary-btn" id="add-manual-record" type="button">新增／編輯當日紀錄</button>
               </div>
             </div>
@@ -311,7 +325,7 @@
             <div>
               <p class="eyebrow">PAYROLL ENGINE</p>
               <h2>薪資逐項拆開，所有金額都有依據</h2>
-              <p>時薪精確至分鐘；月薪加班依每日分鐘與倍率分段計算。</p>
+              <p>時薪精確至分鐘；月薪員工可依倍率或固定加班時薪計算，也可設定免打卡固定薪。</p>
             </div>
             <div class="button-row">
               <span id="payroll-workflow-status" class="workflow-pill">草稿</span>
@@ -325,6 +339,21 @@
           </div>
 
           <div class="alert warning" id="payroll-warning" hidden></div>
+
+          <article class="panel close-check-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">PRE-CLOSE VALIDATION</p>
+                <h3>月結前完整檢查</h3>
+                <p class="panel-description">紅色項目會阻止正常月結；如有特殊原因，仍可輸入主管覆核原因後繼續。</p>
+              </div>
+              <div class="button-row">
+                <button class="secondary-btn" id="confirm-suggested-rests" type="button">確認建議月休</button>
+                <button class="secondary-btn" id="confirm-adjustments" type="button">確認獎金與扣款</button>
+              </div>
+            </div>
+            <div id="month-close-checks" class="month-close-checks"></div>
+          </article>
 
           <article class="panel">
             <div class="panel-heading">
@@ -445,6 +474,17 @@
             <div id="audit-list" class="audit-list"></div>
           </article>
 
+          <article class="panel revision-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">PAYROLL REVISIONS</p>
+                <h3>薪資更正版與差額紀錄</h3>
+                <p class="panel-description">解除鎖定後重新結算時，系統會保留原始總額、修改原因、操作人與補發／追回差額。</p>
+              </div>
+            </div>
+            <div id="payroll-revisions" class="revision-list"></div>
+          </article>
+
           <article class="panel share-status-panel">
             <div class="panel-heading">
               <div>
@@ -462,11 +502,16 @@
             <div>
               <p class="eyebrow">TEAM & RATES</p>
               <h2>員工薪制與費率歷史</h2>
-              <p>每位員工可分別設定平日、週末、國定假日與月薪班別。</p>
+              <p>每位員工可設定費率歷史、月薪班別、免打卡固定薪與按分鐘計算的加班規則。</p>
             </div>
             <button class="primary-btn" id="add-employee" type="button">新增員工</button>
           </div>
           <div id="employee-grid" class="employee-grid"></div>
+          <details id="deleted-employee-archive" class="employee-archive" hidden>
+            <summary>已刪除員工（<span id="deleted-employee-count">0</span>）</summary>
+            <p>刪除不會清掉既有打卡與薪資歷史；需要時可將員工復原。</p>
+            <div id="deleted-employee-list" class="deleted-employee-list"></div>
+          </details>
 
           <article class="panel leave-ledger-panel">
             <div class="panel-heading">
@@ -625,8 +670,15 @@
               <p id="historical-import-status" class="history-import-status">正在確認歷史工資資料…</p>
               <div class="button-row">
                 <button class="secondary-btn" id="download-backup" type="button">下載備份</button>
-                <button class="secondary-btn" id="restore-backup" type="button">還原備份</button>
-                <input id="backup-file" type="file" accept="application/json" hidden />
+                <button class="secondary-btn" id="restore-backup" type="button">選擇並還原備份</button>
+              </div>
+              <div class="backup-file-picker">
+                <label for="backup-file">
+                  <strong>JSON 備份檔</strong>
+                  <span>若上方按鈕沒有跳出視窗，也可以直接使用這個選擇欄位。</span>
+                </label>
+                <input id="backup-file" type="file" accept=".json,application/json" />
+                <p id="backup-file-status" role="status" aria-live="polite">尚未選擇備份檔。</p>
               </div>
               <button class="danger-text-btn" id="reset-data" type="button">恢復示範資料</button>
             </article>
@@ -642,7 +694,8 @@
                 <li>無法判斷的打卡時間必須人工確認，不會自動猜測。</li>
                 <li>月休超過店內設定基準會列入年假使用試算，結算前仍須由主管確認。</li>
                 <li>國定假日、例假、休息日與颱風日應分別標記。</li>
-                <li>月薪員工提早與延後工時會以月薪 ÷ 240 為基礎分段試算，仍請依實際班別核對。</li>
+                <li>月薪員工可選擇月薪 ÷ 240 分段倍率、固定加班時薪或不自動計算；固定時薪會依班表外分鐘精確試算。</li>
+                <li>免打卡固定薪員工不會產生缺卡警示，也不會因沒有出勤紀錄而影響固定月薪。</li>
               </ul>
               <p class="legal-links">
                 <a href="https://laws.mol.gov.tw/FLAW/FLAWDAT09.aspx?flno=24&id=FL014930" target="_blank" rel="noreferrer">勞基法第 24 條</a>
@@ -667,50 +720,16 @@
     <form id="cloud-login-form" class="dialog-form">
       <div class="dialog-heading">
         <div>
-          <p class="eyebrow">ADMIN SIGN IN</p>
-          <h2>管理者登入</h2>
+          <p class="eyebrow">VERCEL SECURE SIGN IN</p>
+          <h2>以 Vercel 帳號登入</h2>
         </div>
         <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
       </div>
-      <p class="dialog-copy">登入後會自動同步網站上的員工、打卡、休假與薪資資料。</p>
-      <label>
-        <span>Email</span>
-        <input id="cloud-login-email" type="email" autocomplete="username" required />
-      </label>
-      <label>
-        <span>密碼</span>
-        <input id="cloud-login-password" type="password" autocomplete="current-password" required />
-      </label>
+      <p class="dialog-copy">系統不保存密碼。登入後只允許 Vercel 環境變數白名單中的帳號存取雲端薪資資料。</p>
       <p id="cloud-login-error" class="form-error" hidden></p>
       <div class="dialog-actions">
-        <button class="text-btn" id="cloud-forgot-password" type="button">忘記密碼</button>
-        <span class="dialog-spacer"></span>
         <button class="secondary-btn" type="button" data-close-dialog>取消</button>
-        <button class="primary-btn" id="cloud-login-submit" type="submit">登入並同步</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="cloud-password-dialog" class="cloud-dialog">
-    <form id="cloud-password-form" class="dialog-form">
-      <div class="dialog-heading">
-        <div>
-          <p class="eyebrow">SECURE PASSWORD</p>
-          <h2 id="cloud-password-title">設定管理者密碼</h2>
-        </div>
-      </div>
-      <p id="cloud-password-description" class="dialog-copy">請設定至少 10 個字元的密碼。</p>
-      <label>
-        <span>新密碼</span>
-        <input id="cloud-new-password" type="password" minlength="10" autocomplete="new-password" required />
-      </label>
-      <label>
-        <span>再次輸入新密碼</span>
-        <input id="cloud-confirm-password" type="password" minlength="10" autocomplete="new-password" required />
-      </label>
-      <p id="cloud-password-error" class="form-error" hidden></p>
-      <div class="dialog-actions">
-        <button class="primary-btn" id="cloud-password-submit" type="submit">儲存密碼並登入</button>
+        <button class="primary-btn" id="cloud-login-submit" type="submit">前往 Vercel 安全登入</button>
       </div>
     </form>
   </dialog>
@@ -741,15 +760,40 @@
         <label class="hourly-field"><span>忙碌時段開始</span><input id="employee-peak-start" type="time" /></label>
         <label class="hourly-field"><span>忙碌時段結束</span><input id="employee-peak-end" type="time" /></label>
         <label class="monthly-field"><span>月薪</span><input id="employee-monthly-salary" type="number" min="0" /></label>
-        <label class="monthly-field"><span>固定上班時間</span><input id="employee-schedule-start" type="time" /></label>
-        <label class="monthly-field"><span>固定下班時間</span><input id="employee-schedule-end" type="time" /></label>
+        <label class="monthly-field">
+          <span>出勤方式</span>
+          <select id="employee-attendance-mode">
+            <option value="required">需要打卡／依班表核對</option>
+            <option value="none">免打卡／每月固定領薪</option>
+          </select>
+        </label>
+        <label class="monthly-field attendance-required-field"><span>固定上班時間</span><input id="employee-schedule-start" type="time" /></label>
+        <label class="monthly-field attendance-required-field"><span>固定下班時間</span><input id="employee-schedule-end" type="time" /></label>
+        <label class="monthly-field attendance-required-field">
+          <span>加班計算方式</span>
+          <select id="employee-overtime-mode">
+            <option value="salary_multiplier">月薪 ÷ 240 × 分段倍率</option>
+            <option value="fixed_hourly">固定加班時薪／計算至分鐘</option>
+            <option value="none">不自動計算加班</option>
+          </select>
+        </label>
+        <label class="monthly-field attendance-required-field overtime-fixed-field"><span>固定加班時薪</span><input id="employee-overtime-hourly-rate" type="number" min="0" step="1" /></label>
+        <label class="monthly-field attendance-required-field monthly-special-day-field">
+          <span>月薪制國定假日／颱風加給</span>
+          <select id="employee-monthly-special-day-mode">
+            <option value="none">不自動加給</option>
+            <option value="national">國定假日出勤加發一日；颱風不另計</option>
+            <option value="national_typhoon">國定假日加發一日＋颱風店內加給</option>
+          </select>
+          <small>選擇「不自動加給」前，請確認國定假日未出勤或已依法調移；颱風加給可依店內規則約定。</small>
+        </label>
         <label><span>本次費率生效日</span><input id="employee-rate-effective" type="date" required /></label>
         <label><span>到職日</span><input id="employee-hire-date" type="date" /></label>
         <label><span>離職日</span><input id="employee-end-date" type="date" /></label>
         <label><span>年度年假基準</span><input id="employee-annual-leave" type="number" min="0" step="0.125" /></label>
         <label><span>設定／更換打卡 PIN</span><input id="employee-punch-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" placeholder="留白表示不變更" /></label>
       </div>
-      <fieldset class="workday-fieldset monthly-field">
+      <fieldset class="workday-fieldset monthly-field attendance-required-field">
         <legend>每週預定上班日（用於缺卡檢查）</legend>
         <div class="workday-options">
           <label data-workday="1"><span><input type="checkbox" name="employee-workday" value="1" />週一</span><input class="workday-start" type="time" aria-label="週一上班" /><input class="workday-end" type="time" aria-label="週一下班" /></label>
@@ -761,12 +805,20 @@
           <label data-workday="0"><span><input type="checkbox" name="employee-workday" value="0" />週日</span><input class="workday-start" type="time" aria-label="週日上班" /><input class="workday-end" type="time" aria-label="週日下班" /></label>
         </div>
       </fieldset>
+      <fieldset id="employee-special-rules-fieldset" class="special-rules-fieldset monthly-field attendance-required-field">
+        <legend>特殊加班起算規則</legend>
+        <p>適合「每月特定日期後，某些星期改用不同上班起點」。當日臨時班別仍會優先於此規則。</p>
+        <div id="employee-special-rules-list" class="special-rules-list"></div>
+        <button id="add-special-overtime-rule" class="secondary-btn" type="button">＋ 新增特殊規則</button>
+      </fieldset>
       <div id="employee-rate-history" class="rate-history-list"></div>
       <label class="checkbox-label">
         <input id="employee-active" type="checkbox" checked />
         <span>目前在職並參與計薪</span>
       </label>
       <div class="dialog-actions">
+        <button class="danger-text-btn" id="delete-employee" type="button" hidden>刪除員工</button>
+        <span class="dialog-spacer"></span>
         <button class="secondary-btn" value="cancel" type="button" data-close-dialog>取消</button>
         <button class="primary-btn" value="default" type="submit">儲存員工</button>
       </div>
@@ -795,6 +847,7 @@
             <option value="annual_leave">年假</option>
             <option value="unpaid">事假／無薪假</option>
             <option value="sick">病假</option>
+            <option value="absence">缺勤</option>
             <option value="other">其他</option>
           </select>
         </label>
@@ -828,6 +881,47 @@
         <button class="secondary-btn" type="button" data-close-dialog>取消</button>
         <button class="secondary-btn" id="save-next-attendance" type="button">儲存並下一筆</button>
         <button class="primary-btn" type="submit">儲存紀錄</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="attendance-keyin-dialog" class="attendance-keyin-dialog">
+    <form method="dialog" id="attendance-keyin-form" class="dialog-form attendance-keyin-form">
+      <div class="dialog-heading">
+        <div>
+          <p class="eyebrow">MONTHLY KEYBOARD ENTRY</p>
+          <h2 id="attendance-keyin-title">整月快速 Key-in</h2>
+        </div>
+        <div class="keyin-heading-actions">
+          <button class="primary-btn keyin-top-save" type="submit">儲存資料</button>
+          <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+        </div>
+      </div>
+      <div class="keyin-guide">
+        <span><b>快速輸入</b>：輸入 0800 會自動變成 08:00，按 Enter 前往下一天同一欄。</span>
+        <span><b>整批貼上</b>：可從 Excel 複製每列 2、4 或 6 個時間欄位，一次貼上多天資料。</span>
+        <span><b>安全儲存</b>：只有改過的日期會更新；空白不會刪除舊資料，需按該列「清除」才會刪除。</span>
+      </div>
+      <div class="keyin-legend" aria-label="日期顏色說明">
+        <span><i class="day-swatch weekday"></i>平日</span>
+        <span><i class="day-swatch weekend"></i>週末／假日</span>
+        <span><i class="day-swatch national"></i>國定假日</span>
+        <span><i class="day-swatch typhoon"></i>颱風日</span>
+      </div>
+      <div class="keyin-grid-wrap">
+        <div class="keyin-grid keyin-grid-head" aria-hidden="true">
+          <span>日期</span><span>應上班時間</span><span>第 1 段上班</span><span>第 1 段下班</span><span>第 2 段上班</span><span>第 2 段下班</span><span>第 3 段上班</span><span>第 3 段下班</span><span>操作</span>
+        </div>
+        <div id="attendance-keyin-body" class="attendance-keyin-body"></div>
+      </div>
+      <div class="keyin-footer-status">
+        <strong id="attendance-keyin-count">尚未修改</strong>
+        <span>已排休或請假的日期仍可輸入工時；假別資料不會被這個畫面更動。</span>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-btn" type="button" data-close-dialog>取消</button>
+        <span class="dialog-spacer"></span>
+        <button class="primary-btn" type="submit">儲存本月已修改資料</button>
       </div>
     </form>
   </dialog>

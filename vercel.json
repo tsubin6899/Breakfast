@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "public",
+  "functions": {
+    "api/recognize-timecard.ts": {
+      "maxDuration": 60
+    },
+    "api/operations-state.ts": {
+      "maxDuration": 60
+    }
+  },
+  "headers": [
+    {
+      "source": "/employee_portal/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow, noarchive" },
+        { "key": "Referrer-Policy", "value": "no-referrer" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
+      ]
+    }
+  ]
+}

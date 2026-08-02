@@ -1,0 +1,46 @@
+{
+  "sourceFile": "E:/初一食午/初一食午營業額存檔/63a3f985-b2ed-4b72-b5a8-37829cb160cf-taiwan.csv",
+  "analyzedAt": "2026-08-02",
+  "encoding": "UTF-8 with BOM",
+  "columnCount": 53,
+  "rowCount": 135,
+  "dateRange": {
+    "from": "2026-07-24",
+    "through": "2026-08-01"
+  },
+  "calculation": {
+    "dateColumn": "訂單日期",
+    "amountColumn": "總金額 ",
+    "formula": "以訂單日期分組後加總總金額；總金額已反映訂單錯誤調整、平台服務費與退款／退款爭議",
+    "salesIncludingTax": 31860,
+    "orderErrorAdjustmentsIncludingTax": -200,
+    "platformServiceFeesIncludingTax": -11167,
+    "netAmountCheck": 20493
+  },
+  "quality": {
+    "blankDates": 0,
+    "blankNetAmounts": 0,
+    "negativeNetRows": 5,
+    "completedRows": 128,
+    "refundRows": 5,
+    "refundDisputeRows": 2,
+    "duplicateOrderOrUuidRows": 7,
+    "duplicateExplanation": "退款與退款爭議會沿用原訂單識別碼，屬對帳調整列；不得依訂單 ID 去重。"
+  },
+  "dailyTotals": [
+    { "date": "2026-07-24", "detailRows": 14, "amount": 1767 },
+    { "date": "2026-07-25", "detailRows": 23, "amount": 3839 },
+    { "date": "2026-07-26", "detailRows": 22, "amount": 4105 },
+    { "date": "2026-07-27", "detailRows": 15, "amount": 2209 },
+    { "date": "2026-07-28", "detailRows": 14, "amount": 2031 },
+    { "date": "2026-07-29", "detailRows": 10, "amount": 1350 },
+    { "date": "2026-07-30", "detailRows": 12, "amount": 1466 },
+    { "date": "2026-07-31", "detailRows": 8, "amount": 1261 },
+    { "date": "2026-08-01", "detailRows": 17, "amount": 2465 }
+  ],
+  "reconciliation": {
+    "existingUberIncomeThrough": "2026-07-23",
+    "overlappingDates": [],
+    "action": "新增 9 筆每日 Uber eat 外送淨收入，沒有覆寫或重複加總既有資料。"
+  }
+}

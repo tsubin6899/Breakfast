@@ -2,5 +2,7 @@
 .env.*
 !.env.example
 .netlify
+.vercel
+public
 node_modules
-
+.local-cache

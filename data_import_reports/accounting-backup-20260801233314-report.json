@@ -1,0 +1,1296 @@
+{
+  "source": "E:\\初一食午\\初一食午營業額存檔\\初一食午_20260801233314.back",
+  "period": {
+    "from": "2026-07-22",
+    "through": "2026-08-01"
+  },
+  "summary": {
+    "sourceMainTransactions": 126,
+    "eligibleSplitRows": 103,
+    "matchedExistingRows": 13,
+    "importedRows": 90,
+    "excludedRows": 23,
+    "excludedTransfers": 20,
+    "excludedBalanceAdjustments": 3,
+    "sourceEligibleTotals": {
+      "income": 332696.0,
+      "expense": 232304.0
+    },
+    "matchedExistingTotals": {
+      "income": 33208.0,
+      "expense": 25177.0
+    },
+    "importedTotals": {
+      "income": 299488.0,
+      "expense": 207127.0
+    }
+  },
+  "normalization": {
+    "快一點line": "快一點line pay收入",
+    "line Pay": "line Pay經營收入",
+    "廢油": "其他收入",
+    "Uber": "Uber eat外送",
+    "熊貓": "foodpanda外送"
+  },
+  "reconciliation": [
+    {
+      "period": "2026-07",
+      "sourceEligibleIncome": 286031.0,
+      "sourceEligibleExpense": 228864.0,
+      "matchedExistingIncome": 33208.0,
+      "matchedExistingExpense": 25177.0,
+      "importedIncome": 252823.0,
+      "importedExpense": 203687.0
+    },
+    {
+      "period": "2026-08",
+      "sourceEligibleIncome": 46665.0,
+      "sourceEligibleExpense": 3440.0,
+      "matchedExistingIncome": 0.0,
+      "matchedExistingExpense": 0.0,
+      "importedIncome": 46665.0,
+      "importedExpense": 3440.0
+    }
+  ],
+  "eligibleRows": [
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "祥鈺",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "祥鈺",
+      "amount": 2050.0,
+      "sourceRef": "初一食午_20260801233314.back・5DFCE748-F804-49CF-9B01-9F57D4A6FB25・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1640.0,
+      "sourceRef": "初一食午_20260801233314.back・F0C68860-8099-4E3D-94B1-ACF440BF4FDC・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "開元",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "開元",
+      "amount": 2170.0,
+      "sourceRef": "初一食午_20260801233314.back・4957B04F-467B-4EC9-9C5D-9FAC8320EBD1・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "吉禾食品",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "吉禾食品",
+      "amount": 6758.0,
+      "sourceRef": "初一食午_20260801233314.back・105A14AE-05DF-4745-B573-A3DEEF6A3151・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "茶葉廠商",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "上統茶葉",
+      "amount": 7954.0,
+      "sourceRef": "初一食午_20260801233314.back・A90203FF-3763-46DA-BC08-1891D0E27B4C・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 18120.0,
+      "sourceRef": "初一食午_20260801233314.back・99EB87E2-3D94-464A-AA17-EA7E11E4D5B2・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "高麗菜生菜",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "高麗菜生菜",
+      "amount": 1320.0,
+      "sourceRef": "初一食午_20260801233314.back・2E22B4C4-6C8B-4DA2-9D68-69D6D6AAB494・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 10640.0,
+      "sourceRef": "初一食午_20260801233314.back・EED2D964-55B1-4C43-AA53-B72C93D29D90・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 670.0,
+      "sourceRef": "初一食午_20260801233314.back・36B635EE-BF73-485B-A0D1-6B18A5467D9C・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 120.0,
+      "sourceRef": "初一食午_20260801233314.back・2D6132BA-BEF4-48D5-A54F-9EAE08B068B7・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "expense",
+      "sourceCategory": "萬霖雜糧行",
+      "normalizedGroup": "雜貨成本",
+      "normalizedCategory": "萬霖",
+      "amount": 3285.0,
+      "sourceRef": "初一食午_20260801233314.back・E958BACB-5DD4-43B8-8773-7C56704D4121・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-22",
+      "type": "income",
+      "sourceCategory": "UBER EAT外送",
+      "normalizedGroup": "平台收入",
+      "normalizedCategory": "Uber eat外送",
+      "amount": 1721.0,
+      "sourceRef": "初一食午_20260801233314.back・81730A03-9632-4A66-A9DB-47E1E877BF7D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "expense",
+      "sourceCategory": "冰塊",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "冰塊",
+      "amount": 300.0,
+      "sourceRef": "初一食午_20260801233314.back・1C6DDB32-4571-4E8A-9B80-DB76D88A3C54・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 15015.0,
+      "sourceRef": "初一食午_20260801233314.back・007F9CB4-8BD0-4F3D-B688-7CE504E4AD5A・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "expense",
+      "sourceCategory": "聖淘沙",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "聖淘沙",
+      "amount": 805.0,
+      "sourceRef": "初一食午_20260801233314.back・02049BA5-52B8-4228-BF0A-A81A6615C2DB・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "expense",
+      "sourceCategory": "丸漢堡",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "丸漢堡",
+      "amount": 9450.0,
+      "sourceRef": "初一食午_20260801233314.back・71CCFCFB-FB62-4035-9954-CBEBDBDC5F87・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "expense",
+      "sourceCategory": "祥鈺",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "祥鈺",
+      "amount": 3710.0,
+      "sourceRef": "初一食午_20260801233314.back・6195932E-01AE-4E92-9DD9-A4CBCA02C59D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-23",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1640.0,
+      "sourceRef": "初一食午_20260801233314.back・8B87728D-58A0-4D16-915E-B133932E1043・split 0"
+    },
+    {
+      "status": "matched-existing",
+      "date": "2026-07-23",
+      "type": "income",
+      "sourceCategory": "UBER EAT外送",
+      "normalizedGroup": "平台收入",
+      "normalizedCategory": "Uber eat外送",
+      "amount": 1937.0,
+      "sourceRef": "初一食午_20260801233314.back・E1E7B748-98A2-4131-9C40-1298FFC0E81D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "expense",
+      "sourceCategory": "瓦斯桶",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "瓦斯費",
+      "amount": 1190.0,
+      "sourceRef": "初一食午_20260801233314.back・4F946050-6244-4A47-9C69-D7C3814062FA・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "expense",
+      "sourceCategory": "弘陽",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "弘陽",
+      "amount": 3697.0,
+      "sourceRef": "初一食午_20260801233314.back・140A8DDC-47D2-4C87-8A0F-803F025B1244・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "expense",
+      "sourceCategory": "開元",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "開元",
+      "amount": 3850.0,
+      "sourceRef": "初一食午_20260801233314.back・5E18B4CC-F2EE-415A-81DB-1594F777BDD6・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "expense",
+      "sourceCategory": "吉禾食品",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "吉禾食品",
+      "amount": 10498.0,
+      "sourceRef": "初一食午_20260801233314.back・725B8EA4-BD74-4366-A2D6-687197D4B5FE・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 13354.0,
+      "sourceRef": "初一食午_20260801233314.back・01A50E57-08D7-421A-898E-5F83063656C4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 7890.0,
+      "sourceRef": "初一食午_20260801233314.back・5308B470-CA30-4A5E-A164-A453A8B1CF71・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 2075.0,
+      "sourceRef": "初一食午_20260801233314.back・65F469AC-388F-4E6B-BEA7-5367C8E6AF8D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-24",
+      "type": "expense",
+      "sourceCategory": "雜項",
+      "normalizedGroup": "雜支",
+      "normalizedCategory": "其他雜支",
+      "amount": 17100.0,
+      "sourceRef": "初一食午_20260801233314.back・D6E6A274-D6A2-4FC1-BD1C-8D21B2BB8ABC・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 5740.0,
+      "sourceRef": "初一食午_20260801233314.back・B9D12442-36F6-42D4-9063-4A02A10CD3E2・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "expense",
+      "sourceCategory": "高麗菜生菜",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "高麗菜生菜",
+      "amount": 1565.0,
+      "sourceRef": "初一食午_20260801233314.back・5D2F88FE-D404-4DD1-A440-154198D7BAB4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 200.0,
+      "sourceRef": "初一食午_20260801233314.back・0732EDE6-732C-4B40-A31A-3FDDD5F7CCEB・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 23685.0,
+      "sourceRef": "初一食午_20260801233314.back・B5DD3BCB-94FB-48EA-B4D8-8D18CFE52516・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 12835.0,
+      "sourceRef": "初一食午_20260801233314.back・167CED64-FE44-4566-9121-32D3DDCDBEBF・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 2310.0,
+      "sourceRef": "初一食午_20260801233314.back・5CDCAAB5-0260-428E-B258-16001C134329・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-25",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 535.0,
+      "sourceRef": "初一食午_20260801233314.back・40303963-0983-4D48-B20A-67F53451F54F・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-26",
+      "type": "expense",
+      "sourceCategory": "冰塊",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "冰塊",
+      "amount": 200.0,
+      "sourceRef": "初一食午_20260801233314.back・0B64F5A4-8F07-447C-832C-A45609AA2087・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-26",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 24842.0,
+      "sourceRef": "初一食午_20260801233314.back・306B2C77-9D70-49EC-B1C6-13F407B2DA87・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-26",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 765.0,
+      "sourceRef": "初一食午_20260801233314.back・3388A578-D03D-422B-BF52-1DFCD5A5043F・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-26",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 3425.0,
+      "sourceRef": "初一食午_20260801233314.back・1E6D0F2F-80AE-4D73-BB40-3427ED5E4122・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-26",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 17300.0,
+      "sourceRef": "初一食午_20260801233314.back・EE7DE3CE-4E19-4140-A827-2011AE33D454・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "聖淘沙",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "聖淘沙",
+      "amount": 1526.0,
+      "sourceRef": "初一食午_20260801233314.back・BB0D436F-D6A9-4120-BE8C-60E1D7D5E848・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "祥鈺",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "祥鈺",
+      "amount": 2430.0,
+      "sourceRef": "初一食午_20260801233314.back・62BAE8B1-81F1-4CCA-953B-45EC6C167B07・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "寶綠免洗餐具",
+      "normalizedGroup": "雜貨成本",
+      "normalizedCategory": "寶綠餐具",
+      "amount": 2160.0,
+      "sourceRef": "初一食午_20260801233314.back・FDDAB9D4-2E90-4CD8-951F-809A657776CA・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "丸漢堡",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "丸漢堡",
+      "amount": 8065.0,
+      "sourceRef": "初一食午_20260801233314.back・C0D1B318-A8B0-46E7-8549-90A44E754C46・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "開元",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "開元",
+      "amount": 1235.0,
+      "sourceRef": "初一食午_20260801233314.back・09235822-E086-4DB4-BE34-D68D20AB2169・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "地瓜",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "地瓜",
+      "amount": 2040.0,
+      "sourceRef": "初一食午_20260801233314.back・C6551651-2C3E-41E4-9CC6-18B38F169828・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1720.0,
+      "sourceRef": "初一食午_20260801233314.back・761E01A0-46FE-4DBE-8613-E278FEDE59A8・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "勝達",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "勝達",
+      "amount": 228.0,
+      "sourceRef": "初一食午_20260801233314.back・20EDADAC-AA97-4DDA-9F92-F3A0DC7DB6F4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "吉禾食品",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "吉禾食品",
+      "amount": 12063.0,
+      "sourceRef": "初一食午_20260801233314.back・2E2F1FF7-92FC-4BC6-80C4-C115545D1DF4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "expense",
+      "sourceCategory": "冰塊",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "冰塊",
+      "amount": 200.0,
+      "sourceRef": "初一食午_20260801233314.back・6AD267FD-54CD-4294-9633-4CBF459120BB・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-27",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 16000.0,
+      "sourceRef": "初一食午_20260801233314.back・888F738A-5C2D-4ADB-B1B4-E80871D567A4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "冰塊",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "冰塊",
+      "amount": 100.0,
+      "sourceRef": "初一食午_20260801233314.back・38DE9606-FA81-49C2-914A-EE52036DDA8D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "高麗菜生菜",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "高麗菜生菜",
+      "amount": 1295.0,
+      "sourceRef": "初一食午_20260801233314.back・A15CDF66-3D93-4EAF-8892-4350CA8C48FD・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "瓦斯桶",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "瓦斯費",
+      "amount": 1230.0,
+      "sourceRef": "初一食午_20260801233314.back・B4915FE9-41EE-42C3-857F-38931A54C4FF・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "聖淘沙",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "聖淘沙",
+      "amount": 716.0,
+      "sourceRef": "初一食午_20260801233314.back・0BDD11A5-C1DD-4733-8387-033BED4B8D59・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "弘陽",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "弘陽",
+      "amount": 2792.0,
+      "sourceRef": "初一食午_20260801233314.back・54182D68-BA3C-4FA5-B0A1-19F355D82487・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1720.0,
+      "sourceRef": "初一食午_20260801233314.back・D3161D63-6E18-4AFB-B151-68D893892CA2・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 16580.0,
+      "sourceRef": "初一食午_20260801233314.back・BC9F0AC2-EDCB-498A-899F-77E484AA560C・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 8235.0,
+      "sourceRef": "初一食午_20260801233314.back・7F3DB2C6-7E2B-48D3-84B4-B8E5BDF70235・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 2685.0,
+      "sourceRef": "初一食午_20260801233314.back・A9B7AA6E-AD24-42FA-BA9C-9367DD0918A3・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 155.0,
+      "sourceRef": "初一食午_20260801233314.back・4405AC4C-4087-4410-AA66-3C66CFE72CB6・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "水費",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "水費",
+      "amount": 551.0,
+      "sourceRef": "初一食午_20260801233314.back・0D26FAC7-B1AC-43EE-AA20-6BD0B813BE00・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "雇主提撥勞退",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "雇主提撥勞退",
+      "amount": 1770.0,
+      "sourceRef": "初一食午_20260801233314.back・8F071900-3CD4-475F-8694-502CF866EA8A・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "雜項",
+      "normalizedGroup": "雜支",
+      "normalizedCategory": "其他雜支",
+      "amount": 4179.0,
+      "sourceRef": "初一食午_20260801233314.back・5F309C59-E093-465A-A49F-D7F85F120CE1・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "健保費",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "健保費",
+      "amount": 3828.0,
+      "sourceRef": "初一食午_20260801233314.back・28BB4354-253A-4B4D-A882-5927CD510499・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-28",
+      "type": "expense",
+      "sourceCategory": "勞保費",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "勞保費",
+      "amount": 3383.0,
+      "sourceRef": "初一食午_20260801233314.back・CA7DCA37-A8B0-42B6-BE02-7718FC72B315・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "income",
+      "sourceCategory": "廢油",
+      "normalizedGroup": "其他收入",
+      "normalizedCategory": "其他收入",
+      "amount": 450.0,
+      "sourceRef": "初一食午_20260801233314.back・9A851A24-0854-40E1-9032-5FB2E93B180E・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "開元",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "開元",
+      "amount": 1745.0,
+      "sourceRef": "初一食午_20260801233314.back・9E980759-69BF-4D09-9EFE-B7640BE799CE・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "雜項",
+      "normalizedGroup": "雜支",
+      "normalizedCategory": "其他雜支",
+      "amount": 650.0,
+      "sourceRef": "初一食午_20260801233314.back・8EF21646-CE75-4F77-B043-3C1DB43EC918・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "吉禾食品",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "吉禾食品",
+      "amount": 6873.0,
+      "sourceRef": "初一食午_20260801233314.back・52012128-5D09-4DBC-A645-D24E61252716・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "祥鈺",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "祥鈺",
+      "amount": 2050.0,
+      "sourceRef": "初一食午_20260801233314.back・CC0B4739-2468-48E1-950D-5D413ED1A387・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "萬霖雜糧行",
+      "normalizedGroup": "雜貨成本",
+      "normalizedCategory": "萬霖",
+      "amount": 1965.0,
+      "sourceRef": "初一食午_20260801233314.back・1D23CB55-1587-409F-822A-FF8F35C083F4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1720.0,
+      "sourceRef": "初一食午_20260801233314.back・52BC0EE5-66B1-4BF7-B7C4-2454DD8C2E56・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 25061.0,
+      "sourceRef": "初一食午_20260801233314.back・9FD06B60-A601-428D-B888-109D0EDAB9E4・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 410.0,
+      "sourceRef": "初一食午_20260801233314.back・E924CFD4-54ED-4D33-971F-9731BCEBC46D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 1665.0,
+      "sourceRef": "初一食午_20260801233314.back・EDE7DEA8-630A-42E8-BE95-2D3AC5F7E5D8・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-29",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 9475.0,
+      "sourceRef": "初一食午_20260801233314.back・949545BC-F013-4789-9EF9-B87905E46CE2・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "expense",
+      "sourceCategory": "冰塊",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "冰塊",
+      "amount": 300.0,
+      "sourceRef": "初一食午_20260801233314.back・4904DF25-4ECF-433F-BAFC-4F7ABF39CF49・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1720.0,
+      "sourceRef": "初一食午_20260801233314.back・593471C5-A8EB-4C69-AE3B-1547333D7B4B・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "expense",
+      "sourceCategory": "寶綠免洗餐具",
+      "normalizedGroup": "雜貨成本",
+      "normalizedCategory": "寶綠餐具",
+      "amount": 2015.0,
+      "sourceRef": "初一食午_20260801233314.back・BA5B408F-B366-442A-AFC7-B793A88656F7・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "expense",
+      "sourceCategory": "聖淘沙",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "聖淘沙",
+      "amount": 756.0,
+      "sourceRef": "初一食午_20260801233314.back・925349E3-449D-4255-B3B9-814F37E24B7A・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "expense",
+      "sourceCategory": "丸漢堡",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "丸漢堡",
+      "amount": 9405.0,
+      "sourceRef": "初一食午_20260801233314.back・A70FB8F1-EB6B-44E1-9351-FE835A6E8398・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 16060.0,
+      "sourceRef": "初一食午_20260801233314.back・ED136A93-DC03-4752-B03F-A82304DD3B51・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 165.0,
+      "sourceRef": "初一食午_20260801233314.back・D569328D-11A4-475F-8541-351E0DBAC98F・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 1495.0,
+      "sourceRef": "初一食午_20260801233314.back・02EB8EC5-D930-4613-9084-D71EA5154B5C・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-30",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 7060.0,
+      "sourceRef": "初一食午_20260801233314.back・94268990-39BB-4A96-B6BE-473C7EA91608・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 16476.0,
+      "sourceRef": "初一食午_20260801233314.back・A4E81FA7-6EAA-4899-A45E-E827B33F8038・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "瓦斯桶",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "瓦斯費",
+      "amount": 590.0,
+      "sourceRef": "初一食午_20260801233314.back・0DB64BDC-9AD1-4797-9B7D-BCE20EF7B4B5・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 1720.0,
+      "sourceRef": "初一食午_20260801233314.back・E5948707-1D5B-42F4-9A5C-44981136A438・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "祥鈺",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "祥鈺",
+      "amount": 4250.0,
+      "sourceRef": "初一食午_20260801233314.back・AEE980D5-1DDA-43C2-9387-BC54DD871535・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "高麗菜生菜",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "高麗菜生菜",
+      "amount": 860.0,
+      "sourceRef": "初一食午_20260801233314.back・2E0C6AB8-5B7B-4941-98E1-41E6400C71CB・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "吉禾食品",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "吉禾食品",
+      "amount": 6912.0,
+      "sourceRef": "初一食午_20260801233314.back・6E7426DA-DE67-42AA-8797-FBEA882646FC・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "開元",
+      "normalizedGroup": "飲品成本",
+      "normalizedCategory": "開元",
+      "amount": 3955.0,
+      "sourceRef": "初一食午_20260801233314.back・17A8DE88-0C1E-4E56-B599-1ADEC6A9538D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "弘陽",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "弘陽",
+      "amount": 3485.0,
+      "sourceRef": "初一食午_20260801233314.back・031392C2-3616-4803-AE7E-1984B76A068D・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "展誠麵包",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "展誠麵包",
+      "amount": 19921.0,
+      "sourceRef": "初一食午_20260801233314.back・AAFA4A9C-7179-4A69-A844-E08862A0CB3C・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "口福蘿蔔糕",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "口福蘿蔔糕",
+      "amount": 18630.0,
+      "sourceRef": "初一食午_20260801233314.back・612A8B8F-3BC3-457F-A390-7D6EED4F6709・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 510.0,
+      "sourceRef": "初一食午_20260801233314.back・C668CF55-6FF6-46AF-8BD0-5AB1C79B9900・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 6310.0,
+      "sourceRef": "初一食午_20260801233314.back・62BA05D3-CEE2-43C5-BBB9-A5AB3D86B34F・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-07-31",
+      "type": "expense",
+      "sourceCategory": "電話費",
+      "normalizedGroup": "固定成本",
+      "normalizedCategory": "電話費",
+      "amount": 989.0,
+      "sourceRef": "初一食午_20260801233314.back・2C3CAB4E-7EA3-45C0-B83F-9AD61B305408・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-08-01",
+      "type": "expense",
+      "sourceCategory": "蛋商",
+      "normalizedGroup": "食材成本",
+      "normalizedCategory": "蛋商",
+      "amount": 3440.0,
+      "sourceRef": "初一食午_20260801233314.back・A6303569-7AE0-409A-9900-81114BAC47EA・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-08-01",
+      "type": "income",
+      "sourceCategory": "當日現金營業額",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "現金收入",
+      "amount": 26300.0,
+      "sourceRef": "初一食午_20260801233314.back・614D8FA5-05CA-4CCC-A226-2C04DC11F297・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-08-01",
+      "type": "income",
+      "sourceCategory": "全支付",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "全支付",
+      "amount": 890.0,
+      "sourceRef": "初一食午_20260801233314.back・2D55184B-B04D-4B4B-907F-A26E0A5DAE07・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-08-01",
+      "type": "income",
+      "sourceCategory": "Line pay經營收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "line Pay經營收入",
+      "amount": 3635.0,
+      "sourceRef": "初一食午_20260801233314.back・3DAE2C24-BBCC-4DDC-A47F-027B327B5D77・split 0"
+    },
+    {
+      "status": "imported",
+      "date": "2026-08-01",
+      "type": "income",
+      "sourceCategory": "快一點line pay收入",
+      "normalizedGroup": "現金收入",
+      "normalizedCategory": "快一點line pay收入",
+      "amount": 15840.0,
+      "sourceRef": "初一食午_20260801233314.back・3E325FBE-770E-4CF6-A13D-58973B65A54B・split 0"
+    }
+  ],
+  "excludedRows": [
+    {
+      "entryDate": "2026-07-22",
+      "transactionId": "10809377-21E3-4C3B-B75E-0730CD8BE67E",
+      "transactionType": 2,
+      "sum": 18120.0,
+      "secondSum": 18120.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-22",
+      "transactionId": "EF714D94-5E1D-4E56-8A83-C178D98F1CB2",
+      "transactionType": 8,
+      "sum": 815.0,
+      "secondSum": 0.0,
+      "description": "",
+      "reason": "帳戶餘額調整"
+    },
+    {
+      "entryDate": "2026-07-23",
+      "transactionId": "76F6FAE6-8A21-427A-ADB9-561B4750DA13",
+      "transactionType": 2,
+      "sum": 15015.0,
+      "secondSum": 15015.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-24",
+      "transactionId": "21CAE0F0-5594-4529-9ECA-27EFEA0199C6",
+      "transactionType": 2,
+      "sum": 12164.0,
+      "secondSum": 12164.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-24",
+      "transactionId": "9ADF54E4-C32B-427A-87EE-4C25EDD44F0C",
+      "transactionType": 2,
+      "sum": 400.0,
+      "secondSum": 400.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-24",
+      "transactionId": "19F78DD8-F73A-42A3-886C-C546C51EC286",
+      "transactionType": 2,
+      "sum": 400.0,
+      "secondSum": 400.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-25",
+      "transactionId": "8344B596-0956-450A-9752-BC3C171A8540",
+      "transactionType": 2,
+      "sum": 23485.0,
+      "secondSum": 23485.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-25",
+      "transactionId": "98766740-D00C-421C-8378-0BF8389D8E1B",
+      "transactionType": 8,
+      "sum": -370.0,
+      "secondSum": 0.0,
+      "description": "",
+      "reason": "帳戶餘額調整"
+    },
+    {
+      "entryDate": "2026-07-26",
+      "transactionId": "DF7CD7CB-FFF7-481B-AA45-9405B0B63E98",
+      "transactionType": 2,
+      "sum": 24642.0,
+      "secondSum": 24642.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-26",
+      "transactionId": "66D042CB-FF1F-4232-A761-822A8C6DF2DB",
+      "transactionType": 2,
+      "sum": 20000.0,
+      "secondSum": 20000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-27",
+      "transactionId": "E581EB37-7379-4CD8-93AC-71E2B818E700",
+      "transactionType": 2,
+      "sum": 15800.0,
+      "secondSum": 15800.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-28",
+      "transactionId": "59900992-5816-4567-A8BB-82342833FE5D",
+      "transactionType": 2,
+      "sum": 16480.0,
+      "secondSum": 16480.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-28",
+      "transactionId": "E338502C-89F3-4519-9902-04C848B25E77",
+      "transactionType": 2,
+      "sum": 1000.0,
+      "secondSum": 1000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-28",
+      "transactionId": "625CA834-4D49-43A1-BE80-1AD39AAD9EB8",
+      "transactionType": 2,
+      "sum": 1000.0,
+      "secondSum": 1000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-29",
+      "transactionId": "D04382C0-412D-4ECE-8107-C9E64C637E20",
+      "transactionType": 2,
+      "sum": 25061.0,
+      "secondSum": 25061.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-30",
+      "transactionId": "9E8AD902-7CFB-4EB3-B9A3-58375D901AE3",
+      "transactionType": 2,
+      "sum": 16060.0,
+      "secondSum": 16060.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-07-31",
+      "transactionId": "B5A51AD9-D813-4B04-B07A-04C8A342EC77",
+      "transactionType": 2,
+      "sum": 16476.0,
+      "secondSum": 16476.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "4570A1E8-7B24-47B9-B9AF-B2FA876FBF49",
+      "transactionType": 8,
+      "sum": -3725.0,
+      "secondSum": 0.0,
+      "description": "",
+      "reason": "帳戶餘額調整"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "C17B9265-F1FB-44E6-AC9E-A317FB8068AB",
+      "transactionType": 2,
+      "sum": 26300.0,
+      "secondSum": 26300.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "DE3DE381-EA80-4A59-BA61-D0849C01A0E7",
+      "transactionType": 2,
+      "sum": 2000.0,
+      "secondSum": 2000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "01F099DF-9B38-41EA-A6EC-AD7F4B85B156",
+      "transactionType": 2,
+      "sum": 1000.0,
+      "secondSum": 1000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "A4631AE8-D7F3-4BC1-A262-C102B59922A6",
+      "transactionType": 2,
+      "sum": 1000.0,
+      "secondSum": 1000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    },
+    {
+      "entryDate": "2026-08-01",
+      "transactionId": "E5A28505-625E-43FA-BBA0-429C35069DC3",
+      "transactionType": 2,
+      "sum": 30000.0,
+      "secondSum": 30000.0,
+      "description": "",
+      "reason": "帳戶互轉"
+    }
+  ]
+}
