@@ -272,7 +272,7 @@
         date: day.date,
         type: "income",
         group: "平台收入",
-        category: "foodpanda外送",
+        category: "Foodpanda外送",
         amount: day.amount,
         paymentMethod: "平台匯款",
         counterparty: "foodpanda",

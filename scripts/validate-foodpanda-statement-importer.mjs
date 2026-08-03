@@ -40,6 +40,7 @@ assert(first.summary.periodFees === 300, "foodpanda 整期平台費應為 300 �
 assert(first.summary.estimatedPayout === 47304, "foodpanda 預估撥款應為 47,304 元");
 assert(first.summary.duplicateOrderRows === 0, "foodpanda 對帳單不應有重複訂單編號");
 assert(first.transactions.length === 13 && first.summary.newDays === 13, "空白系統應新增 13 天 foodpanda 收入");
+assert(first.transactions.every(row => row.category === "Foodpanda外送" && row.group === "平台收入"), "foodpanda 匯入名稱應統一為 Foodpanda外送並歸入平台收入");
 
 const matched = await importer.analyzeFile({ file, transactions: historyTransactions, importBatches: [] });
 assert(matched.summary.matchedDays === 13, "既有 Key-in 應有 13 天與 foodpanda 對帳單相符");

@@ -203,9 +203,11 @@ for (const capability of ["catalogItemSettings", "dailyClosures", "closedMonths"
 for (const group of ["現金收入", "平台收入", "其他收入", "食材成本", "飲品成本", "雜貨成本", "人事成本", "固定成本", "其他支出"]) {
   assert(accountingApp.includes(`"${group}"`), `分類與項目設定缺少預設分類：${group}`);
 }
-for (const item of ["現金營業收入", "line Pay經營收入", "快一點line pay收入", "Uber eat外送", "foodpanda外送", "正式員工薪資", "臨時工讀日薪"]) {
+for (const item of ["現金營業收入", "line Pay經營收入", "快一點line pay收入", "Uber eat外送", "Foodpanda外送", "正式員工薪資", "臨時工讀日薪"]) {
   assert(accountingApp.includes(`"${item}"`), `分類與項目設定缺少預設項目：${item}`);
 }
+assert(accountingApp.includes('"現金收入": ["現金營業收入", "line Pay經營收入", "快一點line pay收入"]'), "Line Pay 與快一點應列在現金收入預設項目");
+assert(!accountingApp.includes('"foodpanda外送"'), "記帳系統不得保留小寫 foodpanda 的顯示名稱");
 
 const dashboardHtml = await readFile(resolve(ROOT, "dashboard_cost/index.html"), "utf8");
 assert(

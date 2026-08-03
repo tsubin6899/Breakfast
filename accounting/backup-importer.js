@@ -18,7 +18,7 @@
       if (["快一點line", "快一點linepay", "快一點linepay收入", "快一點linepay支付"].includes(key)) return "快一點line pay收入";
       if (["linepay", "linepay收入", "linepay經營收入"].includes(key)) return "line Pay經營收入";
       if (["uber", "ubereat", "ubereats", "ubereat外送", "uber收入"].includes(key)) return "Uber eat外送";
-      if (["熊貓", "foodpanda", "foodpanda外送", "熊貓外送"].includes(key)) return "foodpanda外送";
+      if (["熊貓", "foodpanda", "foodpanda外送", "熊貓外送"].includes(key)) return "Foodpanda外送";
       if (["廢油", "其他", "其他收入"].includes(key)) return "其他收入";
       if (["街口", "街口支付", "街口經營收入"].includes(key)) return "街口經營收入";
       if (key === "全支付") return "全支付";
@@ -41,7 +41,7 @@
 
   function normalizeGroup(parent, category, type) {
     if (type === "income") {
-      if (["Uber eat外送", "foodpanda外送"].includes(category)) return "平台收入";
+      if (["Uber eat外送", "Foodpanda外送"].includes(category)) return "平台收入";
       if (category === "其他收入") return "其他收入";
       return "現金收入";
     }
@@ -347,7 +347,7 @@
         "line Pay": "line Pay經營收入",
         "廢油": "其他收入",
         "Uber": "Uber eat外送",
-        "熊貓": "foodpanda外送"
+        "熊貓": "Foodpanda外送"
       },
       newRows: importedRows,
       matchedRows,

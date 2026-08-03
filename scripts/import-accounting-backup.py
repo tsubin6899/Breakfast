@@ -85,7 +85,7 @@ def normalize_category(value: str | None, row_type: str) -> str:
         if key in {"uber", "ubereat", "ubereats", "ubereat外送", "uber收入"}:
             return "Uber eat外送"
         if key in {"熊貓", "foodpanda", "foodpanda外送", "熊貓外送"}:
-            return "foodpanda外送"
+            return "Foodpanda外送"
         if key in {"廢油", "其他", "其他收入"}:
             return "其他收入"
         if key in {"街口", "街口支付", "街口經營收入"}:
@@ -111,7 +111,7 @@ def normalize_category(value: str | None, row_type: str) -> str:
 
 def normalize_group(parent: str | None, category: str, row_type: str) -> str:
     if row_type == "income":
-        if category in {"Uber eat外送", "foodpanda外送"}:
+        if category in {"Uber eat外送", "Foodpanda外送"}:
             return "平台收入"
         if category == "其他收入":
             return "其他收入"
@@ -292,7 +292,7 @@ def main() -> None:
                 "line Pay": "line Pay經營收入",
                 "廢油": "其他收入",
                 "Uber": "Uber eat外送",
-                "熊貓": "foodpanda外送",
+                "熊貓": "Foodpanda外送",
             },
         },
         "transactions": imported,

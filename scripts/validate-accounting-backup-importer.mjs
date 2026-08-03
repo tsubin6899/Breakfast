@@ -68,6 +68,17 @@ assert(firstImport.summary.transferRows === 20, "應排除 20 筆帳戶互轉");
 assert(firstImport.summary.adjustmentRows === 3, "應排除 3 筆餘額調整");
 assert(firstImport.summary.importedIncome === 299488, "新增收入合計不符");
 assert(firstImport.summary.importedExpense === 207127, "新增支出合計不符");
+const incomeAliases = new Map([
+  ["快一點line", "快一點line pay收入"],
+  ["line Pay", "line Pay經營收入"],
+  ["Uber", "Uber eat外送"],
+  ["熊貓", "Foodpanda外送"]
+]);
+for (const [source, expected] of incomeAliases) {
+  assert(importer.normalizeCategory(source, "income") === expected, `記帳備份收入名稱未正規化：${source} → ${expected}`);
+}
+assert(["快一點line pay收入", "line Pay經營收入"].every(item => importer.normalizeGroup("", item, "income") === "現金收入"), "Line Pay 與快一點應歸在現金收入");
+assert(["Uber eat外送", "Foodpanda外送"].every(item => importer.normalizeGroup("", item, "income") === "平台收入"), "Uber 與 Foodpanda 應歸在平台收入");
 
 const repeatedImport = await importer.analyzeFile({
   file: sourceFile,

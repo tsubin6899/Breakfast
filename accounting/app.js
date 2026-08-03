@@ -37,8 +37,8 @@
   };
   const DEFAULT_CATEGORY_CATALOG = {
     income: {
-      "現金收入": ["現金營業收入"],
-      "平台收入": ["line Pay經營收入", "快一點line pay收入", "全支付收入", "街口支付收入", "Uber eat外送", "foodpanda外送"],
+      "現金收入": ["現金營業收入", "line Pay經營收入", "快一點line pay收入"],
+      "平台收入": ["全支付收入", "街口支付收入", "Uber eat外送", "Foodpanda外送"],
       "其他收入": ["其他收入", "廢油收入"]
     },
     expense: {
@@ -49,6 +49,17 @@
       "固定成本": ["房租", "電費", "水費", "瓦斯費", "電話費", "勞保費", "健保費", "雇主提撥勞退", "稅金", "保險", "平台手續費"],
       "其他支出": ["其他雜支", "行銷費用", "設備費用"]
     }
+  };
+  const CANONICAL_INCOME_GROUPS = {
+    "現金營業收入": "現金收入",
+    "line Pay經營收入": "現金收入",
+    "快一點line pay收入": "現金收入",
+    "全支付收入": "平台收入",
+    "街口支付收入": "平台收入",
+    "Uber eat外送": "平台收入",
+    "Foodpanda外送": "平台收入",
+    "其他收入": "其他收入",
+    "廢油收入": "其他收入"
   };
 
   function emptyCategoryCatalog() {
@@ -72,7 +83,7 @@
     const text = String(value || "").trim();
     const key = text.toLowerCase().replace(/[\s_\-]/g, "");
     if (/uber/.test(key)) return "Uber eat外送";
-    if (/foodpanda|熊貓/.test(key)) return "foodpanda外送";
+    if (/foodpanda|熊貓/.test(key)) return "Foodpanda外送";
     if (/快一點/.test(key)) return "快一點line pay收入";
     if (/linepay|line收入/.test(key)) return "line Pay經營收入";
     if (/全支付/.test(key)) return "全支付收入";
@@ -85,7 +96,10 @@
   function catalogGroupForRow(row) {
     const key = `${row.group || ""}${row.category || ""}${row.counterparty || ""}`.toLowerCase().replace(/[\s_\-]/g, "");
     if (row.type === "income") {
-      if (/uber|foodpanda|熊貓|linepay|line收入|快一點|全支付|街口/.test(key)) return "平台收入";
+      const item = canonicalIncomeItem(row.category || row.counterparty || row.group);
+      if (CANONICAL_INCOME_GROUPS[item]) return CANONICAL_INCOME_GROUPS[item];
+      if (/uber|foodpanda|熊貓/.test(key)) return "平台收入";
+      if (/linepay|line收入|快一點/.test(key)) return "現金收入";
       if (/其他|廢油/.test(key)) return "其他收入";
       if (GROUPS.income.includes(row.group)) return row.group;
       return "現金收入";
@@ -104,6 +118,15 @@
       .flatMap(value => String(value || "").split(/[／/、+＋&＆]/))
       .map(value => value.trim())
       .filter(value => value && value !== group && value !== "未分類");
+  }
+
+  function normalizeTransactionNames(row) {
+    if (!row || row.type !== "income") return { ...row };
+    const category = canonicalIncomeItem(row.category || row.counterparty || row.group);
+    const group = CANONICAL_INCOME_GROUPS[category] || catalogGroupForRow({ ...row, category });
+    const canonicalCounterparty = canonicalIncomeItem(row.counterparty);
+    const counterparty = CANONICAL_INCOME_GROUPS[canonicalCounterparty] ? canonicalCounterparty : row.counterparty;
+    return { ...row, group, category, counterparty };
   }
 
   function buildDefaultCategoryCatalog(transactions = []) {
@@ -125,7 +148,11 @@
     const catalog = base || emptyCategoryCatalog();
     for (const type of Object.keys(GROUPS)) {
       for (const group of GROUPS[type]) {
-        for (const item of Array.isArray(saved?.[type]?.[group]) ? saved[type][group] : []) addCatalogItem(catalog, type, group, item);
+        for (const item of Array.isArray(saved?.[type]?.[group]) ? saved[type][group] : []) {
+          const normalizedItem = type === "income" ? canonicalIncomeItem(item) : item;
+          const normalizedGroup = type === "income" ? CANONICAL_INCOME_GROUPS[normalizedItem] || group : group;
+          addCatalogItem(catalog, type, normalizedGroup, normalizedItem);
+        }
       }
     }
     return catalog;
@@ -160,7 +187,7 @@
     return {
       version: 4,
       selectedMonth: currentMonth(),
-      transactions: (HISTORY.transactions || []).map(item => ({ ...item })),
+      transactions: (HISTORY.transactions || []).map(normalizeTransactionNames),
       categoryCatalog: buildDefaultCategoryCatalog(HISTORY.transactions || []),
       catalogItemSettings: {},
       dayLabor: [],
@@ -181,9 +208,9 @@
       ...base,
       ...(value || {}),
       version: 4,
-      transactions: Array.isArray(value?.transactions) ? value.transactions : base.transactions,
+      transactions: Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions,
       dayLabor: Array.isArray(value?.dayLabor) ? value.dayLabor : [],
-      recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates : [],
+      recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates.map(normalizeTransactionNames) : [],
       importBatches: Array.isArray(value?.importBatches) ? value.importBatches : [],
       reconciliations: value?.reconciliations && typeof value.reconciliations === "object" ? value.reconciliations : {},
       dailyClosures: value?.dailyClosures && typeof value.dailyClosures === "object" ? value.dailyClosures : {},
@@ -196,7 +223,7 @@
     if (HISTORY.id && !value?.importedSources?.[HISTORY.id]) {
       const existing = new Set(normalized.transactions.map(item => item.id));
       for (const item of HISTORY.transactions || []) {
-        if (!existing.has(item.id)) normalized.transactions.push({ ...item });
+        if (!existing.has(item.id)) normalized.transactions.push(normalizeTransactionNames(item));
       }
       normalized.importedSources[HISTORY.id] = { source: HISTORY.source, importedAt: "2026-08-01" };
     }
@@ -450,6 +477,10 @@
   function mappedCatalogValue(type, group, value) {
     const normalized = normalizeAlias(value);
     if (!normalized) return { group, item: value };
+    if (type === "income") {
+      const item = canonicalIncomeItem(value);
+      if (CANONICAL_INCOME_GROUPS[item]) return { group: CANONICAL_INCOME_GROUPS[item], item };
+    }
     for (const candidateGroup of GROUPS[type] || []) {
       for (const item of state.categoryCatalog?.[type]?.[candidateGroup] || []) {
         const setting = catalogSetting(type, candidateGroup, item);
@@ -463,8 +494,9 @@
 
   function applyCatalogMappings(rows) {
     return rows.map(row => {
-      const mapped = mappedCatalogValue(row.type, row.group, row.category || row.counterparty);
-      return { ...row, group: mapped.group || row.group, category: mapped.item || row.category };
+      const normalized = normalizeTransactionNames(row);
+      const mapped = mappedCatalogValue(normalized.type, normalized.group, normalized.category || normalized.counterparty);
+      return normalizeTransactionNames({ ...normalized, group: mapped.group || normalized.group, category: mapped.item || normalized.category });
     });
   }
 

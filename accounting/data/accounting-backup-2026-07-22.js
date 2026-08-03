@@ -13,7 +13,7 @@ window.BREAKFAST_ACCOUNTING_BACKUP_2026_07_22 = {
       "line Pay": "line Pay經營收入",
       "廢油": "其他收入",
       "Uber": "Uber eat外送",
-      "熊貓": "foodpanda外送"
+      "熊貓": "Foodpanda外送"
     }
   },
   "transactions": [

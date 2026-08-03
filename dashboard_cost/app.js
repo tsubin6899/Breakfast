@@ -507,7 +507,7 @@
     if (["快一點line", "快一點linepay", "快一點linepay收入", "快一點linepay支付"].includes(key)) return "快一點line pay收入";
     if (["linepay", "linepay收入", "linepay經營收入"].includes(key)) return "line Pay經營收入";
     if (["uber", "ubereat", "ubereats", "ubereat外送", "uber收入"].includes(key)) return "Uber eat外送";
-    if (["熊貓", "foodpanda", "foodpanda外送", "熊貓外送"].includes(key)) return "foodpanda外送";
+    if (["熊貓", "foodpanda", "foodpanda外送", "熊貓外送"].includes(key)) return "Foodpanda外送";
     if (["廢油", "其他", "其他收入"].includes(key)) return "其他收入";
     if (["街口", "街口支付", "街口經營收入"].includes(key)) return "街口經營收入";
     return String(value || "其他收入");
@@ -611,7 +611,7 @@
     const revenueGroups = groupedRevenueValues(stats.flatMap(item => item.incomeRows));
     const payrollRatio = total.income ? (total.payroll + total.labor) / total.income : 0;
     const costRatio = total.income ? total.expenses / total.income : 0;
-    const platform = revenueGroups.filter(item => ["Uber eat外送", "foodpanda外送"].includes(item.label)).reduce((sum, item) => sum + item.amount, 0);
+    const platform = revenueGroups.filter(item => ["Uber eat外送", "Foodpanda外送"].includes(item.label)).reduce((sum, item) => sum + item.amount, 0);
     const insights = [];
     insights.push({ tone: costRatio > .85 ? "bad" : costRatio > .75 ? "warn" : "good", title: `整體成本率 ${pct(costRatio)}`, text: costRatio > .85 ? "支出已接近收入，應優先檢查食材、人事及單次大額費用。" : costRatio > .75 ? "成本仍在可控範圍，但結餘空間偏薄，適合逐月追蹤。" : "目前支出結構相對健康，仍需持續觀察淡旺季差異。" });
     if (groups[0]) insights.push({ tone: "", title: `最大一般支出：${groups[0].label}`, text: `累計 ${money(groups[0].amount)}，占一般營運支出 ${pct(total.operating ? groups[0].amount / total.operating : 0)}。` });
