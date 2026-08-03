@@ -141,6 +141,8 @@
   let toastTimer;
   let state = loadState();
   let selectedLedgerDate = "";
+  let reportGrain = "month";
+  let reportAnchorDate = "";
   let pendingBackupImport = null;
   let pendingUberImport = null;
   let pendingFoodpandaImport = null;
@@ -512,6 +514,11 @@
       title: "月份收支，一天一天核對。",
       description: "用月曆查看每日收入與支出，點選日期即可核對明細、實際現金與電子支付入帳。"
     },
+    report: {
+      eyebrow: "INCOME & EXPENSE REPORT",
+      title: "收入、支出與廠商占比，一眼掌握。",
+      description: "切換年報、月報與週報，用同一套資料查看收支趨勢、淨額、分類結構與各支出對象占比。"
+    },
     import: {
       eyebrow: "IMPORT CENTER",
       title: "把來源資料安全帶進系統。",
@@ -612,6 +619,273 @@
     const labor = monthLabor(month).reduce((sum, item) => sum + Number(item.amount || 0), 0);
     const expenses = operating + payroll.amount + labor;
     return { income, operating, payroll, labor, expenses, net: income - expenses };
+  }
+
+  function dateFromLocalString(value) {
+    const [year, month, day] = String(value || "").split("-").map(Number);
+    return new Date(year, (month || 1) - 1, day || 1, 12, 0, 0);
+  }
+
+  function reportAnchor() {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(reportAnchorDate)) reportAnchorDate = `${state.selectedMonth}-01`;
+    return dateFromLocalString(reportAnchorDate);
+  }
+
+  function reportRangeFor(grain = reportGrain, anchor = reportAnchor()) {
+    const year = anchor.getFullYear();
+    const month = anchor.getMonth();
+    let start;
+    let end;
+    let label;
+    if (grain === "year") {
+      start = new Date(year, 0, 1, 12);
+      end = new Date(year, 11, 31, 12);
+      label = `${year} 年`;
+    } else if (grain === "week") {
+      const mondayOffset = (anchor.getDay() + 6) % 7;
+      start = new Date(anchor);
+      start.setDate(anchor.getDate() - mondayOffset);
+      end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      label = `${start.getFullYear()}/${start.getMonth() + 1}/${start.getDate()}－${end.getFullYear()}/${end.getMonth() + 1}/${end.getDate()}`;
+    } else {
+      start = new Date(year, month, 1, 12);
+      end = new Date(year, month + 1, 0, 12);
+      label = `${year} 年 ${month + 1} 月`;
+    }
+    return { grain, start: localDateString(start), end: localDateString(end), label };
+  }
+
+  function reportBuckets(range) {
+    const buckets = [];
+    const start = dateFromLocalString(range.start);
+    const end = dateFromLocalString(range.end);
+    if (range.grain === "year") {
+      for (let month = 0; month < 12; month += 1) {
+        const bucketStart = new Date(start.getFullYear(), month, 1, 12);
+        const bucketEnd = new Date(start.getFullYear(), month + 1, 0, 12);
+        buckets.push({ label: `${month + 1} 月`, start: localDateString(bucketStart), end: localDateString(bucketEnd) });
+      }
+      return buckets;
+    }
+    if (range.grain === "month") {
+      const totalDays = end.getDate();
+      for (let day = 1; day <= totalDays; day += 7) {
+        const lastDay = Math.min(day + 6, totalDays);
+        buckets.push({
+          label: `${day}–${lastDay} 日`,
+          start: localDateString(new Date(start.getFullYear(), start.getMonth(), day, 12)),
+          end: localDateString(new Date(start.getFullYear(), start.getMonth(), lastDay, 12))
+        });
+      }
+      return buckets;
+    }
+    const weekdayFormatter = new Intl.DateTimeFormat("zh-TW", { weekday: "short" });
+    for (let cursor = new Date(start); cursor <= end; cursor.setDate(cursor.getDate() + 1)) {
+      const date = localDateString(cursor);
+      buckets.push({ label: `${cursor.getMonth() + 1}/${cursor.getDate()} ${weekdayFormatter.format(cursor)}`, start: date, end: date });
+    }
+    return buckets;
+  }
+
+  function reportMonthsBetween(start, end) {
+    const first = dateFromLocalString(start);
+    const last = dateFromLocalString(end);
+    const months = [];
+    const cursor = new Date(first.getFullYear(), first.getMonth(), 1, 12);
+    const limit = new Date(last.getFullYear(), last.getMonth(), 1, 12);
+    while (cursor <= limit) {
+      months.push(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`);
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+  }
+
+  function reportEntriesBetween(start, end) {
+    const transactions = applyCatalogMappings(state.transactions).map(item => ({
+      ...item,
+      amount: Number(item.amount || 0),
+      reportKind: "transaction"
+    }));
+    const labor = state.dayLabor.map(item => ({
+      id: item.id,
+      date: item.date,
+      type: "expense",
+      group: "人事成本",
+      category: "臨時工讀日薪",
+      counterparty: item.name || "臨時工讀",
+      amount: Number(item.amount || 0),
+      reportKind: "labor"
+    }));
+    const payroll = reportMonthsBetween(start, end).flatMap(month => {
+      const alreadyRecorded = transactions.some(item => item.type === "expense" && item.date?.startsWith(month) && /正式員工薪資/.test(item.category || ""));
+      const summary = payrollForMonth(month);
+      if (alreadyRecorded || !(summary.amount > 0)) return [];
+      return [{
+        id: `report-payroll-${month}`,
+        date: `${month}-28`,
+        type: "expense",
+        group: "人事成本",
+        category: "正式員工薪資",
+        counterparty: "薪資管理 APP",
+        amount: Number(summary.amount),
+        reportKind: "payroll"
+      }];
+    });
+    return [...transactions, ...labor, ...payroll]
+      .filter(item => item.amount > 0 && item.date >= start && item.date <= end)
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }
+
+  function aggregateReportRows(entries, labelFor) {
+    const values = new Map();
+    entries.forEach(item => {
+      const label = String(labelFor(item) || "未分類").trim() || "未分類";
+      values.set(label, (values.get(label) || 0) + Number(item.amount || 0));
+    });
+    return [...values.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "zh-Hant"));
+  }
+
+  function collapsedReportRows(rows, limit = 8) {
+    if (rows.length <= limit) return rows;
+    const visible = rows.slice(0, limit - 1);
+    visible.push([`其他 ${rows.length - limit + 1} 項`, rows.slice(limit - 1).reduce((sum, row) => sum + row[1], 0)]);
+    return visible;
+  }
+
+  function renderReportRankedBars(selector, rows, denominator, tone = "navy", emptyText = "這個期間尚無資料。") {
+    const target = $(selector);
+    const visible = collapsedReportRows(rows);
+    const maximum = Math.max(...visible.map(row => row[1]), 0);
+    target.innerHTML = visible.length ? visible.map(([label, amount], index) => {
+      const share = denominator ? amount / denominator * 100 : 0;
+      const width = maximum ? Math.max(2, amount / maximum * 100) : 0;
+      return `<article class="report-ranked-row ${tone}" aria-label="${escapeHtml(label)}，${money(amount)}，占比 ${decimal(share)}%">
+        <div class="report-ranked-copy"><span><b>${index + 1}</b>${escapeHtml(label)}</span><strong>${money(amount)} <small>${decimal(share)}%</small></strong></div>
+        <div class="report-ranked-track" aria-hidden="true"><i style="--report-bar-width:${width}%"></i></div>
+      </article>`;
+    }).join("") : `<p class="report-empty">${escapeHtml(emptyText)}</p>`;
+  }
+
+  function renderReportTrend(buckets, entries) {
+    const values = buckets.map(bucket => {
+      const rows = entries.filter(item => item.date >= bucket.start && item.date <= bucket.end);
+      const income = rows.filter(item => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
+      const expense = rows.filter(item => item.type === "expense").reduce((sum, item) => sum + item.amount, 0);
+      return { ...bucket, income, expense, net: income - expense };
+    });
+    const maximum = Math.max(...values.flatMap(item => [item.income, item.expense]), 0);
+    const chart = $("#report-trend-chart");
+    chart.setAttribute("aria-label", values.map(item => `${item.label}收入${money(item.income)}、支出${money(item.expense)}、淨額${money(item.net)}`).join("；"));
+    chart.innerHTML = maximum ? `
+      <div class="report-chart-scale">最高 ${shortMoney(maximum)}</div>
+      <div class="report-chart-columns">
+        ${values.map(item => {
+          const incomeHeight = item.income ? Math.max(3, item.income / maximum * 100) : 0;
+          const expenseHeight = item.expense ? Math.max(3, item.expense / maximum * 100) : 0;
+          return `<article class="report-chart-column" title="${escapeHtml(item.label)}｜收入 ${money(item.income)}｜支出 ${money(item.expense)}｜淨額 ${money(item.net)}">
+            <div class="report-chart-bars" aria-hidden="true"><i class="income" style="--report-bar-height:${incomeHeight}%"></i><i class="expense" style="--report-bar-height:${expenseHeight}%"></i></div>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small class="${item.net < 0 ? "negative" : ""}">${item.net >= 0 ? "+" : "−"}${shortMoney(Math.abs(item.net))}</small>
+          </article>`;
+        }).join("")}
+      </div>` : '<p class="report-empty">這個期間尚無收入或支出。</p>';
+  }
+
+  function renderReportMatrix(buckets, entries) {
+    const head = $("#report-matrix-head");
+    const body = $("#report-matrix-body");
+    head.innerHTML = `<tr><th>分類</th><th>收入／支出項目</th>${buckets.map(bucket => `<th>${escapeHtml(bucket.label)}</th>`).join("")}<th>期間合計</th><th>占比</th></tr>`;
+    if (!entries.length) {
+      body.innerHTML = `<tr><td colspan="${buckets.length + 4}" class="report-empty">這個期間尚無收入或支出資料。</td></tr>`;
+      return;
+    }
+    const bucketValuesFor = rows => buckets.map(bucket => rows.filter(item => item.date >= bucket.start && item.date <= bucket.end).reduce((sum, item) => sum + item.amount, 0));
+    const html = [];
+    for (const type of ["income", "expense"]) {
+      const typeRows = entries.filter(item => item.type === type);
+      if (!typeRows.length) continue;
+      const typeTotal = typeRows.reduce((sum, item) => sum + item.amount, 0);
+      const typeBuckets = bucketValuesFor(typeRows);
+      html.push(`<tr class="report-matrix-type ${type}"><th colspan="2">${type === "income" ? "收入項目" : "支出項目"}</th>${typeBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(typeTotal)}</th><th>100%</th></tr>`);
+      const configured = GROUPS[type] || [];
+      const groups = [...new Set(typeRows.map(item => item.group || "未分類"))].sort((a, b) => {
+        const first = configured.indexOf(a);
+        const second = configured.indexOf(b);
+        return (first < 0 ? 999 : first) - (second < 0 ? 999 : second) || a.localeCompare(b, "zh-Hant");
+      });
+      groups.forEach(group => {
+        const groupRows = typeRows.filter(item => (item.group || "未分類") === group);
+        const groupTotal = groupRows.reduce((sum, item) => sum + item.amount, 0);
+        const groupBuckets = bucketValuesFor(groupRows);
+        html.push(`<tr class="report-matrix-group ${type}"><th>${escapeHtml(group)}</th><th>分類小計</th>${groupBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(groupTotal)}</th><th>${decimal(groupTotal / typeTotal * 100)}%</th></tr>`);
+        const items = aggregateReportRows(groupRows, item => item.category || item.counterparty || "未分類");
+        items.forEach(([category, total]) => {
+          const itemRows = groupRows.filter(item => (item.category || item.counterparty || "未分類") === category);
+          const itemBuckets = bucketValuesFor(itemRows);
+          html.push(`<tr><td>${escapeHtml(group)}</td><td>${escapeHtml(category)}</td>${itemBuckets.map(value => `<td>${value ? money(value) : "—"}</td>`).join("")}<td><strong>${money(total)}</strong></td><td>${decimal(total / typeTotal * 100)}%</td></tr>`);
+        });
+      });
+    }
+    body.innerHTML = html.join("");
+  }
+
+  function renderReport() {
+    const range = reportRangeFor();
+    const buckets = reportBuckets(range);
+    const entries = reportEntriesBetween(range.start, range.end);
+    const incomeEntries = entries.filter(item => item.type === "income");
+    const expenseEntries = entries.filter(item => item.type === "expense");
+    const income = incomeEntries.reduce((sum, item) => sum + item.amount, 0);
+    const expense = expenseEntries.reduce((sum, item) => sum + item.amount, 0);
+    const net = income - expense;
+    const expenseRatio = income ? expense / income * 100 : 0;
+    const netRatio = income ? net / income * 100 : 0;
+
+    document.querySelectorAll("[data-report-grain]").forEach(button => button.setAttribute("aria-pressed", String(button.dataset.reportGrain === reportGrain)));
+    $("#report-period-label").textContent = range.label;
+    $("#report-total-income").textContent = money(income);
+    $("#report-income-note").textContent = `${incomeEntries.length.toLocaleString("zh-TW")} 筆收入`;
+    $("#report-total-expense").textContent = money(expense);
+    $("#report-expense-note").textContent = `${expenseEntries.length.toLocaleString("zh-TW")} 筆支出（含薪資）`;
+    $("#report-total-net").textContent = money(net);
+    $("#report-total-net").classList.toggle("negative", net < 0);
+    $("#report-net-note").textContent = income ? `淨額率 ${decimal(netRatio)}%` : "期間內尚無收入";
+    $("#report-expense-ratio").textContent = income ? `${decimal(expenseRatio)}%` : "—";
+    $("#report-trend-subtitle").textContent = `${range.label}，每欄下方顯示該段期間淨額`;
+    $("#report-matrix-subtitle").textContent = `${range.label}依${range.grain === "year" ? "月份" : range.grain === "month" ? "每 7 日" : "每日"}分欄；項目占比以同類型總額為分母。`;
+
+    const importedThrough = HISTORY.importedThrough ? `歷史資料匯入至 ${escapeHtml(HISTORY.importedThrough)}` : "使用目前記帳資料";
+    $("#report-source-banner").innerHTML = `<strong>${escapeHtml(range.label)}報表資料：</strong>${escapeHtml(HISTORY.source)}＋本機新增記帳＋薪資管理資料；${importedThrough}。正式員工薪資為月結資料，統一列於每月 28 日以利週報與明細互相核對。`;
+
+    renderReportTrend(buckets, entries);
+    renderReportRankedBars("#report-expense-groups", aggregateReportRows(expenseEntries, item => item.group), expense, "expense");
+    renderReportRankedBars("#report-income-sources", aggregateReportRows(incomeEntries, item => item.category || item.group), income, "income");
+    const vendorRows = aggregateReportRows(expenseEntries, item => item.counterparty || item.category || item.group);
+    $("#report-vendor-count").textContent = `${vendorRows.length.toLocaleString("zh-TW")} 個對象`;
+    renderReportRankedBars("#report-vendors", vendorRows, expense, "vendor");
+    renderReportMatrix(buckets, entries);
+  }
+
+  function setReportGrain(grain) {
+    if (!["year", "month", "week"].includes(grain)) return;
+    reportGrain = grain;
+    renderReport();
+  }
+
+  function shiftReportPeriod(delta) {
+    const anchor = reportAnchor();
+    if (reportGrain === "year") anchor.setFullYear(anchor.getFullYear() + delta);
+    else if (reportGrain === "month") anchor.setMonth(anchor.getMonth() + delta);
+    else anchor.setDate(anchor.getDate() + delta * 7);
+    reportAnchorDate = localDateString(anchor);
+    renderReport();
+  }
+
+  function resetReportPeriod() {
+    const today = localDateString();
+    reportAnchorDate = today.startsWith(state.selectedMonth) ? today : `${state.selectedMonth}-01`;
+    renderReport();
   }
 
   function accountingExceptions(month) {
@@ -1144,6 +1418,7 @@
   function renderAll() {
     renderSourceBanner();
     renderSummary();
+    renderReport();
     renderDataLists();
     renderCatalog();
     renderQuickEntryPresets();
@@ -1471,6 +1746,7 @@
     if (month < months[0] || month > months.at(-1)) return;
     state.selectedMonth = month;
     selectedLedgerDate = preferredDate.startsWith(month) ? preferredDate : "";
+    reportAnchorDate = preferredDate.startsWith(month) ? preferredDate : `${month}-01`;
     $("#month-filter").value = month;
     const created = materializeRecurring(month);
     saveState(created ? `已帶入 ${created} 筆固定收支` : "已儲存於本機");
@@ -1511,6 +1787,13 @@
     $("#month-filter").addEventListener("change", event => {
       changeLedgerMonth(event.target.value);
     });
+    document.querySelector(".report-grain-switch").addEventListener("click", event => {
+      const button = event.target.closest("[data-report-grain]");
+      if (button) setReportGrain(button.dataset.reportGrain);
+    });
+    $("#report-period-prev").addEventListener("click", () => shiftReportPeriod(-1));
+    $("#report-period-next").addEventListener("click", () => shiftReportPeriod(1));
+    $("#report-period-current").addEventListener("click", resetReportPeriod);
 
     $("#accounting-cloud-login").addEventListener("click", () => {
       window.location.href = `/api/auth/authorize?returnTo=${encodeURIComponent("/accounting/?view=safety")}`;
@@ -2197,6 +2480,7 @@
     const sharedMonth = window.BreakfastOperationsStore?.getGlobalMonth("");
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth || "")) state.selectedMonth = requestedMonth;
     else if (/^\d{4}-(0[1-9]|1[0-2])$/.test(sharedMonth || "")) state.selectedMonth = sharedMonth;
+    reportAnchorDate = `${state.selectedMonth}-01`;
     renderMonthOptions();
     const requestedDate = params.get("date");
     if (requestedDate?.startsWith(state.selectedMonth)) selectedLedgerDate = requestedDate;

@@ -58,6 +58,7 @@
       <nav class="accounting-page-tabs" role="tablist" aria-label="記帳系統分頁">
         <button id="accounting-tab-entry" class="accounting-page-tab" type="button" role="tab" aria-selected="true" data-accounting-tab="entry"><i aria-hidden="true">＋</i><span><strong>新增收入／支出</strong><small>一般記帳・日薪・固定收支</small></span></button>
         <button id="accounting-tab-ledger" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="ledger"><i aria-hidden="true">曆</i><span><strong>月份收支明細</strong><small>月曆・每日明細・收支摘要</small></span></button>
+        <button id="accounting-tab-report" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="report"><i aria-hidden="true">表</i><span><strong>收入支出報表</strong><small>年報・月報・週報・廠商占比</small></span></button>
         <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true">匯</i><span><strong>匯入中心</strong><small>記帳備份・平台對帳單・資料還原</small></span></button>
         <button id="accounting-tab-catalog" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="catalog"><i aria-hidden="true">類</i><span><strong>分類與項目設定</strong><small>收入項目・支出廠商・新增項目</small></span></button>
         <button id="accounting-tab-safety" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="safety"><i aria-hidden="true">安</i><span><strong>關帳與資料安全</strong><small>每日關帳・月結・版本救援</small></span></button>
@@ -95,6 +96,77 @@
       <article class="summary-card payroll"><i class="summary-icon" aria-hidden="true">薪</i><span>正式員工薪資</span><strong id="summary-payroll">$0</strong><small id="summary-payroll-source">等待薪資資料</small></article>
       <article class="summary-card labor"><i class="summary-icon" aria-hidden="true">工</i><span>臨時工讀日薪</span><strong id="summary-labor">$0</strong><small>獨立計入人事成本</small></article>
       <article class="summary-card net"><i class="summary-icon" aria-hidden="true">餘</i><span>本月收支結餘</span><strong id="summary-net">$0</strong><small id="summary-net-ratio">淨利率 0%</small></article>
+    </section>
+
+    <section class="report-dashboard" data-accounting-page="report" aria-labelledby="report-title">
+      <div id="report-source-banner" class="source-banner report-source-banner" aria-live="polite"></div>
+
+      <section class="panel report-toolbar" aria-label="報表期間設定">
+        <div>
+          <p class="eyebrow">INCOME & EXPENSE REPORT</p>
+          <h2 id="report-title">收入支出統計報表</h2>
+          <p class="panel-copy">從總覽、趨勢到收入來源與支出對象，所有數字都使用相同期間與相同資料來源。</p>
+        </div>
+        <div class="report-controls">
+          <div class="report-grain-switch" role="group" aria-label="切換報表週期">
+            <button type="button" data-report-grain="year" aria-pressed="false">年報表</button>
+            <button type="button" data-report-grain="month" aria-pressed="true">月報表</button>
+            <button type="button" data-report-grain="week" aria-pressed="false">週報表</button>
+          </div>
+          <div class="report-period-navigation">
+            <button id="report-period-prev" type="button" aria-label="上一期">‹</button>
+            <strong id="report-period-label">報表期間</strong>
+            <button id="report-period-next" type="button" aria-label="下一期">›</button>
+            <button id="report-period-current" class="secondary-btn" type="button">回到本期</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="report-kpi-grid" aria-label="報表摘要">
+        <article class="report-kpi income"><span>期間總收入</span><strong id="report-total-income">$0</strong><small id="report-income-note">0 筆收入</small></article>
+        <article class="report-kpi expense"><span>期間總支出</span><strong id="report-total-expense">$0</strong><small id="report-expense-note">0 筆支出</small></article>
+        <article class="report-kpi net"><span>期間淨額</span><strong id="report-total-net">$0</strong><small id="report-net-note">淨利率 0%</small></article>
+        <article class="report-kpi ratio"><span>支出占收入</span><strong id="report-expense-ratio">0%</strong><small>每 $100 收入所需支出</small></article>
+      </section>
+
+      <section class="report-visual-grid">
+        <article class="panel report-trend-panel">
+          <div class="report-panel-heading">
+            <div><p class="eyebrow">PERIOD TREND</p><h2>收入與支出趨勢</h2><p id="report-trend-subtitle">各期間收入、支出與淨額</p></div>
+            <div class="report-legend" aria-label="圖例"><span><i class="income"></i>收入</span><span><i class="expense"></i>支出</span></div>
+          </div>
+          <div id="report-trend-chart" class="report-trend-chart" role="img" aria-label="收入與支出趨勢圖"></div>
+        </article>
+
+        <article class="panel report-expense-group-panel">
+          <div class="report-panel-heading"><div><p class="eyebrow">EXPENSE MIX</p><h2>支出分類占比</h2><p>占本期全部支出</p></div></div>
+          <div id="report-expense-groups" class="report-ranked-bars"></div>
+        </article>
+      </section>
+
+      <section class="report-breakdown-grid">
+        <article class="panel">
+          <div class="report-panel-heading"><div><p class="eyebrow">INCOME SOURCES</p><h2>收入來源</h2><p>各收入項目占本期收入</p></div></div>
+          <div id="report-income-sources" class="report-ranked-bars"></div>
+        </article>
+        <article class="panel report-vendor-panel">
+          <div class="report-panel-heading"><div><p class="eyebrow">VENDORS & PAYEES</p><h2>廠商／支出對象占比</h2><p>占本期全部支出，未填廠商時以支出項目歸類</p></div><span id="report-vendor-count" class="panel-chip">0 個對象</span></div>
+          <div id="report-vendors" class="report-ranked-bars report-vendor-bars"></div>
+        </article>
+      </section>
+
+      <section class="panel report-matrix-panel">
+        <div class="report-panel-heading">
+          <div><p class="eyebrow">DETAILED MATRIX</p><h2>收入與支出項目明細表</h2><p id="report-matrix-subtitle">依期間分欄，右側顯示合計與占比。</p></div>
+          <span class="panel-chip gold">正式薪資列於每月 28 日</span>
+        </div>
+        <div class="report-table-wrap">
+          <table class="report-matrix-table">
+            <thead id="report-matrix-head"></thead>
+            <tbody id="report-matrix-body"></tbody>
+          </table>
+        </div>
+      </section>
     </section>
 
     <section class="panel backup-import-panel" aria-labelledby="backup-import-title" data-accounting-page="import">
