@@ -1288,5 +1288,57 @@ tbody tr:hover { background:#faf8f2; }
   .report-chart-columns { height: 276px; grid-auto-columns: 55px; }
   .report-chart-bars { height: 214px; }
   .report-matrix-panel { margin-top: 12px; }
-  .report-matrix-table { min-width: 780px; }
+  .report-matrix-table {
+    --report-sticky-category-width: 82px;
+    --report-sticky-item-width: 148px;
+    min-width: 780px;
+  }
+  .report-matrix-table thead th:first-child,
+  .report-matrix-table tbody td:first-child,
+  .report-matrix-table tbody tr:not(.report-matrix-type) > th:first-child {
+    position: sticky;
+    z-index: 3;
+    left: 0;
+    width: var(--report-sticky-category-width);
+    min-width: var(--report-sticky-category-width);
+    max-width: var(--report-sticky-category-width);
+    background: #fffdf8;
+    background-clip: padding-box;
+  }
+  .report-matrix-table thead th:nth-child(2),
+  .report-matrix-table tbody td:nth-child(2),
+  .report-matrix-table tbody tr:not(.report-matrix-type) > th:nth-child(2) {
+    position: sticky;
+    z-index: 3;
+    left: var(--report-sticky-category-width);
+    width: var(--report-sticky-item-width);
+    min-width: var(--report-sticky-item-width);
+    max-width: var(--report-sticky-item-width);
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+    background: #fffdf8;
+    background-clip: padding-box;
+    box-shadow: 8px 0 12px -10px rgba(23, 35, 30, .7);
+  }
+  .report-matrix-table thead th:first-child,
+  .report-matrix-table thead th:nth-child(2) {
+    z-index: 7;
+    background: #f7f4ec;
+  }
+  .report-matrix-table .report-matrix-type > th:first-child {
+    position: sticky;
+    z-index: 5;
+    left: 0;
+    min-width: calc(var(--report-sticky-category-width) + var(--report-sticky-item-width));
+    background: var(--green);
+    background-clip: padding-box;
+    box-shadow: 8px 0 12px -10px rgba(23, 35, 30, .7);
+  }
+  .report-matrix-table .report-matrix-type.expense > th:first-child { background: var(--red); }
+  .report-matrix-table .report-matrix-type > th:nth-child(2) { position: static; }
+  .report-matrix-table .report-matrix-group.income > th:first-child,
+  .report-matrix-table .report-matrix-group.income > th:nth-child(2) { background: var(--green-soft); }
+  .report-matrix-table .report-matrix-group.expense > th:first-child,
+  .report-matrix-table .report-matrix-group.expense > th:nth-child(2) { background: var(--red-soft); }
 }
