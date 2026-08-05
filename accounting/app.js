@@ -1534,7 +1534,7 @@
     context.scale(scale, scale);
     context.fillStyle = "#fffdf8";
     context.fillRect(0, 0, width, height);
-    return { canvas, context };
+    return { canvas, context, scale };
   }
 
   function fitReportText(context, value, maxWidth) {
@@ -1676,7 +1676,7 @@
     const sectionGap = 28;
     const sectionHeight = sectionLabelHeight + rows.length * rowHeight + sectionGap;
     const height = 204 + periodChunks.length * sectionHeight;
-    const { canvas, context } = createReportCanvas(width, height);
+    const { canvas, context, scale } = createReportCanvas(width, height);
     const startY = drawReportHeading(context, target, width);
     const tableX = 36;
     periodChunks.forEach((periodChunk, chunkIndex) => {
@@ -1729,6 +1729,11 @@
         });
       });
     });
+    canvas.reportPdfSections = periodChunks.map((_, chunkIndex) => ({
+      y: Math.round((startY + chunkIndex * sectionHeight) * scale),
+      height: Math.round((sectionLabelHeight + rowHeight) * scale),
+      end: Math.round((startY + (chunkIndex + 1) * sectionHeight) * scale)
+    }));
     return canvas;
   }
 
@@ -1736,6 +1741,154 @@
     if (target.id === "report-trend-card") return reportTrendCanvas(target);
     if (target.id === "report-matrix-card") return reportMatrixCanvas(target);
     return reportRankedCanvas(target);
+  }
+
+  function pdfAscii(value) {
+    return new TextEncoder().encode(value);
+  }
+
+  function joinPdfBytes(parts) {
+    const length = parts.reduce((sum, part) => sum + part.length, 0);
+    const output = new Uint8Array(length);
+    let offset = 0;
+    parts.forEach(part => {
+      output.set(part, offset);
+      offset += part.length;
+    });
+    return output;
+  }
+
+  function splitReportCanvasForPdf(source, reportName) {
+    const pageWidth = source.width;
+    const pageHeight = Math.round(pageWidth * 841.89 / 595.28);
+    const headerHeight = Math.round(pageWidth * .075);
+    const footerHeight = Math.round(pageWidth * .05);
+    const contentHeight = pageHeight - headerHeight - footerHeight;
+    const repeatedHeaders = Array.isArray(source.reportPdfSections) ? source.reportPdfSections : [];
+    const repeatedHeaderHeight = repeatedHeaders.length ? Math.max(...repeatedHeaders.map(item => item.height)) : 0;
+    const repeatCapacity = Math.max(1, contentHeight - repeatedHeaderHeight);
+    const totalPages = repeatedHeaders.length
+      ? Math.max(1, 1 + Math.ceil(Math.max(0, source.height - contentHeight) / repeatCapacity))
+      : Math.max(1, Math.ceil(source.height / contentHeight));
+    const totalCapacity = contentHeight + Math.max(0, totalPages - 1) * repeatCapacity;
+    const utilization = Math.min(1, source.height / totalCapacity);
+    const pages = [];
+    let sourceY = 0;
+    for (let index = 0; index < totalPages; index += 1) {
+      const repeatedHeader = index ? repeatedHeaders.find(item => sourceY >= item.y && sourceY < item.end) || repeatedHeaders.findLast(item => sourceY >= item.y) || repeatedHeaders[0] : null;
+      const availableHeight = contentHeight - (repeatedHeader?.height || 0);
+      const sliceHeight = index === totalPages - 1 ? source.height - sourceY : Math.min(source.height - sourceY, Math.max(1, Math.round(availableHeight * utilization)));
+      const page = document.createElement("canvas");
+      page.width = pageWidth;
+      page.height = pageHeight;
+      const context = page.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, pageWidth, pageHeight);
+      context.fillStyle = "#17231e";
+      context.font = `900 ${Math.round(pageWidth * .019)}px ${REPORT_JPG_FONT}`;
+      context.textAlign = "left";
+      context.textBaseline = "middle";
+      context.fillText(`初一食午｜${reportName}`, Math.round(pageWidth * .035), Math.round(headerHeight * .45));
+      context.fillStyle = "#66746d";
+      context.font = `700 ${Math.round(pageWidth * .014)}px ${REPORT_JPG_FONT}`;
+      context.textAlign = "right";
+      context.fillText($("#report-period-label").textContent, Math.round(pageWidth * .965), Math.round(headerHeight * .45));
+      context.strokeStyle = "#d9d4c7";
+      context.lineWidth = Math.max(1, Math.round(pageWidth * .001));
+      context.beginPath();
+      context.moveTo(Math.round(pageWidth * .035), headerHeight - 1);
+      context.lineTo(Math.round(pageWidth * .965), headerHeight - 1);
+      context.stroke();
+      let contentY = headerHeight;
+      if (repeatedHeader) {
+        context.drawImage(source, 0, repeatedHeader.y, source.width, repeatedHeader.height, 0, contentY, pageWidth, repeatedHeader.height);
+        contentY += repeatedHeader.height;
+      }
+      context.drawImage(source, 0, sourceY, source.width, sliceHeight, 0, contentY, pageWidth, sliceHeight);
+      context.fillStyle = "#66746d";
+      context.font = `600 ${Math.round(pageWidth * .013)}px ${REPORT_JPG_FONT}`;
+      context.textAlign = "center";
+      context.fillText(`${reportName}｜第 ${index + 1} / ${totalPages} 頁`, pageWidth / 2, pageHeight - footerHeight * .45);
+      pages.push(page);
+      sourceY += sliceHeight;
+    }
+    return pages;
+  }
+
+  function buildPdfDocument(pages) {
+    const objectCount = 2 + pages.length * 3;
+    const objects = Array(objectCount + 1);
+    const pageIds = pages.map((_, index) => 3 + index * 3);
+    objects[1] = pdfAscii("<< /Type /Catalog /Pages 2 0 R >>");
+    objects[2] = pdfAscii(`<< /Type /Pages /Kids [${pageIds.map(id => `${id} 0 R`).join(" ")}] /Count ${pages.length} >>`);
+    pages.forEach((page, index) => {
+      const pageId = pageIds[index];
+      const imageId = pageId + 1;
+      const contentId = pageId + 2;
+      const content = pdfAscii("q\n595.28 0 0 841.89 0 0 cm\n/Im0 Do\nQ\n");
+      objects[pageId] = pdfAscii(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /ProcSet [/PDF /ImageC] /XObject << /Im0 ${imageId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+      objects[imageId] = joinPdfBytes([
+        pdfAscii(`<< /Type /XObject /Subtype /Image /Width ${page.width} /Height ${page.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${page.jpeg.length} >>\nstream\n`),
+        page.jpeg,
+        pdfAscii("\nendstream")
+      ]);
+      objects[contentId] = joinPdfBytes([
+        pdfAscii(`<< /Length ${content.length} >>\nstream\n`),
+        content,
+        pdfAscii("endstream")
+      ]);
+    });
+
+    const header = joinPdfBytes([pdfAscii("%PDF-1.4\n%"), new Uint8Array([0xe2, 0xe3, 0xcf, 0xd3]), pdfAscii("\n")]);
+    const parts = [header];
+    const offsets = Array(objectCount + 1).fill(0);
+    let length = header.length;
+    for (let id = 1; id <= objectCount; id += 1) {
+      offsets[id] = length;
+      const object = joinPdfBytes([pdfAscii(`${id} 0 obj\n`), objects[id], pdfAscii("\nendobj\n")]);
+      parts.push(object);
+      length += object.length;
+    }
+    const xrefOffset = length;
+    const xref = [`xref\n0 ${objectCount + 1}\n`, "0000000000 65535 f \n"];
+    for (let id = 1; id <= objectCount; id += 1) xref.push(`${String(offsets[id]).padStart(10, "0")} 00000 n \n`);
+    xref.push(`trailer\n<< /Size ${objectCount + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+    parts.push(pdfAscii(xref.join("")));
+    return joinPdfBytes(parts);
+  }
+
+  async function exportFullReportPdf(button) {
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "產生 PDF 中…";
+    try {
+      const reports = [
+        ["report-trend-card", "收入與支出趨勢"],
+        ["report-expense-groups-card", "支出分類占比"],
+        ["report-income-sources-card", "收入來源"],
+        ["report-vendors-card", "廠商與支出對象占比"],
+        ["report-matrix-card", "收入與支出項目明細表"]
+      ];
+      const pages = [];
+      for (const [id, name] of reports) {
+        const source = buildReportJpgCanvas(document.getElementById(id));
+        for (const pageCanvas of splitReportCanvasForPdf(source, name)) {
+          const jpeg = new Uint8Array(await (await canvasJpeg(pageCanvas)).arrayBuffer());
+          pages.push({ width: pageCanvas.width, height: pageCanvas.height, jpeg });
+        }
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+      }
+      const periodLabel = $("#report-period-label").textContent;
+      const pdf = buildPdfDocument(pages);
+      downloadBlob(new Blob([pdf], { type: "application/pdf" }), safeReportFilename(`初一食午_${periodLabel}_收入支出統計報表.pdf`));
+      toast(`整份 PDF 已下載，共 ${pages.length} 頁。`);
+    } catch (error) {
+      console.error("Unable to export report PDF", error);
+      toast("PDF 產生失敗，請重新整理後再試一次。");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 
   async function exportReportJpg(button) {
@@ -2083,6 +2236,7 @@
     $("#report-period-prev").addEventListener("click", () => shiftReportPeriod(-1));
     $("#report-period-next").addEventListener("click", () => shiftReportPeriod(1));
     $("#report-period-current").addEventListener("click", resetReportPeriod);
+    $("#report-download-pdf").addEventListener("click", event => exportFullReportPdf(event.currentTarget));
     $("#report-dashboard").addEventListener("click", event => {
       const button = event.target.closest("[data-report-jpg]");
       if (button) exportReportJpg(button);

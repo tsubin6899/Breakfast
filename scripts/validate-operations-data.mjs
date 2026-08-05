@@ -177,7 +177,7 @@ const featureChecks = [
     "uber-statement-file", "uber-import-review", "uber-import-confirm",
     "foodpanda-statement-file", "foodpanda-import-review", "foodpanda-import-confirm",
     "catalog-item-form", "catalog-item-type", "catalog-item-group", "catalog-item-name", "catalog-groups",
-    "report-dashboard", "report-trend-card", "report-expense-groups-card", "report-income-sources-card", "report-vendors-card", "report-matrix-card",
+    "report-dashboard", "report-download-pdf", "report-trend-card", "report-expense-groups-card", "report-income-sources-card", "report-vendors-card", "report-matrix-card",
     "copy-yesterday", "copy-last-week", "quick-entry-presets", "mobile-quick-add",
     "toggle-daily-close", "daily-close-status", "month-close-checklist", "toggle-accounting-month-lock",
     "snapshot-list", "create-snapshot-now", "undo-accounting-action", "accounting-audit-log",
@@ -198,7 +198,7 @@ for (const [htmlPath, requiredIds] of featureChecks) {
 }
 
 const accountingApp = await readFile(resolve(ROOT, "accounting/app.js"), "utf8");
-for (const capability of ["catalogItemSettings", "dailyClosures", "closedMonths", "auditLog", "undoLog", "createSafetySnapshot", "applyCatalogMappings", "exportReportJpg"]) {
+for (const capability of ["catalogItemSettings", "dailyClosures", "closedMonths", "auditLog", "undoLog", "createSafetySnapshot", "applyCatalogMappings", "exportReportJpg", "exportFullReportPdf"]) {
   assert(accountingApp.includes(capability), `記帳系統缺少安全或分類管理能力：${capability}`);
 }
 for (const group of ["現金收入", "平台收入", "其他收入", "食材成本", "飲品成本", "雜貨成本", "人事成本", "固定成本", "其他支出"]) {
