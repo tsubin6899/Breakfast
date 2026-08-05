@@ -839,7 +839,7 @@
       if (!typeRows.length) continue;
       const typeTotal = typeRows.reduce((sum, item) => sum + item.amount, 0);
       const typeBuckets = bucketValuesFor(typeRows);
-      html.push(`<tr class="report-matrix-type ${type}"><th colspan="2">${type === "income" ? "收入項目" : "支出項目"}</th>${typeBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(typeTotal)}</th><th>100%</th></tr>`);
+      html.push(`<tr class="report-matrix-type ${type}"><th>${type === "income" ? "收入項目" : "支出項目"}</th><th aria-hidden="true"></th>${typeBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(typeTotal)}</th><th>100%</th></tr>`);
       const configured = GROUPS[type] || [];
       const groups = [...new Set(typeRows.map(item => item.group || "未分類"))].sort((a, b) => {
         const first = configured.indexOf(a);
@@ -1493,6 +1493,10 @@
 
   function download(content, filename, type) {
     const blob = new Blob([content], { type });
+    downloadBlob(blob, filename);
+  }
+
+  function downloadBlob(blob, filename) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -1500,7 +1504,227 @@
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function safeReportFilename(value) {
+    return String(value || "報表")
+      .replace(/[\\/:*?\"<>|]/g, "-")
+      .replace(/\s+/g, "_")
+      .replace(/_+/g, "_");
+  }
+
+  function canvasJpeg(canvas) {
+    return new Promise((resolve, reject) => canvas.toBlob(blob => {
+      if (blob) resolve(blob);
+      else reject(new Error("REPORT_JPEG_FAILED"));
+    }, "image/jpeg", .94));
+  }
+
+  const REPORT_JPG_FONT = '"Microsoft JhengHei", "PingFang TC", sans-serif';
+
+  function createReportCanvas(width, height) {
+    const maxSide = 12288;
+    const maxArea = 64_000_000;
+    const scale = Math.min(2, maxSide / width, maxSide / height, Math.sqrt(maxArea / (width * height)));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext("2d");
+    context.scale(scale, scale);
+    context.fillStyle = "#fffdf8";
+    context.fillRect(0, 0, width, height);
+    return { canvas, context };
+  }
+
+  function fitReportText(context, value, maxWidth) {
+    const text = String(value || "");
+    if (context.measureText(text).width <= maxWidth) return text;
+    let output = text;
+    while (output.length > 1 && context.measureText(`${output}…`).width > maxWidth) output = output.slice(0, -1);
+    return `${output}…`;
+  }
+
+  function drawReportText(context, value, x, y, { size = 13, weight = 500, color = "#17231e", align = "left", maxWidth } = {}) {
+    context.save();
+    context.font = `${weight} ${size}px ${REPORT_JPG_FONT}`;
+    context.fillStyle = color;
+    context.textAlign = align;
+    context.textBaseline = "middle";
+    const text = maxWidth ? fitReportText(context, value, maxWidth) : String(value || "");
+    context.fillText(text, x, y);
+    context.restore();
+  }
+
+  function drawReportHeading(context, target, width) {
+    const eyebrow = target.querySelector(".eyebrow")?.textContent || "INCOME & EXPENSE REPORT";
+    const title = target.querySelector("h2")?.textContent || "收入支出統計報表";
+    const description = target.querySelector(".report-panel-heading > div > p:last-child")?.textContent || "";
+    drawReportText(context, eyebrow, 36, 31, { size: 11, weight: 900, color: "#0e4b86" });
+    drawReportText(context, title, 36, 69, { size: 28, weight: 900 });
+    drawReportText(context, description, 36, 101, { size: 12, color: "#66746d", maxWidth: width - 72 });
+    context.fillStyle = "#e9f2fa";
+    context.fillRect(36, 124, width - 72, 34);
+    drawReportText(context, `報表期間：${$("#report-period-label").textContent}`, 48, 141, { size: 12, weight: 900, color: "#31536f" });
+    return 184;
+  }
+
+  function reportRankedCanvas(target) {
+    const rows = [...target.querySelectorAll(".report-ranked-row")];
+    const width = 920;
+    const rowHeight = 62;
+    const height = 210 + Math.max(1, rows.length) * rowHeight;
+    const { canvas, context } = createReportCanvas(width, height);
+    const startY = drawReportHeading(context, target, width);
+    if (!rows.length) {
+      drawReportText(context, target.querySelector(".report-empty")?.textContent || "這個期間尚無資料。", width / 2, startY + 44, { size: 14, color: "#66746d", align: "center" });
+      return canvas;
+    }
+    const tone = target.id === "report-expense-groups-card" ? "#b54e52" : target.id === "report-income-sources-card" ? "#23684f" : "#c67c27";
+    rows.forEach((row, index) => {
+      const y = startY + index * rowHeight;
+      const labelNode = row.querySelector(".report-ranked-copy > span")?.cloneNode(true);
+      labelNode?.querySelector("b")?.remove();
+      const label = labelNode?.textContent?.trim() || "未分類";
+      const amount = row.querySelector(".report-ranked-copy > strong")?.textContent?.trim() || "$0 0%";
+      const percentage = Number.parseFloat(row.querySelector(".report-ranked-track i")?.style.getPropertyValue("--report-bar-width") || "0");
+      context.fillStyle = tone;
+      context.beginPath();
+      context.arc(49, y + 17, 13, 0, Math.PI * 2);
+      context.fill();
+      drawReportText(context, index + 1, 49, y + 17, { size: 10, weight: 900, color: "#ffffff", align: "center" });
+      drawReportText(context, label, 72, y + 17, { size: 14, weight: 800, maxWidth: 490 });
+      drawReportText(context, amount, width - 38, y + 17, { size: 13, weight: 800, align: "right" });
+      context.fillStyle = "#eceae4";
+      context.fillRect(72, y + 40, width - 110, 10);
+      context.fillStyle = tone;
+      context.fillRect(72, y + 40, (width - 110) * Math.max(0, Math.min(100, percentage)) / 100, 10);
+    });
+    return canvas;
+  }
+
+  function reportTrendCanvas(target) {
+    const columns = [...target.querySelectorAll(".report-chart-column")].map(column => {
+      const parts = String(column.title || "").split("｜");
+      const numberAt = index => Number(String(parts[index] || "").replace(/[^\d.-]/g, "")) || 0;
+      return { label: column.querySelector("strong")?.textContent || parts[0] || "", income: numberAt(1), expense: numberAt(2), net: column.querySelector("small")?.textContent || "" };
+    });
+    const width = Math.max(920, 120 + columns.length * 92);
+    const height = 610;
+    const { canvas, context } = createReportCanvas(width, height);
+    const startY = drawReportHeading(context, target, width);
+    const plotLeft = 70;
+    const plotRight = width - 34;
+    const plotTop = startY + 15;
+    const plotHeight = 300;
+    const maximum = Math.max(...columns.flatMap(item => [item.income, item.expense]), 0);
+    for (let step = 0; step <= 4; step += 1) {
+      const y = plotTop + plotHeight * step / 4;
+      context.strokeStyle = "#e4e0d7";
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(plotLeft, y);
+      context.lineTo(plotRight, y);
+      context.stroke();
+      drawReportText(context, shortMoney(maximum * (4 - step) / 4), plotLeft - 8, y, { size: 10, color: "#66746d", align: "right" });
+    }
+    if (!columns.length || !maximum) {
+      drawReportText(context, "這個期間尚無收入或支出。", width / 2, plotTop + plotHeight / 2, { size: 14, color: "#66746d", align: "center" });
+      return canvas;
+    }
+    const slot = (plotRight - plotLeft) / columns.length;
+    columns.forEach((item, index) => {
+      const center = plotLeft + slot * (index + .5);
+      const barWidth = Math.min(24, slot * .26);
+      const incomeHeight = item.income / maximum * plotHeight;
+      const expenseHeight = item.expense / maximum * plotHeight;
+      context.fillStyle = "#23684f";
+      context.fillRect(center - barWidth - 2, plotTop + plotHeight - incomeHeight, barWidth, incomeHeight);
+      context.fillStyle = "#b54e52";
+      context.fillRect(center + 2, plotTop + plotHeight - expenseHeight, barWidth, expenseHeight);
+      drawReportText(context, item.label, center, plotTop + plotHeight + 22, { size: 10, weight: 800, align: "center", maxWidth: slot - 4 });
+      drawReportText(context, item.net, center, plotTop + plotHeight + 44, { size: 10, weight: 900, color: item.net.startsWith("−") ? "#b54e52" : "#23684f", align: "center", maxWidth: slot - 4 });
+    });
+    context.fillStyle = "#23684f";
+    context.fillRect(width - 208, 28, 11, 11);
+    drawReportText(context, "收入", width - 190, 34, { size: 11, weight: 800, color: "#66746d" });
+    context.fillStyle = "#b54e52";
+    context.fillRect(width - 125, 28, 11, 11);
+    drawReportText(context, "支出", width - 107, 34, { size: 11, weight: 800, color: "#66746d" });
+    return canvas;
+  }
+
+  function reportMatrixCanvas(target) {
+    const table = target.querySelector(".report-matrix-table");
+    const rows = [...table.querySelectorAll("tr")];
+    const columnCount = Math.max(...rows.map(row => row.children.length), 0);
+    const columnWidths = Array.from({ length: columnCount }, (_, index) => index === 0 ? 150 : index === 1 ? 250 : 145);
+    const tableWidth = columnWidths.reduce((sum, value) => sum + value, 0);
+    const width = tableWidth + 72;
+    const rowHeight = 42;
+    const height = 204 + rows.length * rowHeight;
+    const { canvas, context } = createReportCanvas(width, height);
+    const startY = drawReportHeading(context, target, width);
+    const tableX = 36;
+    rows.forEach((row, rowIndex) => {
+      const isHeader = row.parentElement?.tagName === "THEAD";
+      const isIncomeType = row.classList.contains("report-matrix-type") && row.classList.contains("income");
+      const isExpenseType = row.classList.contains("report-matrix-type") && row.classList.contains("expense");
+      const isIncomeGroup = row.classList.contains("report-matrix-group") && row.classList.contains("income");
+      const isExpenseGroup = row.classList.contains("report-matrix-group") && row.classList.contains("expense");
+      const background = isIncomeType ? "#23684f" : isExpenseType ? "#b54e52" : isIncomeGroup ? "#e6f2eb" : isExpenseGroup ? "#fbe9e7" : isHeader ? "#f7f4ec" : rowIndex % 2 ? "#fffdf8" : "#faf9f5";
+      const foreground = isIncomeType || isExpenseType ? "#ffffff" : "#17231e";
+      let x = tableX;
+      let logicalColumn = 0;
+      [...row.children].forEach(cell => {
+        const span = Math.max(1, Number(cell.colSpan || 1));
+        const cellWidth = columnWidths.slice(logicalColumn, logicalColumn + span).reduce((sum, value) => sum + value, 0) || 145;
+        const y = startY + rowIndex * rowHeight;
+        context.fillStyle = background;
+        context.fillRect(x, y, cellWidth, rowHeight);
+        context.strokeStyle = "#d9d4c7";
+        context.strokeRect(x, y, cellWidth, rowHeight);
+        const isLabel = logicalColumn < 2;
+        drawReportText(context, cell.textContent?.trim() || "", isLabel ? x + 11 : x + cellWidth - 10, y + rowHeight / 2, {
+          size: isHeader ? 11 : 10.5,
+          weight: isHeader || cell.tagName === "TH" ? 900 : 500,
+          color: foreground,
+          align: isLabel ? "left" : "right",
+          maxWidth: cellWidth - 20
+        });
+        x += cellWidth;
+        logicalColumn += span;
+      });
+    });
+    return canvas;
+  }
+
+  function buildReportJpgCanvas(target) {
+    if (target.id === "report-trend-card") return reportTrendCanvas(target);
+    if (target.id === "report-matrix-card") return reportMatrixCanvas(target);
+    return reportRankedCanvas(target);
+  }
+
+  async function exportReportJpg(button) {
+    const target = document.getElementById(button.dataset.reportJpg || "");
+    if (!target) return;
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "產生中…";
+    try {
+      await new Promise(resolve => window.requestAnimationFrame(resolve));
+      const jpeg = await canvasJpeg(buildReportJpgCanvas(target));
+      const periodLabel = $("#report-period-label").textContent;
+      const reportName = button.dataset.reportJpgName || "收入支出統計報表";
+      downloadBlob(jpeg, safeReportFilename(`初一食午_${periodLabel}_${reportName}.jpg`));
+      toast(`${reportName} JPG 已下載。`);
+    } catch (error) {
+      console.error("Unable to export report JPG", error);
+      toast("JPG 產生失敗，請重新整理後再試一次。");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
   }
 
   function latestBackupImportDate() {
@@ -1826,6 +2050,10 @@
     $("#report-period-prev").addEventListener("click", () => shiftReportPeriod(-1));
     $("#report-period-next").addEventListener("click", () => shiftReportPeriod(1));
     $("#report-period-current").addEventListener("click", resetReportPeriod);
+    $("#report-dashboard").addEventListener("click", event => {
+      const button = event.target.closest("[data-report-jpg]");
+      if (button) exportReportJpg(button);
+    });
 
     $("#accounting-cloud-login").addEventListener("click", () => {
       window.location.href = `/api/auth/authorize?returnTo=${encodeURIComponent("/accounting/?view=safety")}`;
