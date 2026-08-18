@@ -1,4 +1,5 @@
 import { gunzipSync, gzipSync } from "node:zlib";
+import { BlobPreconditionFailedError } from "@vercel/blob";
 import { getSession } from "./_lib/auth.js";
 import { readJson, writeImmutableJson, writeJson } from "./_lib/blob-store.js";
 import { isSameOrigin, json } from "./_lib/http.js";
@@ -30,10 +31,13 @@ function isOperationsState(value: unknown): value is OperationsState {
 }
 
 function isConflict(error: unknown) {
-  const item = error as { status?: number; statusCode?: number; name?: string; code?: string };
+  if (error instanceof BlobPreconditionFailedError) return true;
+  const item = error as { status?: number; statusCode?: number; name?: string; code?: string; message?: string };
+  const message = String(item?.message || "").toLowerCase();
   return item?.status === 409 || item?.statusCode === 409 ||
     item?.name === "BlobPreconditionFailedError" || item?.name === "BlobAlreadyExistsError" ||
-    item?.code === "precondition_failed";
+    item?.code === "precondition_failed" ||
+    (message.includes("precondition failed") && message.includes("etag mismatch"));
 }
 
 async function readPayload(request: Request) {
