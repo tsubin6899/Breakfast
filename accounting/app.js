@@ -61,6 +61,20 @@
     "其他收入": "其他收入",
     "廢油收入": "其他收入"
   };
+  const REQUIRED_DAILY_INCOME_ITEMS = [
+    "快一點line pay收入",
+    "現金營業收入",
+    "line Pay經營收入",
+    "Uber eat外送",
+    "Foodpanda外送"
+  ];
+  const REQUIRED_DAILY_INCOME_SHORT_LABELS = {
+    "快一點line pay收入": "快一點",
+    "現金營業收入": "現金",
+    "line Pay經營收入": "LINE Pay",
+    "Uber eat外送": "Uber",
+    "Foodpanda外送": "Foodpanda"
+  };
 
   function emptyCategoryCatalog() {
     return Object.fromEntries(Object.entries(GROUPS).map(([type, groups]) => [
@@ -185,7 +199,7 @@
 
   function initialState() {
     return {
-      version: 4,
+      version: 5,
       selectedMonth: currentMonth(),
       transactions: (HISTORY.transactions || []).map(normalizeTransactionNames),
       categoryCatalog: buildDefaultCategoryCatalog(HISTORY.transactions || []),
@@ -195,6 +209,7 @@
       importBatches: [],
       reconciliations: {},
       dailyClosures: {},
+      shopClosures: {},
       closedMonths: {},
       auditLog: [],
       undoLog: [],
@@ -207,13 +222,14 @@
     const normalized = {
       ...base,
       ...(value || {}),
-      version: 4,
+      version: 5,
       transactions: Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions,
       dayLabor: Array.isArray(value?.dayLabor) ? value.dayLabor : [],
       recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates.map(normalizeTransactionNames) : [],
       importBatches: Array.isArray(value?.importBatches) ? value.importBatches : [],
       reconciliations: value?.reconciliations && typeof value.reconciliations === "object" ? value.reconciliations : {},
       dailyClosures: value?.dailyClosures && typeof value.dailyClosures === "object" ? value.dailyClosures : {},
+      shopClosures: value?.shopClosures && typeof value.shopClosures === "object" ? value.shopClosures : {},
       closedMonths: value?.closedMonths && typeof value.closedMonths === "object" ? value.closedMonths : {},
       auditLog: Array.isArray(value?.auditLog) ? value.auditLog.slice(0, 300) : [],
       undoLog: Array.isArray(value?.undoLog) ? value.undoLog.slice(0, 20) : [],
@@ -1227,6 +1243,10 @@
       if (undo.payload.previous) state.reconciliations[undo.payload.date] = undo.payload.previous;
       else delete state.reconciliations[undo.payload.date];
     }
+    if (undo.entityType === "shopClosure") {
+      if (undo.payload.previous) state.shopClosures[undo.payload.date] = undo.payload.previous;
+      else delete state.shopClosures[undo.payload.date];
+    }
     logAudit("復原動作", undo.action);
     saveState("上一個動作已復原");
     renderAll();
@@ -1269,6 +1289,53 @@
 
   function localDateString(date = new Date()) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  }
+
+  function requiredDailyIncomeStatus(date) {
+    const recorded = new Set(state.transactions
+      .filter(item => item.date === date && item.type === "income")
+      .map(item => canonicalIncomeItem(item.category || item.counterparty || item.group))
+      .filter(Boolean));
+    const missing = REQUIRED_DAILY_INCOME_ITEMS.filter(item => !recorded.has(item));
+    const isShopClosed = Boolean(state.shopClosures?.[date]?.closed);
+    const isFuture = date > localDateString();
+    return {
+      recorded,
+      missing,
+      isShopClosed,
+      isFuture,
+      isComplete: !isShopClosed && !isFuture && missing.length === 0,
+      shouldWarn: !isShopClosed && !isFuture && missing.length > 0
+    };
+  }
+
+  function renderDailyIncomeChecklist() {
+    const container = $("#daily-income-checklist");
+    if (!container) return;
+    const status = requiredDailyIncomeStatus(selectedLedgerDate);
+    const statusText = status.isShopClosed
+      ? "店休日，不檢查固定收入"
+      : status.isFuture
+        ? "日期尚未到，暫不提醒"
+        : status.isComplete
+          ? "5 項固定收入皆已記帳"
+          : `漏記 ${status.missing.length} 項固定收入`;
+    const tone = status.isShopClosed ? "is-shop-closed" : status.isFuture ? "is-future" : status.isComplete ? "is-complete" : "is-missing";
+    container.className = `daily-income-checklist ${tone}`;
+    container.innerHTML = `
+      <div class="daily-income-checklist-heading">
+        <div><p class="eyebrow">DAILY INCOME CHECK</p><h3>每日固定收入檢查</h3><strong>${escapeHtml(statusText)}</strong></div>
+        <button class="secondary-btn" id="toggle-shop-closure" type="button"${isMonthLocked(selectedLedgerDate.slice(0, 7)) ? " disabled" : ""}>${status.isShopClosed ? "取消店休" : "標記店休"}</button>
+      </div>
+      <div class="daily-income-checklist-items">
+        ${REQUIRED_DAILY_INCOME_ITEMS.map(item => {
+          const isRecorded = status.recorded.has(item);
+          const itemTone = status.isShopClosed ? "is-exempt" : isRecorded ? "is-recorded" : status.isFuture ? "is-pending" : "is-missing";
+          const icon = status.isShopClosed ? "休" : isRecorded ? "✓" : status.isFuture ? "－" : "!";
+          const label = status.isShopClosed ? "店休免檢查" : isRecorded ? "已記帳" : status.isFuture ? "待日期到" : "漏記帳";
+          return `<span class="daily-income-check-item ${itemTone}"><i>${icon}</i><span><strong>${escapeHtml(item)}</strong><small>${label}</small></span></span>`;
+        }).join("")}
+      </div>`;
   }
 
   function daysInMonth(month) {
@@ -1352,6 +1419,7 @@
         ${item.locked ? '<span class="locked-label">不可修改</span>' : `<button class="icon-btn ${item.kind === "labor" ? "delete-calendar-labor" : "delete-calendar-transaction"}" type="button" data-id="${escapeHtml(item.originalId)}" aria-label="刪除這筆明細">×</button>`}
       </article>
     `).join("");
+    renderDailyIncomeChecklist();
     renderDailyReconciliation(rows, income);
   }
 
@@ -1432,10 +1500,22 @@
       const income = rows.filter(item => item.type === "income").reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const expense = rows.filter(item => item.type === "expense").reduce((sum, item) => sum + Number(item.amount || 0), 0);
       const isWeekend = index % 7 >= 5;
-      const aria = `${Number(value)} 月 ${day} 日，收入 ${money(income)}，支出 ${money(expense)}，共 ${rows.length} 筆`;
+      const requiredStatus = requiredDailyIncomeStatus(date);
+      const requiredLabel = requiredStatus.isShopClosed
+        ? "店休"
+        : requiredStatus.shouldWarn
+          ? `漏記：${requiredStatus.missing.join("、")}`
+          : requiredStatus.isComplete ? "5 項固定收入皆已記帳" : "尚未到檢查日期";
+      const requiredNote = requiredStatus.isShopClosed
+        ? '<span class="calendar-required-note is-shop-closed">店休</span>'
+        : requiredStatus.shouldWarn
+          ? `<span class="calendar-required-note is-missing" title="${escapeHtml(requiredLabel)}">缺 ${requiredStatus.missing.length}・${escapeHtml(requiredStatus.missing.map(item => REQUIRED_DAILY_INCOME_SHORT_LABELS[item]).join("、"))}</span>`
+          : requiredStatus.isComplete ? '<span class="calendar-required-note is-complete">✓ 固定收入完整</span>' : "";
+      const aria = `${Number(value)} 月 ${day} 日，收入 ${money(income)}，支出 ${money(expense)}，共 ${rows.length} 筆，${requiredLabel}`;
       return `
-        <button class="calendar-day${isWeekend ? " is-weekend" : ""}${date === selectedLedgerDate ? " is-selected" : ""}${date === today ? " is-today" : ""}${rows.length ? " has-entries" : ""}${state.dailyClosures?.[date]?.locked ? " is-closed" : ""}" type="button" role="gridcell" data-calendar-date="${date}" aria-label="${escapeHtml(aria)}" aria-selected="${date === selectedLedgerDate}">
+        <button class="calendar-day${isWeekend ? " is-weekend" : ""}${date === selectedLedgerDate ? " is-selected" : ""}${date === today ? " is-today" : ""}${rows.length ? " has-entries" : ""}${state.dailyClosures?.[date]?.locked ? " is-closed" : ""}${requiredStatus.isShopClosed ? " is-shop-closed" : ""}${requiredStatus.shouldWarn ? " has-missing-required" : ""}${requiredStatus.isComplete ? " has-complete-required" : ""}" type="button" role="gridcell" data-calendar-date="${date}" aria-label="${escapeHtml(aria)}" aria-selected="${date === selectedLedgerDate}">
           <span class="calendar-day-top"><strong>${day}</strong>${rows.length ? `<small>${rows.length} 筆</small>` : ""}</span>
+          ${requiredNote}
           <span class="calendar-amounts">
             ${income ? `<span class="income">＋${shortMoney(income)}</span>` : ""}
             ${expense ? `<span class="expense">−${shortMoney(expense)}</span>` : ""}
@@ -2588,6 +2668,30 @@
       if (!day) return;
       selectedLedgerDate = day.dataset.calendarDate;
       renderLedger();
+    });
+
+    $("#daily-income-checklist").addEventListener("click", event => {
+      const button = event.target.closest("#toggle-shop-closure");
+      if (!button) return;
+      if (isMonthLocked(selectedLedgerDate.slice(0, 7))) { toast("本月已完成月結，無法變更店休狀態。"); return; }
+      const previous = state.shopClosures[selectedLedgerDate] ? { ...state.shopClosures[selectedLedgerDate] } : null;
+      const status = requiredDailyIncomeStatus(selectedLedgerDate);
+      if (status.isShopClosed) {
+        delete state.shopClosures[selectedLedgerDate];
+        pushUndo(`取消 ${selectedLedgerDate} 店休`, "shopClosure", "restore", { date: selectedLedgerDate, previous });
+        logAudit("取消店休", selectedLedgerDate, selectedLedgerDate.slice(0, 7));
+        saveState("已取消店休");
+        renderAll();
+        toast(`${selectedLedgerDate} 已恢復固定收入檢查。`);
+        return;
+      }
+      if (status.recorded.size && !window.confirm(`${selectedLedgerDate} 已有 ${status.recorded.size} 項固定收入記帳，仍要標記為店休嗎？`)) return;
+      state.shopClosures[selectedLedgerDate] = { date: selectedLedgerDate, closed: true, markedAt: new Date().toISOString() };
+      pushUndo(`標記 ${selectedLedgerDate} 店休`, "shopClosure", "restore", { date: selectedLedgerDate, previous });
+      logAudit("標記店休", selectedLedgerDate, selectedLedgerDate.slice(0, 7));
+      saveState("已標記店休");
+      renderAll();
+      toast(`${selectedLedgerDate} 已標記為店休，不再提醒固定收入。`);
     });
 
     $("#ledger-day-list").addEventListener("click", event => {

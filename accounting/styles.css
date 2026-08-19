@@ -679,6 +679,9 @@ tbody tr:hover { background:#faf8f2; }
 .calendar-day.is-outside { background: #f3f1eb; }
 .calendar-day:not(.is-outside):hover { z-index: 1; background: #f4f9fc; box-shadow: inset 0 0 0 2px #91b8d4; }
 .calendar-day.is-selected { z-index: 2; background: #eaf4fb; box-shadow: inset 0 0 0 3px var(--navy); }
+.calendar-day.has-missing-required { background-image: linear-gradient(145deg, rgba(188, 70, 63, .08), transparent 58%); }
+.calendar-day.has-complete-required { background-image: linear-gradient(145deg, rgba(33, 111, 78, .07), transparent 58%); }
+.calendar-day.is-shop-closed { background: repeating-linear-gradient(135deg, #f3f1eb, #f3f1eb 7px, #ece9e1 7px, #ece9e1 14px); }
 
 .calendar-day.is-today .calendar-day-top strong {
   display: grid;
@@ -702,6 +705,23 @@ tbody tr:hover { background:#faf8f2; }
 .calendar-day.is-weekend .calendar-day-top strong { color: var(--gold); }
 .calendar-day-top small { padding: 3px 6px; border-radius: 999px; color: var(--muted); background: #eeece6; font-size: 9px; font-weight: 900; }
 
+.calendar-required-note {
+  display: block;
+  overflow: hidden;
+  margin: 4px 0;
+  padding: 4px 6px;
+  border-radius: 7px;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calendar-required-note.is-missing { color: #913d38; background: #fbe2df; }
+.calendar-required-note.is-complete { color: #176044; background: #dff0e6; }
+.calendar-required-note.is-shop-closed { color: #655f54; background: #e5e1d8; }
+
 .calendar-amounts {
   display: grid;
   gap: 4px;
@@ -723,7 +743,9 @@ tbody tr:hover { background:#faf8f2; }
 .calendar-mobile-dots { display: none; }
 
 .income-dot,
-.expense-dot {
+.expense-dot,
+.required-missing-dot,
+.required-complete-dot {
   display: inline-block;
   width: 9px;
   height: 9px;
@@ -732,6 +754,8 @@ tbody tr:hover { background:#faf8f2; }
 
 .income-dot { background: var(--green); }
 .expense-dot { background: var(--red); }
+.required-missing-dot { background: #d5574f; }
+.required-complete-dot { background: #2b8a61; }
 
 .calendar-color-guide {
   display: flex;
@@ -816,6 +840,36 @@ tbody tr:hover { background:#faf8f2; }
 .locked-label { align-self: center; color: var(--muted); font-size: 9px; font-weight: 800; }
 .ledger-day-panel .empty-state { margin: 0; padding: 30px 12px; }
 
+.daily-income-checklist {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid #e1ddd3;
+  border-radius: 13px;
+  background: #f8f6f0;
+}
+
+.daily-income-checklist.is-missing { border-color: #efc3bf; background: #fff5f3; }
+.daily-income-checklist.is-complete { border-color: #badbc8; background: #f1faf5; }
+.daily-income-checklist.is-shop-closed { color: #655f54; background: #f0eee8; }
+.daily-income-checklist-heading { display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.daily-income-checklist-heading h3 { margin: 3px 0 0; font-size: 16px; }
+.daily-income-checklist-heading > div > strong { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+.daily-income-checklist.is-missing .daily-income-checklist-heading > div > strong { color: #913d38; }
+.daily-income-checklist.is-complete .daily-income-checklist-heading > div > strong { color: #176044; }
+.daily-income-checklist-heading .secondary-btn { min-height: 36px; padding: 7px 10px; white-space: nowrap; }
+.daily-income-checklist-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 11px; }
+.daily-income-check-item { display: flex; min-width: 0; gap: 7px; align-items: center; padding: 8px; border-radius: 9px; background: #fff; }
+.daily-income-check-item > i { display: grid; width: 24px; height: 24px; flex: 0 0 auto; place-items: center; border-radius: 50%; font-style: normal; font-size: 10px; font-weight: 900; }
+.daily-income-check-item > span { min-width: 0; }
+.daily-income-check-item strong,
+.daily-income-check-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.daily-income-check-item strong { font-size: 11px; }
+.daily-income-check-item small { margin-top: 2px; color: var(--muted); font-size: 9px; }
+.daily-income-check-item.is-recorded > i { color: #fff; background: var(--green); }
+.daily-income-check-item.is-missing > i { color: #fff; background: var(--red); }
+.daily-income-check-item.is-pending > i,
+.daily-income-check-item.is-exempt > i { color: #655f54; background: #e5e1d8; }
+
 @media (max-width: 1180px) {
   .ledger-calendar-layout { grid-template-columns: 1fr; }
   .ledger-day-panel { position: static; }
@@ -833,6 +887,11 @@ tbody tr:hover { background:#faf8f2; }
   .calendar-day-top { min-height: 25px; }
   .calendar-day-top strong { font-size: 14px; }
   .calendar-day-top small { display: none; }
+  .calendar-required-note { margin: 2px 0; padding: 3px 4px; font-size: 8px; }
+  .calendar-required-note.is-missing { font-size: 0; }
+  .calendar-required-note.is-missing::before { content: "! 漏記"; font-size: 8px; }
+  .calendar-required-note.is-complete { font-size: 0; }
+  .calendar-required-note.is-complete::before { content: "✓ 完整"; font-size: 8px; }
   .calendar-day.is-today .calendar-day-top strong { width: 24px; height: 24px; }
   .calendar-amounts { display: none; }
   .calendar-mobile-dots { display: flex; gap: 4px; margin: auto 0 2px; }
@@ -848,6 +907,8 @@ tbody tr:hover { background:#faf8f2; }
   .ledger-day-item .icon-btn,
   .ledger-day-item .locked-label { grid-column: 3; grid-row: 2; justify-self: end; }
   .day-item-amount { font-size: 13px; }
+  .daily-income-checklist-heading { align-items: center; }
+  .daily-income-checklist-items { grid-template-columns: 1fr; }
 }
 
 /* Browser-only import center for the Initial accounting .back archive. */

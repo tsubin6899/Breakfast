@@ -426,7 +426,9 @@
           <div class="calendar-color-guide">
             <span><i class="income-dot"></i>收入</span>
             <span><i class="expense-dot"></i>支出（含當日日薪工讀）</span>
-            <span>正式員工薪資屬整月月結，顯示於上方月薪卡片。</span>
+            <span><i class="required-missing-dot"></i>固定收入漏記</span>
+            <span><i class="required-complete-dot"></i>5 項固定收入完整</span>
+            <span>未來日期暫不提醒；店休日可在右側當日明細標記。</span>
           </div>
         </div>
         <aside class="ledger-day-panel" aria-live="polite">
@@ -441,6 +443,7 @@
           </div>
           <div id="ledger-day-list" class="ledger-day-list"></div>
           <p id="ledger-empty" class="empty-state">這一天目前沒有符合條件的收支明細。</p>
+          <section id="daily-income-checklist" class="daily-income-checklist" aria-label="每日固定收入檢查"></section>
           <form id="daily-reconciliation-form" class="daily-reconciliation-form">
             <div class="wide"><p class="eyebrow">DAILY RECONCILIATION</p><h3>每日現金／入帳核對</h3></div>
             <label>實際現金<input id="reconcile-cash" type="number" min="0" step="1" /></label>
