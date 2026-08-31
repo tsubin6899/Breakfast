@@ -45,6 +45,9 @@ for (const id of ["home-month", "home-cloud-state", "home-actions", "home-budget
   assert(homeHtml.includes(`id="${id}"`), `今日店務中心缺少 ${id}`);
   assert(homeJs.includes(`#${id}`), `今日店務中心腳本未使用 ${id}`);
 }
+for (const entry of ["home-launchpad", "quick-tool-grid", "開始記帳", "打卡與薪資", "經營報表"]) {
+  assert(homeHtml.includes(entry), `手機首頁缺少主要入口：${entry}`);
+}
 for (const id of ["ai-queue-summary", "recognize-all-uploads", "retry-failed-uploads"]) {
   assert(salaryHtml.includes(`id="${id}"`), `打卡 AI 佇列缺少 ${id}`);
 }
