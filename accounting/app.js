@@ -195,6 +195,7 @@
   let cloudReady = false;
   let cloudApplying = false;
   let cloudSyncing = false;
+  let cloudConflictResolving = false;
   let cloudSaveTimer = 0;
   let cloudRetryAttempt = 0;
   let cloudRemote = null;
@@ -356,7 +357,11 @@
     if (lastSuccess) lastSuccess.textContent = CLOUD_SYNC?.relativeTime(meta.lastSuccessAt) || "尚未完成";
     if (pending) pending.textContent = meta.dirty ? (navigator.onLine ? "等待同步" : "離線保留中") : "沒有待同步";
     if (version) version.textContent = meta.revision ? meta.revision.slice(0, 8) : "—";
-    if (syncButton) syncButton.disabled = cloudSyncing || !cloudUser;
+    if (syncButton) syncButton.disabled = cloudSyncing || cloudConflictResolving || !cloudUser;
+    const useRemote = $("#accounting-cloud-use-remote");
+    const useLocal = $("#accounting-cloud-use-local");
+    if (useRemote) useRemote.disabled = cloudSyncing || cloudConflictResolving;
+    if (useLocal) useLocal.disabled = cloudSyncing || cloudConflictResolving;
   }
 
   function setCloudStatus(message, tone = "") {
@@ -369,6 +374,15 @@
 
   function showCloudConflict(show) {
     $("#accounting-cloud-conflict-actions")?.toggleAttribute("hidden", !show);
+  }
+
+  function updateCloudConflictDetail(remote = cloudRemote) {
+    const detail = $("#accounting-cloud-conflict-detail");
+    if (!detail) return;
+    const meta = readCloudMeta();
+    const remoteTime = remote?.updatedAt ? new Date(remote.updatedAt).toLocaleString("zh-TW") : "時間未知";
+    const localTime = meta.lastLocalChangeAt ? new Date(meta.lastLocalChangeAt).toLocaleString("zh-TW") : "沒有本機修改時間";
+    detail.textContent = `雲端：${remoteTime}${remote?.updatedBy ? `・${remote.updatedBy}` : ""}；本機：${localTime}。`;
   }
 
   async function cloudRequestBody(payload) {
@@ -417,7 +431,7 @@
     try {
       const request = await cloudRequestBody({
         state,
-        baseRevision: options.force ? "" : meta.revision,
+        baseRevision: options.force ? "" : (options.baseRevision ?? meta.revision),
         force: options.force === true
       });
       const result = await CLOUD_SYNC.requestJson("/api/operations-state", {
@@ -445,6 +459,7 @@
           updatedAt: error.payload?.updatedAt || "",
           updatedBy: error.payload?.updatedBy || ""
         };
+        updateCloudConflictDetail(cloudRemote);
         showCloudConflict(true);
         setCloudStatus("偵測到另一個雲端版本，請選擇保留哪一份", "danger");
       } else {
@@ -499,6 +514,52 @@
     return CLOUD_SYNC.requestJson("/api/operations-state", { attempts: 3 });
   }
 
+  async function manualAccountingCloudSync() {
+    const meta = readCloudMeta();
+    if (meta.dirty) return syncAccountingCloud();
+    if (!cloudUser || !cloudReady || cloudSyncing || cloudConflictResolving) return false;
+    setCloudStatus("正在確認雲端最新版本…", "working");
+    try {
+      const remote = await fetchCloudState();
+      if (!remote.state) return syncAccountingCloud({ baseRevision: "" });
+      if (remote.revision && remote.revision !== meta.revision) {
+        await adoptCloudState(remote);
+        toast("已下載並套用雲端最新資料。");
+        return true;
+      }
+      setCloudStatus("本機與雲端已是最新版本", "success");
+      return true;
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : "無法確認雲端版本", "danger");
+      return false;
+    }
+  }
+
+  async function resolveAccountingCloudConflict(strategy) {
+    if (!cloudUser || !cloudReady || cloudConflictResolving || cloudSyncing) return false;
+    cloudConflictResolving = true;
+    updateCloudIndicators();
+    setCloudStatus(strategy === "remote" ? "正在下載雲端最新版…" : "正在確認雲端版本並上傳本機資料…", "working");
+    try {
+      const remote = await fetchCloudState();
+      if (strategy === "remote") {
+        if (!remote.state) throw new Error("雲端目前沒有可採用的記帳資料。");
+        await adoptCloudState(remote);
+        toast("已採用雲端資料，跨裝置版本已更新。");
+        return true;
+      }
+      const synced = await syncAccountingCloud({ baseRevision: remote.revision || "" });
+      if (synced) toast("本機資料已成功同步到雲端。");
+      return synced;
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : "版本處理失敗，請稍後再試", "danger");
+      return false;
+    } finally {
+      cloudConflictResolving = false;
+      updateCloudIndicators();
+    }
+  }
+
   async function initializeAccountingCloud() {
     setCloudStatus("正在檢查 Vercel 雲端登入…", "working");
     try {
@@ -519,7 +580,8 @@
         await syncAccountingCloud();
         return;
       }
-      if (meta.dirty && meta.revision && meta.revision !== remote.revision) {
+      if (meta.dirty && meta.revision !== remote.revision) {
+        updateCloudConflictDetail(remote);
         showCloudConflict(true);
         setCloudStatus("本機與雲端都有新資料，請選擇保留哪一份", "danger");
         return;
@@ -2672,18 +2734,14 @@
       $("#accounting-cloud-signout").hidden = true;
       $("#accounting-cloud-login").textContent = "登入 Vercel";
     });
-    $("#accounting-cloud-sync").addEventListener("click", () => syncAccountingCloud());
+    $("#accounting-cloud-sync").addEventListener("click", manualAccountingCloudSync);
     $("#accounting-cloud-use-remote").addEventListener("click", async () => {
       if (!window.confirm("要以雲端資料取代目前本機版本嗎？系統會先建立可還原快照。")) return;
-      const remote = await fetchCloudState().catch(error => {
-        setCloudStatus(error instanceof Error ? error.message : "無法讀取雲端資料", "danger");
-        return null;
-      });
-      if (remote) await adoptCloudState(remote);
+      await resolveAccountingCloudConflict("remote");
     });
     $("#accounting-cloud-use-local").addEventListener("click", async () => {
       if (!window.confirm("確定以目前本機資料覆蓋雲端最新版？雲端舊版仍會保留每日備份。")) return;
-      await syncAccountingCloud({ force: true });
+      await resolveAccountingCloudConflict("local");
     });
     window.addEventListener("offline", () => {
       if (!cloudUser || !readCloudMeta().dirty) return;

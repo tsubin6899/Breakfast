@@ -160,6 +160,8 @@
 }
 .accounting-cloud-conflict[hidden] { display: none; }
 .accounting-cloud-conflict strong { flex: 1 1 320px; color: var(--red); }
+.accounting-cloud-conflict p { flex: 1 0 100%; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.accounting-cloud-conflict button:disabled { opacity: .58; cursor: wait; }
 .receipt-button,
 .receipt-link { min-height: 32px; padding: 5px 8px; border: 1px solid #b7cbd9; border-radius: 8px; color: var(--navy); background: #fff; font-size: 10px; font-weight: 900; cursor: pointer; }
 

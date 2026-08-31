@@ -50,4 +50,15 @@ sandbox.navigator.onLine = false;
 await assert.rejects(() => cloud.requestJson("/api/test"), error => error.code === "OFFLINE");
 assert.equal(calls.length, 3, "離線時不得送出網路請求");
 
+const [accountingApp, accountingHtml] = await Promise.all([
+  readFile(resolve(ROOT, "accounting/app.js"), "utf8"),
+  readFile(resolve(ROOT, "accounting/index.html"), "utf8")
+]);
+assert.ok(accountingApp.includes("manualAccountingCloudSync"), "手動同步未先確認雲端最新版本");
+assert.ok(accountingApp.includes("resolveAccountingCloudConflict"), "版本衝突選擇未集中處理");
+assert.ok(accountingApp.includes('syncAccountingCloud({ baseRevision: remote.revision || "" })'), "採用本機資料前未取得最新雲端版本號");
+assert.ok(!accountingApp.includes("syncAccountingCloud({ force: true })"), "衝突處理不應依賴僅店主可用的強制覆蓋");
+assert.ok(accountingApp.includes("meta.dirty && meta.revision !== remote.revision"), "首次同步的本機變更可能被雲端直接覆蓋");
+assert.ok(accountingHtml.includes('id="accounting-cloud-conflict-detail"'), "版本衝突未顯示本機與雲端時間資訊");
+
 console.log("雲端同步重試、衝突與離線保護檢查完成。");
