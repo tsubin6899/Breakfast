@@ -105,6 +105,24 @@
 .accounting-cloud-card p[data-tone="success"] { color: var(--green); font-weight: 800; }
 .accounting-cloud-card p[data-tone="danger"] { color: var(--red); font-weight: 800; }
 .accounting-cloud-card p[data-tone="working"] { color: var(--navy); font-weight: 800; }
+.cloud-sync-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 13px;
+}
+.cloud-sync-metrics > span {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid #d8e3ec;
+  border-radius: 10px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, .78);
+  font-size: 10px;
+  font-weight: 800;
+}
+.cloud-sync-metrics strong { color: var(--ink); font-size: 12px; overflow-wrap: anywhere; }
 .accounting-cloud-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .accounting-cloud-conflict {
   grid-column: 1 / -1;
@@ -125,6 +143,7 @@
   .accounting-cloud-card { grid-template-columns: 1fr; }
   .accounting-cloud-actions { justify-content: stretch; }
   .accounting-cloud-actions button { flex: 1 1 auto; }
+  .cloud-sync-metrics { grid-template-columns: 1fr; }
 }
 @media (max-width: 520px) {
   .daily-reconciliation-form { grid-template-columns: 1fr; }

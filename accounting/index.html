@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="../shared/operations-shell.css" />
   <script src="../shared/operations-store.js"></script>
   <script src="../shared/operations-insights.js"></script>
+  <script src="../shared/cloud-sync.js"></script>
   <script defer src="../shared/operations-shell.js"></script>
   <script defer src="./data/revenue-history-2022-2025.js"></script>
   <script defer src="./data/revenue-history-2026.js"></script>
@@ -374,6 +375,11 @@
           <p class="eyebrow">VERCEL PRIVATE CLOUD</p>
           <h3>雲端同步與跨裝置備份</h3>
           <p id="accounting-cloud-status" data-tone="waiting">正在檢查 Vercel 雲端登入…</p>
+          <div class="cloud-sync-metrics" aria-label="記帳雲端同步狀態">
+            <span>最後成功<strong id="accounting-cloud-last-success">尚未完成</strong></span>
+            <span>本機變更<strong id="accounting-cloud-pending">沒有待同步</strong></span>
+            <span>雲端版本<strong id="accounting-cloud-version">—</strong></span>
+          </div>
         </div>
         <div class="accounting-cloud-actions">
           <button class="secondary-btn" id="accounting-cloud-login" type="button">登入 Vercel</button>

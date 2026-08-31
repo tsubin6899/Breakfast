@@ -66,6 +66,8 @@
     const payrollRows = Array.isArray(closure?.snapshot?.rows) ? closure.snapshot.rows : [];
     const audit = [...(accounting.auditLog || []), ...(payroll.auditLog || [])].sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || ""))).slice(0, 8);
     const store = window.BreakfastOperationsStore?.read();
+    const accountingCloudMeta = safeJson("breakfast-accounting-cloud-meta-v1", {}) || {};
+    const payrollCloudMeta = safeJson("breakfast-payroll-cloud-meta-v1", {}) || {};
     return {
       month,
       accounting: {
@@ -88,8 +90,22 @@
         total: payrollRows.reduce((sum, item) => sum + number(item.total), 0)
       },
       sync: {
-        accounting: { updatedAt: store?.modules?.accounting?.updatedAt || "", updatedBy: "本機資料" },
-        payroll: { updatedAt: store?.modules?.payroll?.updatedAt || "", updatedBy: "本機資料" }
+        accounting: {
+          updatedAt: accountingCloudMeta.lastSuccessAt || store?.modules?.accounting?.updatedAt || "",
+          lastSuccessAt: accountingCloudMeta.lastSuccessAt || "",
+          lastLocalChangeAt: accountingCloudMeta.lastLocalChangeAt || "",
+          dirty: accountingCloudMeta.dirty === true,
+          revision: accountingCloudMeta.revision || "",
+          updatedBy: "本機同步紀錄"
+        },
+        payroll: {
+          updatedAt: payrollCloudMeta.lastSuccessAt || store?.modules?.payroll?.updatedAt || "",
+          lastSuccessAt: payrollCloudMeta.lastSuccessAt || "",
+          lastLocalChangeAt: payrollCloudMeta.lastLocalChangeAt || "",
+          dirty: payrollCloudMeta.dirty === true,
+          revision: payrollCloudMeta.revision || "",
+          updatedBy: "本機同步紀錄"
+        }
       },
       services: { geminiConfigured: null, cloudStorageConfigured: null },
       audit
@@ -104,7 +120,21 @@
       ...cloud,
       accounting: hasLocalAccounting ? { ...cloud.accounting, ...local.accounting } : cloud.accounting,
       payroll: hasLocalPayroll ? { ...cloud.payroll, ...local.payroll } : cloud.payroll,
+      sync: {
+        accounting: mergeSyncItem(local.sync?.accounting, cloud.sync?.accounting),
+        payroll: mergeSyncItem(local.sync?.payroll, cloud.sync?.payroll)
+      },
       audit: local.audit?.length ? local.audit : cloud.audit
+    };
+  }
+
+  function mergeSyncItem(localItem = {}, cloudItem = {}) {
+    return {
+      ...cloudItem,
+      ...localItem,
+      updatedAt: localItem.lastSuccessAt || cloudItem.updatedAt || localItem.updatedAt || "",
+      updatedBy: cloudItem.updatedBy || localItem.updatedBy || "",
+      dirty: localItem.dirty === true
     };
   }
 
@@ -174,12 +204,17 @@
     ].map(([ok, label]) => `<span class="${ok ? "is-good" : "is-bad"}">${ok ? "✓" : "!"} ${label}</span>`).join("");
 
     const syncRows = [
-      ["帳", "記帳資料", summary.sync?.accounting],
-      ["薪", "薪資資料", summary.sync?.payroll]
+      ["帳", "記帳資料", summary.sync?.accounting, "/accounting/#safety"],
+      ["薪", "薪資資料", summary.sync?.payroll, "/salary_app/#settings"]
     ];
-    $("#home-sync").innerHTML = syncRows.map(([icon, label, item]) => {
+    $("#home-sync").innerHTML = syncRows.map(([icon, label, item, href]) => {
+      const pending = item?.dirty === true;
       const stale = !item?.updatedAt || Date.now() - Date.parse(item.updatedAt) > 24 * 60 * 60 * 1000;
-      return `<article class="sync-item ${stale ? "is-warning" : "is-good"}"><i>${icon}</i><div><strong>${label}・${stale ? "請確認同步" : "同步正常"}</strong><small>${relativeTime(item?.updatedAt)}${item?.updatedBy ? `・${escapeHtml(item.updatedBy)}` : ""}</small></div></article>`;
+      const stateLabel = pending ? "等待同步" : stale ? "請確認同步" : "同步正常";
+      const detail = pending
+        ? `${navigator.onLine ? "本機變更尚未上傳" : "目前離線，變更已保留"}・最後成功 ${relativeTime(item?.lastSuccessAt || item?.updatedAt)}`
+        : `${relativeTime(item?.updatedAt)}${item?.updatedBy ? `・${escapeHtml(item.updatedBy)}` : ""}`;
+      return `<article class="sync-item ${pending || stale ? "is-warning" : "is-good"}"><i>${icon}</i><div><strong>${label}・${stateLabel}</strong><small>${detail}</small></div><a href="${href}">${pending ? "處理" : "查看"} →</a></article>`;
     }).join("");
 
     $("#home-audit").innerHTML = summary.audit?.length ? summary.audit.map(item => `<article class="audit-item"><div><strong>${escapeHtml(item.action || "更新資料")}</strong><small>${escapeHtml(item.detail || "")}</small></div><time>${relativeTime(item.timestamp || item.createdAt)}</time></article>`).join("") : '<p class="empty-copy">尚無可顯示的最近操作。</p>';

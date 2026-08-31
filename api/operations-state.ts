@@ -124,7 +124,13 @@ export default {
     } catch (error) {
       if (isConflict(error)) {
         const latest = await readJson<CloudDocument>(CURRENT_PATH);
-        return json({ error: "REVISION_CONFLICT", message: "雲端資料剛由另一台裝置更新。", revision: latest?.value.revision || "" }, 409);
+        return json({
+          error: "REVISION_CONFLICT",
+          message: "雲端資料剛由另一台裝置更新。",
+          revision: latest?.value.revision || "",
+          updatedAt: latest?.value.updatedAt || "",
+          updatedBy: latest?.value.updatedBy || ""
+        }, 409);
       }
       throw error;
     }

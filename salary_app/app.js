@@ -5,11 +5,14 @@
   const PAYROLL_BRIDGE_KEY = "breakfast-payroll-summary-v1";
   const AI_TOKEN_STORAGE_KEY = "breakfast-payroll-ai-token";
   const CLOUD_LOCAL_BACKUP_KEY = "breakfast-payroll-before-cloud";
+  const PAYROLL_CLOUD_META_KEY = "breakfast-payroll-cloud-meta-v1";
   const CLOUD_SAVE_DELAY = 60_000;
+  const CLOUD_RETRY_DELAYS = [5_000, 15_000, 45_000];
   const APP_VERSION = 10;
   const EMPLOYEE_NAME_ALIASES = { "采葳": "黃采葳" };
   const EXCLUDED_EMPLOYEE_NAMES = new Set(["年終", "待補", "其他薪資支出（原營業額檔）"]);
   const LOCAL_MODE = Boolean(window.BREAKFAST_LOCAL_MODE);
+  const CLOUD_SYNC = window.BreakfastCloudSync;
   const BUNDLED_HISTORIES = [
     window.BREAKFAST_SALARY_HISTORY_2022_2025,
     window.BREAKFAST_SALARY_HISTORY_2026_H1
@@ -128,6 +131,8 @@
     const monthlySpecialDayMode = normalizeMonthlySpecialDayMode(employee?.monthlySpecialDayMode);
     const base = {
       ...employee,
+      birthday: /^\d{4}-\d{2}-\d{2}$/.test(String(employee?.birthday || "")) ? employee.birthday : "",
+      birthdayGiftAmount: Math.max(0, Number(employee?.birthdayGiftAmount ?? 1000)),
       attendanceRequired,
       overtimeMode,
       overtimeHourlyRate,
@@ -539,17 +544,23 @@
   let saveAndAdvanceAttendance = false;
   let ocrReviewUploadId = "";
   let cloudUser = null;
-  let cloudRevision = "";
+  let cloudRevision = readPayrollCloudMeta().revision;
   let cloudReady = false;
   let cloudSaving = false;
+  let cloudApplying = false;
   let cloudSavePending = false;
   let cloudSaveTimer = null;
+  let cloudRetryAttempt = 0;
   let pendingAuditEvents = [];
   let currentPayslipEmployeeId = "";
   let employeeSpecialRulesDraft = [];
 
   function saveState(message = "已儲存於本機") {
     const persisted = persistLocalState(state);
+    if (persisted && !cloudApplying) {
+      const meta = readPayrollCloudMeta();
+      writePayrollCloudMeta({ ...meta, dirty: true, lastLocalChangeAt: new Date().toISOString() });
+    }
     publishPayrollBridge();
     window.BreakfastOperationsStore?.autoSnapshot("payroll", stateForPersistence(state), {
       label: "薪資每日自動快照",
@@ -565,6 +576,31 @@
       window.setTimeout(() => { indicator.textContent = "已儲存於本機"; }, 1200);
     }
     scheduleCloudSave();
+  }
+
+  function readPayrollCloudMeta() {
+    const defaults = { revision: "", dirty: false, lastSuccessAt: "", lastLocalChangeAt: "", retryCount: 0 };
+    try {
+      const value = JSON.parse(localStorage.getItem(PAYROLL_CLOUD_META_KEY) || "null");
+      return value && typeof value === "object" ? { ...defaults, ...value } : defaults;
+    } catch {
+      return defaults;
+    }
+  }
+
+  function writePayrollCloudMeta(value) {
+    localStorage.setItem(PAYROLL_CLOUD_META_KEY, JSON.stringify(value));
+    updateCloudIndicators();
+  }
+
+  function updateCloudIndicators() {
+    const meta = readPayrollCloudMeta();
+    const lastSuccess = $("#payroll-cloud-last-success");
+    const pending = $("#payroll-cloud-pending");
+    const version = $("#payroll-cloud-version");
+    if (lastSuccess) lastSuccess.textContent = CLOUD_SYNC?.relativeTime(meta.lastSuccessAt) || "尚未完成";
+    if (pending) pending.textContent = meta.dirty ? (navigator.onLine ? "等待同步" : "離線保留中") : "沒有待同步";
+    if (version) version.textContent = meta.revision ? meta.revision.slice(0, 8) : "—";
   }
 
   function uid(prefix = "id") {
@@ -653,6 +689,41 @@
     return month >= from && month <= to;
   }
 
+  function automaticBirthdayAdjustment(employee, month) {
+    const birthday = String(employee?.birthday || "");
+    const amount = Math.max(0, Number(employee?.birthdayGiftAmount ?? 1000));
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(birthday) || birthday.slice(5, 7) !== month.slice(5, 7) || amount <= 0) return null;
+    const alreadyAdded = state.adjustments.some(adjustment => (
+      adjustment.employeeId === employee.id &&
+      adjustmentApplies(adjustment, month) &&
+      /生日.*禮金|禮金.*生日/.test(String(adjustment.name || ""))
+    ));
+    if (alreadyAdded) return null;
+    return normalizeAdjustment({
+      id: `automatic-birthday-${employee.id}-${month}`,
+      employeeId: employee.id,
+      name: "生日禮金",
+      type: "earning",
+      category: "gift",
+      quantity: 1,
+      unitRate: amount,
+      amount,
+      effectiveFrom: month,
+      effectiveTo: month,
+      month,
+      recurring: false,
+      automatic: true,
+      source: "employee-birthday"
+    });
+  }
+
+  function employeesForDisplay(employees = state.employees) {
+    return employees
+      .map((employee, index) => ({ employee, index }))
+      .sort((a, b) => Number(b.employee.active !== false) - Number(a.employee.active !== false) || a.index - b.index)
+      .map(item => item.employee);
+  }
+
   function invalidateAdjustmentConfirmation(month = state.settings.month) {
     const monthState = state.closedMonths?.[month];
     if (!monthState) return;
@@ -698,6 +769,7 @@
       if (text) text.textContent = label;
     });
     if (panelDetail) panelDetail.textContent = detail;
+    updateCloudIndicators();
   }
 
   function updateCloudUi() {
@@ -748,6 +820,7 @@
     if (!cloudUser) {
       setCloudStatus("僅存此裝置", "local", "登入後才會將薪資資料同步到網站。");
     }
+    updateCloudIndicators();
   }
 
   function cloudErrorMessage(error) {
@@ -757,29 +830,38 @@
   }
 
   async function cloudRequest(method, body) {
-    const response = await fetch("/api/payroll-state", {
+    return CLOUD_SYNC.requestJson("/api/payroll-state", {
       method,
-      credentials: "same-origin",
       headers: body ? { "Content-Type": "application/json" } : {},
-      body: body ? JSON.stringify(body) : undefined
+      body: body ? JSON.stringify(body) : undefined,
+      attempts: 3
     });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const error = new Error(payload.message || "雲端資料讀寫失敗。");
-      error.status = response.status;
-      error.code = payload.error || "";
-      error.payload = payload;
-      throw error;
-    }
-    return payload;
   }
 
   function scheduleCloudSave() {
     if (!cloudUser || !cloudReady) return;
     window.clearTimeout(cloudSaveTimer);
+    if (!navigator.onLine) {
+      setCloudStatus("等待網路恢復", "local", "本機變更已安全保留；連線後會自動同步。" );
+      return;
+    }
+    setCloudStatus("等待同步", "local", "本機已儲存，60 秒後會自動上傳。" );
     cloudSaveTimer = window.setTimeout(() => {
       pushCloudState().catch(error => console.warn("Cloud save failed", error));
     }, CLOUD_SAVE_DELAY);
+  }
+
+  function scheduleCloudRetry(error) {
+    if (!cloudUser || !cloudReady || !readPayrollCloudMeta().dirty || !CLOUD_SYNC?.isRetryable(error)) return;
+    const delay = CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, CLOUD_RETRY_DELAYS.length - 1)];
+    cloudRetryAttempt += 1;
+    const meta = readPayrollCloudMeta();
+    writePayrollCloudMeta({ ...meta, retryCount: cloudRetryAttempt });
+    window.clearTimeout(cloudSaveTimer);
+    setCloudStatus("等待自動重試", "local", `同步暫時失敗，${Math.round(delay / 1000)} 秒後會再次嘗試。`);
+    cloudSaveTimer = window.setTimeout(() => {
+      pushCloudState().catch(retryError => console.warn("Cloud retry failed", retryError));
+    }, delay);
   }
 
   async function pushCloudState({ force = false, notify = false } = {}) {
@@ -804,6 +886,14 @@
       }
       cloudRevision = result.revision || "";
       cloudReady = true;
+      cloudRetryAttempt = 0;
+      writePayrollCloudMeta({
+        ...readPayrollCloudMeta(),
+        revision: cloudRevision,
+        dirty: false,
+        lastSuccessAt: result.updatedAt || new Date().toISOString(),
+        retryCount: 0
+      });
       setCloudStatus(
         "已同步雲端",
         "ready",
@@ -828,6 +918,7 @@
         toast("登入已過期，請重新登入。");
       } else {
         setCloudStatus("同步失敗", "error", cloudErrorMessage(error));
+        scheduleCloudRetry(error);
         if (notify) toast(cloudErrorMessage(error));
       }
       throw error;
@@ -840,17 +931,34 @@
     }
   }
 
-  async function pullCloudState({ notify = false } = {}) {
+  async function pullCloudState({ notify = false, force = false } = {}) {
     if (!cloudUser) return;
     window.clearTimeout(cloudSaveTimer);
     cloudReady = false;
     setCloudStatus("正在下載…", "syncing", "正在讀取網站上的最新薪資資料。");
     try {
       const result = await cloudRequest("GET");
+      const meta = readPayrollCloudMeta();
       if (!result.state) {
         cloudRevision = "";
         cloudReady = true;
         await pushCloudState({ notify: true });
+        return;
+      }
+      if (!force && meta.dirty) {
+        cloudRevision = result.revision || meta.revision || "";
+        if (meta.revision && meta.revision === result.revision) {
+          cloudReady = true;
+          await pushCloudState({ notify });
+          return;
+        }
+        cloudReady = false;
+        setCloudStatus(
+          "本機與雲端都有新版",
+          "conflict",
+          "尚未同步的本機內容已保留。請選擇下載雲端版本，或確認後以上傳本機資料為準。"
+        );
+        showView("settings");
         return;
       }
       const missingBundledHistoryIds = BUNDLED_HISTORIES
@@ -870,6 +978,7 @@
       if (currentText !== cloudText) {
         localStorage.setItem(CLOUD_LOCAL_BACKUP_KEY, currentText);
       }
+      cloudApplying = true;
       state = normalized;
       if (needsBundledHistoryMigration) {
         state.auditLog
@@ -881,6 +990,15 @@
       cloudRevision = result.revision || "";
       cloudReady = true;
       persistLocalState(state);
+      cloudApplying = false;
+      cloudRetryAttempt = 0;
+      writePayrollCloudMeta({
+        ...meta,
+        revision: cloudRevision,
+        dirty: false,
+        lastSuccessAt: result.updatedAt || new Date().toISOString(),
+        retryCount: 0
+      });
       renderAll();
       updateCloudUi();
       setCloudStatus(
@@ -893,6 +1011,7 @@
       }
       if (notify) toast("已下載雲端最新資料；原本本機內容已保留備份。");
     } catch (error) {
+      cloudApplying = false;
       cloudReady = false;
       if (error.status === 401) {
         cloudUser = null;
@@ -923,9 +1042,8 @@
       return;
     }
     try {
-      const response = await fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" });
-      const result = await response.json().catch(() => ({}));
-      if (response.ok && result.user) await connectCloudUser(result.user);
+      const result = await CLOUD_SYNC.requestJson("/api/auth/session", { attempts: 2 });
+      if (result.user) await connectCloudUser(result.user);
       else updateCloudUi();
       const cloudResult = new URLSearchParams(location.search).get("cloud");
       if (cloudResult) {
@@ -1393,9 +1511,11 @@
     overtimePay = applyRounding(overtimePay, mode, "item");
     specialPay = applyRounding(specialPay, mode, "item");
 
-    const applicableAdjustments = state.adjustments.filter(adjustment =>
+    const manualAdjustments = state.adjustments.filter(adjustment =>
       adjustment.employeeId === employee.id && adjustmentApplies(adjustment, month)
     );
+    const birthdayAdjustment = automaticBirthdayAdjustment(employee, month);
+    const applicableAdjustments = birthdayAdjustment ? [...manualAdjustments, birthdayAdjustment] : manualAdjustments;
     const earnings = applicableAdjustments
       .filter(adjustment => adjustment.type === "earning")
       .reduce((sum, adjustment) => sum + adjustmentAmount(adjustment), 0);
@@ -2117,9 +2237,12 @@
     const month = state.settings.month;
     if (!$("#adjustment-effective-from").value) $("#adjustment-effective-from").value = month;
     const snapshotRows = state.closedMonths?.[month]?.snapshot?.rows;
+    const manualList = state.adjustments.filter(adjustment => adjustmentApplies(adjustment, month));
+    const birthdayList = calculateLivePayroll(month)
+      .flatMap(row => row.adjustments.filter(adjustment => adjustment.automatic === true));
     const list = state.closedMonths?.[month]?.locked && Array.isArray(snapshotRows)
       ? snapshotRows.flatMap(row => row.adjustments || [])
-      : state.adjustments.filter(adjustment => adjustmentApplies(adjustment, month));
+      : [...manualList, ...birthdayList];
     const categories = [
       { id: "bonus", label: "獎金", icon: "獎" },
       { id: "gift", label: "禮金", icon: "禮" },
@@ -2153,9 +2276,11 @@
                 <div class="adjustment-row">
                   <span class="adjustment-employee">${escapeHtml(employee?.name || "已刪除員工")}</span>
                   <strong>${escapeHtml(adjustment.name)}</strong>
-                  <small>${adjustment.quantity || 1} × ${money(adjustment.unitRate || adjustment.amount)}・${adjustment.effectiveFrom || month}${adjustment.effectiveTo ? `～${adjustment.effectiveTo}` : (adjustment.recurring ? " 起" : "")}</small>
+                  <small>${adjustment.quantity || 1} × ${money(adjustment.unitRate || adjustment.amount)}・${adjustment.automatic ? "依員工生日自動加入" : `${adjustment.effectiveFrom || month}${adjustment.effectiveTo ? `～${adjustment.effectiveTo}` : (adjustment.recurring ? " 起" : "")}`}</small>
                   <b class="${category.id === "deduction" ? "negative" : "positive"}">${category.id === "deduction" ? "−" : "+"}${money(adjustmentAmount(adjustment))}</b>
-                  <button type="button" class="remove-adjustment" data-id="${adjustment.id}" aria-label="刪除 ${escapeHtml(adjustment.name)}">×</button>
+                  ${adjustment.automatic
+                    ? '<span class="automatic-adjustment-badge" title="請至員工設定調整生日或禮金金額">自動</span>'
+                    : `<button type="button" class="remove-adjustment" data-id="${adjustment.id}" aria-label="刪除 ${escapeHtml(adjustment.name)}">×</button>`}
                 </div>
               `;
             }).join("")}
@@ -2196,7 +2321,7 @@
   }
 
   function renderEmployees() {
-    $("#employee-grid").innerHTML = state.employees.map(employee => {
+    $("#employee-grid").innerHTML = employeesForDisplay().map(employee => {
       const current = employeeAt(employee, state.settings.month);
       return `
       <article class="employee-card ${current.active ? "" : "is-inactive"}">
@@ -2208,7 +2333,7 @@
           </div>
         </div>
         <h3>${escapeHtml(current.name)}</h3>
-        <p>${current.payType === "monthly" ? "月薪制" : "時薪制"}${current.attendanceRequired === false ? "・免打卡固定薪" : ""}${current.hireDate ? `・${escapeHtml(current.hireDate)} 到職` : "・到職日未設定"}${current.endDate ? `・${escapeHtml(current.endDate)} 離職` : ""}・${employee.payHistory.length} 筆費率歷史</p>
+        <p>${current.payType === "monthly" ? "月薪制" : "時薪制"}${current.attendanceRequired === false ? "・免打卡固定薪" : ""}${current.hireDate ? `・${escapeHtml(current.hireDate)} 到職` : "・到職日未設定"}${current.endDate ? `・${escapeHtml(current.endDate)} 離職` : ""}・${current.birthday ? `${escapeHtml(current.birthday.slice(5).replace("-", "/"))} 生日／禮金 ${money(current.birthdayGiftAmount)}` : "生日未設定"}・${employee.payHistory.length} 筆費率歷史</p>
         <div class="employee-rate-grid">${employeeRateMarkup(current)}</div>
       </article>
     `;
@@ -2513,6 +2638,8 @@
     $("#employee-rate-effective").value = `${state.settings.month}-01`;
     $("#employee-hire-date").value = employee?.hireDate || "";
     $("#employee-end-date").value = employee?.endDate || "";
+    $("#employee-birthday").value = employee?.birthday || "";
+    $("#employee-birthday-gift-amount").value = employee?.birthdayGiftAmount ?? 1000;
     $("#employee-annual-leave").value = employee?.annualLeave || 0;
     $("#employee-punch-pin").value = "";
     $$('input[name="employee-workday"]').forEach(input => {
@@ -2761,7 +2888,7 @@
       totals[type] = (totals[type] || 0) + recordMinutes(record);
       return totals;
     }, {});
-    const applicableAdjustments = state.adjustments.filter(adjustment =>
+    const applicableAdjustments = row.adjustments || state.adjustments.filter(adjustment =>
       adjustment.employeeId === employee.id && adjustmentApplies(adjustment, month)
     );
     const monthEmployee = employeeAt(employee, month);
@@ -4169,8 +4296,8 @@
         來源: record.source || "",
         備註: record.note || ""
       }));
-    const adjustmentRows = state.adjustments
-      .filter(adjustment => adjustmentApplies(adjustment, state.settings.month))
+    const adjustmentRows = payrollForMonth(state.settings.month)
+      .flatMap(row => row.adjustments || [])
       .map(adjustment => ({
         員工: getEmployee(adjustment.employeeId)?.name || "",
         項目: adjustment.name,
@@ -4223,7 +4350,7 @@
     });
     $("#cloud-download-latest").addEventListener("click", async () => {
       if (!window.confirm("確定下載雲端最新資料？目前尚未同步的本機內容會先保留成安全備份，再由雲端版本取代。")) return;
-      await pullCloudState({ notify: true }).catch(() => {});
+      await pullCloudState({ notify: true, force: true }).catch(() => {});
     });
     $("#cloud-upload-current").addEventListener("click", async () => {
       if (!window.confirm("確定要用目前本機資料覆蓋雲端版本？雲端原版本會保留一份伺服器備份。")) return;
@@ -4260,6 +4387,18 @@
       cloudSavePending = false;
       updateCloudUi();
       toast("已登出管理者帳號；本機資料仍保留。");
+    });
+
+    window.addEventListener("offline", () => {
+      if (!cloudUser || !readPayrollCloudMeta().dirty) return;
+      window.clearTimeout(cloudSaveTimer);
+      setCloudStatus("等待網路恢復", "local", "本機變更已安全保留；連線後會自動同步。");
+    });
+    window.addEventListener("online", () => {
+      updateCloudIndicators();
+      if (!cloudUser || !readPayrollCloudMeta().dirty) return;
+      if (cloudReady) pushCloudState().catch(error => console.warn("Cloud resume failed", error));
+      else pullCloudState().catch(error => console.warn("Cloud resume check failed", error));
     });
 
     $("#access-role-form").addEventListener("submit", event => {
@@ -4581,6 +4720,8 @@
         name: $("#employee-name").value.trim(),
         hireDate: $("#employee-hire-date").value,
         endDate: $("#employee-end-date").value,
+        birthday: $("#employee-birthday").value,
+        birthdayGiftAmount: Math.max(0, Number($("#employee-birthday-gift-amount").value || 0)),
         annualLeave: Number($("#employee-annual-leave").value || 0),
         active: $("#employee-active").checked,
         expectedWorkdays,
@@ -5199,6 +5340,8 @@
       getState: () => state,
       stateForPersistence,
       normalizeEmployee,
+      automaticBirthdayAdjustment,
+      employeesForDisplay,
       calculatePayroll,
       calculateLivePayroll,
       monthlyRestDays,

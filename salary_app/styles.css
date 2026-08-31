@@ -1651,6 +1651,18 @@ progress::-webkit-progress-value { background: var(--green); }
   background: var(--red-soft);
 }
 
+.automatic-adjustment-badge {
+  display: grid;
+  width: 32px;
+  min-height: 28px;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--purple);
+  background: var(--purple-soft);
+  font-size: 9px;
+  font-weight: 950;
+}
+
 .employee-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -1896,6 +1908,32 @@ progress::-webkit-progress-value { background: var(--green); }
   line-height: 1.6;
 }
 
+.cloud-sync-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 15px;
+}
+
+.cloud-sync-metrics > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 11px;
+  border: 1px solid #d8e3ec;
+  border-radius: 11px;
+  color: var(--muted);
+  background: #f8fbfd;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.cloud-sync-metrics strong {
+  color: var(--ink);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
 .cloud-safety-note {
   display: grid;
   gap: 3px;
@@ -1911,6 +1949,10 @@ progress::-webkit-progress-value { background: var(--green); }
 
 .cloud-safety-note strong {
   color: var(--green);
+}
+
+@media (max-width: 620px) {
+  .cloud-sync-metrics { grid-template-columns: 1fr; }
 }
 
 .cloud-dialog {
@@ -3154,7 +3196,8 @@ tfoot th {
     grid-row: 2;
   }
 
-  .adjustment-row > button {
+  .adjustment-row > button,
+  .adjustment-row > .automatic-adjustment-badge {
     grid-column: 3;
     grid-row: 1 / 3;
   }

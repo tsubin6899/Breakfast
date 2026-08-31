@@ -166,4 +166,54 @@ result = api.calculatePayroll(heMinute, "2026-07");
 assert(result.overtimeMinutes === 11, "07:49 到 08:00 應精確計算 11 分鐘加班");
 assert(nearly(result.overtimePay, 11 / 60 * 200), "11 分鐘、每小時 200 元的加班費計算不符");
 
-console.log("薪資回歸測試通過：老闆固定月薪、何秀芷月休與特殊加班、時薪國定假日、缺勤扣薪及分鐘加班皆正確。");
+// 員工生日當月自動加入生日禮金，預設 1,000 元並可個別調整。
+state = reset();
+let birthdayEmployee = api.normalizeEmployee({
+  id: "birthday-employee",
+  name: "生日測試員工",
+  birthday: "1995-09-18",
+  payType: "hourly",
+  hourlyRate: 200,
+  active: true
+});
+state.employees.push(birthdayEmployee);
+state = api.setState(state);
+birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");
+assert(birthdayEmployee.birthdayGiftAmount === 1000, "舊資料與新員工的生日禮金預設應為 1,000 元");
+result = api.calculatePayroll(birthdayEmployee, "2026-09");
+assert(result.earnings === 1000, "生日當月應自動加入 1,000 元生日禮金");
+assert(result.adjustments.some(adjustment => adjustment.automatic && adjustment.name === "生日禮金"), "生日禮金應標記為自動項目");
+assert(api.calculatePayroll(birthdayEmployee, "2026-08").earnings === 0, "非生日月份不得加入生日禮金");
+
+birthdayEmployee.birthdayGiftAmount = 1500;
+state = api.setState(state);
+birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");
+assert(api.calculatePayroll(birthdayEmployee, "2026-09").earnings === 1500, "個別生日禮金金額設定未生效");
+state.adjustments.push({
+  id: "manual-birthday-gift",
+  employeeId: birthdayEmployee.id,
+  name: "生日禮金",
+  type: "earning",
+  category: "gift",
+  quantity: 1,
+  unitRate: 2000,
+  amount: 2000,
+  effectiveFrom: "2026-09",
+  effectiveTo: "2026-09",
+  month: "2026-09",
+  recurring: false
+});
+state = api.setState(state);
+birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");
+result = api.calculatePayroll(birthdayEmployee, "2026-09");
+assert(result.earnings === 2000 && result.adjustments.length === 1, "同月已有手動生日禮金時不得重複計算");
+
+const sortedEmployees = api.employeesForDisplay([
+  { id: "inactive-1", active: false },
+  { id: "active-1", active: true },
+  { id: "active-2", active: true },
+  { id: "inactive-2", active: false }
+]);
+assert(sortedEmployees.map(employee => employee.id).join(",") === "active-1,active-2,inactive-1,inactive-2", "員工卡片應將在職員工排在停用員工前方，並保留原本順序");
+
+console.log("薪資回歸測試通過：固定月薪、月休、特殊加班、假日、缺勤、分鐘加班、生日禮金與員工排序皆正確。");

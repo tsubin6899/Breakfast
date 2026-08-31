@@ -8,6 +8,7 @@
   const ACCOUNTING_PAGE_KEY = "breakfast-accounting-active-page-v1";
   const ACCOUNTING_CLOUD_META_KEY = "breakfast-accounting-cloud-meta-v1";
   const ACCOUNTING_CLOUD_DELAY = 60_000;
+  const ACCOUNTING_CLOUD_RETRY_DELAYS = [5_000, 15_000, 45_000];
   const ACCOUNTING_HISTORIES = [
     window.BREAKFAST_ACCOUNTING_HISTORY_2022_2025,
     window.BREAKFAST_ACCOUNTING_HISTORY_2026,
@@ -30,6 +31,7 @@
   };
   const $ = selector => document.querySelector(selector);
   const INSIGHTS = window.BreakfastOperationsInsights;
+  const CLOUD_SYNC = window.BreakfastCloudSync;
   const moneyFormatter = new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 });
 
   const GROUPS = {
@@ -191,7 +193,9 @@
   let cloudUser = null;
   let cloudReady = false;
   let cloudApplying = false;
+  let cloudSyncing = false;
   let cloudSaveTimer = 0;
+  let cloudRetryAttempt = 0;
   let cloudRemote = null;
 
   function uid(prefix) {
@@ -269,7 +273,7 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     if (!cloudApplying) {
       const meta = readCloudMeta();
-      writeCloudMeta({ ...meta, dirty: true });
+      writeCloudMeta({ ...meta, dirty: true, lastLocalChangeAt: new Date().toISOString() });
       scheduleCloudSave();
     }
     window.BreakfastOperationsStore?.setGlobalMonth(state.selectedMonth, "accounting");
@@ -288,16 +292,30 @@
   }
 
   function readCloudMeta() {
+    const defaults = { revision: "", dirty: false, lastSuccessAt: "", lastLocalChangeAt: "", retryCount: 0 };
     try {
       const value = JSON.parse(localStorage.getItem(ACCOUNTING_CLOUD_META_KEY) || "null");
-      return value && typeof value === "object" ? { revision: "", dirty: false, ...value } : { revision: "", dirty: false };
+      return value && typeof value === "object" ? { ...defaults, ...value } : defaults;
     } catch {
-      return { revision: "", dirty: false };
+      return defaults;
     }
   }
 
   function writeCloudMeta(value) {
     localStorage.setItem(ACCOUNTING_CLOUD_META_KEY, JSON.stringify(value));
+    updateCloudIndicators();
+  }
+
+  function updateCloudIndicators() {
+    const meta = readCloudMeta();
+    const lastSuccess = $("#accounting-cloud-last-success");
+    const pending = $("#accounting-cloud-pending");
+    const version = $("#accounting-cloud-version");
+    const syncButton = $("#accounting-cloud-sync");
+    if (lastSuccess) lastSuccess.textContent = CLOUD_SYNC?.relativeTime(meta.lastSuccessAt) || "尚未完成";
+    if (pending) pending.textContent = meta.dirty ? (navigator.onLine ? "等待同步" : "離線保留中") : "沒有待同步";
+    if (version) version.textContent = meta.revision ? meta.revision.slice(0, 8) : "—";
+    if (syncButton) syncButton.disabled = cloudSyncing || !cloudUser;
   }
 
   function setCloudStatus(message, tone = "") {
@@ -305,6 +323,7 @@
     if (!status) return;
     status.textContent = message;
     status.dataset.tone = tone;
+    updateCloudIndicators();
   }
 
   function showCloudConflict(show) {
@@ -324,13 +343,34 @@
   function scheduleCloudSave() {
     if (!cloudReady || !cloudUser) return;
     window.clearTimeout(cloudSaveTimer);
+    if (!navigator.onLine) {
+      setCloudStatus("目前離線，本機變更會在恢復網路後自動同步", "waiting");
+      return;
+    }
     setCloudStatus("本機已儲存，60 秒後同步雲端", "waiting");
     cloudSaveTimer = window.setTimeout(() => syncAccountingCloud(), ACCOUNTING_CLOUD_DELAY);
   }
 
+  function scheduleCloudRetry(error) {
+    if (!cloudUser || !cloudReady || !readCloudMeta().dirty || !CLOUD_SYNC?.isRetryable(error)) return;
+    const delay = ACCOUNTING_CLOUD_RETRY_DELAYS[Math.min(cloudRetryAttempt, ACCOUNTING_CLOUD_RETRY_DELAYS.length - 1)];
+    cloudRetryAttempt += 1;
+    const meta = readCloudMeta();
+    writeCloudMeta({ ...meta, retryCount: cloudRetryAttempt });
+    window.clearTimeout(cloudSaveTimer);
+    setCloudStatus(`同步暫時失敗，${Math.round(delay / 1000)} 秒後自動重試`, "waiting");
+    cloudSaveTimer = window.setTimeout(() => syncAccountingCloud(), delay);
+  }
+
   async function syncAccountingCloud(options = {}) {
     if (!cloudUser || !cloudReady) return false;
+    if (cloudSyncing) return false;
+    if (!navigator.onLine) {
+      setCloudStatus("目前離線，本機資料已安全保留", "waiting");
+      return false;
+    }
     window.clearTimeout(cloudSaveTimer);
+    cloudSyncing = true;
     const meta = readCloudMeta();
     setCloudStatus("正在壓縮並同步雲端…", "working");
     try {
@@ -339,28 +379,41 @@
         baseRevision: options.force ? "" : meta.revision,
         force: options.force === true
       });
-      const response = await fetch("/api/operations-state", {
+      const result = await CLOUD_SYNC.requestJson("/api/operations-state", {
         method: "PUT",
-        credentials: "same-origin",
         headers: request.headers,
-        body: request.body
+        body: request.body,
+        attempts: 3
       });
-      const result = await response.json().catch(() => ({}));
-      if (response.status === 409) {
-        cloudRemote = { revision: result.revision || "" };
-        showCloudConflict(true);
-        setCloudStatus("偵測到另一個雲端版本，請選擇保留哪一份", "danger");
-        return false;
-      }
-      if (!response.ok) throw new Error(result.message || `同步失敗（${response.status}）`);
-      writeCloudMeta({ revision: result.revision || "", dirty: false, updatedAt: result.updatedAt || new Date().toISOString() });
+      cloudRetryAttempt = 0;
+      writeCloudMeta({
+        ...meta,
+        revision: result.revision || "",
+        dirty: false,
+        lastSuccessAt: result.updatedAt || new Date().toISOString(),
+        retryCount: 0
+      });
       cloudRemote = null;
       showCloudConflict(false);
       setCloudStatus(`雲端已同步・${new Date().toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}`, "success");
       return true;
     } catch (error) {
-      setCloudStatus(error instanceof Error ? error.message : "雲端同步暫時失敗，本機資料仍安全", "danger");
+      if (error?.status === 409 || error?.code === "REVISION_CONFLICT") {
+        cloudRemote = {
+          revision: error.payload?.revision || "",
+          updatedAt: error.payload?.updatedAt || "",
+          updatedBy: error.payload?.updatedBy || ""
+        };
+        showCloudConflict(true);
+        setCloudStatus("偵測到另一個雲端版本，請選擇保留哪一份", "danger");
+      } else {
+        setCloudStatus(error instanceof Error ? error.message : "雲端同步暫時失敗，本機資料仍安全", "danger");
+        scheduleCloudRetry(error);
+      }
       return false;
+    } finally {
+      cloudSyncing = false;
+      updateCloudIndicators();
     }
   }
 
@@ -380,7 +433,13 @@
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth || "")) state.selectedMonth = selectedMonth;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     cloudApplying = false;
-    writeCloudMeta({ revision: remote.revision || "", dirty: false, updatedAt: remote.updatedAt || "" });
+    writeCloudMeta({
+      ...readCloudMeta(),
+      revision: remote.revision || "",
+      dirty: false,
+      lastSuccessAt: remote.updatedAt || new Date().toISOString(),
+      retryCount: 0
+    });
     window.BreakfastOperationsStore?.setGlobalMonth(state.selectedMonth, "accounting");
     publishAccountingBridge();
     renderMonthOptions();
@@ -393,17 +452,13 @@
   }
 
   async function fetchCloudState() {
-    const response = await fetch("/api/operations-state", { credentials: "same-origin", cache: "no-store" });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.message || `讀取雲端失敗（${response.status}）`);
-    return result;
+    return CLOUD_SYNC.requestJson("/api/operations-state", { attempts: 3 });
   }
 
   async function initializeAccountingCloud() {
     setCloudStatus("正在檢查 Vercel 雲端登入…", "working");
     try {
-      const sessionResponse = await fetch("/api/auth/session", { credentials: "same-origin", cache: "no-store" });
-      const session = await sessionResponse.json().catch(() => ({}));
+      const session = await CLOUD_SYNC.requestJson("/api/auth/session", { attempts: 2 });
       cloudUser = session.user || null;
       $("#accounting-cloud-login").textContent = cloudUser ? "重新登入" : "登入 Vercel";
       $("#accounting-cloud-signout")?.toggleAttribute("hidden", !cloudUser);
@@ -2519,6 +2574,17 @@
       if (!window.confirm("確定以目前本機資料覆蓋雲端最新版？雲端舊版仍會保留每日備份。")) return;
       await syncAccountingCloud({ force: true });
     });
+    window.addEventListener("offline", () => {
+      if (!cloudUser || !readCloudMeta().dirty) return;
+      window.clearTimeout(cloudSaveTimer);
+      setCloudStatus("目前離線，本機變更會在恢復網路後自動同步", "waiting");
+    });
+    window.addEventListener("online", () => {
+      updateCloudIndicators();
+      if (!cloudUser || !readCloudMeta().dirty) return;
+      if (cloudReady) syncAccountingCloud();
+      else initializeAccountingCloud();
+    });
 
     $("#entry-type").addEventListener("change", () => {
       $("#entry-group").value = "";
@@ -3234,6 +3300,7 @@
       summary: { month: state.selectedMonth, transactions: state.transactions.length, labor: state.dayLabor.length }
     }).then(() => renderSnapshotList());
     initializeAccountingCloud();
+    updateCloudIndicators();
   }
 
   document.addEventListener("DOMContentLoaded", init);

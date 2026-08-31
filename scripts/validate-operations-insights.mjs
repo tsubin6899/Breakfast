@@ -36,10 +36,11 @@ const rows = insights.buildBudgetRows(budget, { income: 400000, expense: 260000,
 assert(rows.some(row => row.key === "income" && row.ratio === .8), "收入目標進度錯誤");
 assert(rows.some(row => row.key === "group:食材成本" && Math.abs(row.ratio - (5 / 6)) < .0001), "分類預算進度錯誤");
 
-const [homeHtml, homeJs, salaryHtml] = await Promise.all([
+const [homeHtml, homeJs, salaryHtml, accountingHtml] = await Promise.all([
   readFile(resolve(ROOT, "index.html"), "utf8"),
   readFile(resolve(ROOT, "shared/home.js"), "utf8"),
-  readFile(resolve(ROOT, "salary_app/index.html"), "utf8")
+  readFile(resolve(ROOT, "salary_app/index.html"), "utf8"),
+  readFile(resolve(ROOT, "accounting/index.html"), "utf8")
 ]);
 for (const id of ["home-month", "home-cloud-state", "home-actions", "home-budget", "home-sync", "home-audit"]) {
   assert(homeHtml.includes(`id="${id}"`), `今日店務中心缺少 ${id}`);
@@ -51,7 +52,18 @@ for (const entry of ["home-launchpad", "quick-tool-grid", "開始記帳", "打�
 for (const id of ["ai-queue-summary", "recognize-all-uploads", "retry-failed-uploads"]) {
   assert(salaryHtml.includes(`id="${id}"`), `打卡 AI 佇列缺少 ${id}`);
 }
+for (const id of ["employee-birthday", "employee-birthday-gift-amount"]) {
+  assert(salaryHtml.includes(`id="${id}"`), `員工設定缺少 ${id}`);
+}
 assert(!salaryHtml.includes("第 2 段") && !salaryHtml.includes("第 3 段"), "早餐店打卡介面不得顯示多餘時段");
 assert(!salaryHtml.includes('id="add-segment"'), "單日打卡不得新增第二時段");
+for (const [html, prefix] of [[salaryHtml, "payroll"], [accountingHtml, "accounting"]]) {
+  for (const suffix of ["cloud-last-success", "cloud-pending", "cloud-version"]) {
+    assert(html.includes(`id="${prefix}-${suffix}"`), `雲端同步面板缺少 ${prefix}-${suffix}`);
+  }
+  assert(html.includes('/shared/cloud-sync.js'), `${prefix} 頁面未載入共用雲端同步模組`);
+}
+assert(homeHtml.includes('/shared/cloud-sync.js'), "首頁未載入共用雲端同步模組");
+assert(homeJs.includes("lastSuccessAt") && homeJs.includes("dirty"), "首頁未顯示待同步與最後成功狀態");
 
 console.log("營運中心、預算異常與 AI 佇列檢查完成。");

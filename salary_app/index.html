@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../shared/operations-shell.css" />
   <script src="./local-mode.js"></script>
   <script src="../shared/operations-store.js"></script>
+  <script src="../shared/cloud-sync.js"></script>
   <script defer src="../shared/operations-shell.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -568,6 +569,11 @@
                 <span>權限：<b id="cloud-account-role">—</b></span>
                 <p id="cloud-panel-detail">登入後才會將薪資資料同步到網站。</p>
               </div>
+              <div class="cloud-sync-metrics" aria-label="薪資雲端同步狀態">
+                <span>最後成功<strong id="payroll-cloud-last-success">尚未完成</strong></span>
+                <span>本機變更<strong id="payroll-cloud-pending">沒有待同步</strong></span>
+                <span>雲端版本<strong id="payroll-cloud-version">—</strong></span>
+              </div>
               <div id="cloud-account-actions" class="button-row" hidden>
                 <button class="secondary-btn" id="cloud-download-latest" type="button">下載雲端最新資料</button>
                 <button class="secondary-btn" id="cloud-upload-current" type="button">以上傳本機資料為準</button>
@@ -802,6 +808,12 @@
         <label><span>本次費率生效日</span><input id="employee-rate-effective" type="date" required /></label>
         <label><span>到職日</span><input id="employee-hire-date" type="date" /></label>
         <label><span>離職日</span><input id="employee-end-date" type="date" /></label>
+        <label><span>生日</span><input id="employee-birthday" type="date" /></label>
+        <label>
+          <span>生日禮金</span>
+          <input id="employee-birthday-gift-amount" type="number" min="0" step="1" value="1000" />
+          <small>生日當月自動加入薪資；填 0 可停用。</small>
+        </label>
         <label><span>年度年假基準</span><input id="employee-annual-leave" type="number" min="0" step="0.125" /></label>
         <label><span>設定／更換打卡 PIN</span><input id="employee-punch-pin" type="password" inputmode="numeric" minlength="4" maxlength="8" placeholder="留白表示不變更" /></label>
       </div>
