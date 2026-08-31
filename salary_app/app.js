@@ -2542,14 +2542,14 @@
   }
 
   function renderSegmentInputs(segments = [{ start: "", end: "" }]) {
-    $("#segment-list").innerHTML = segments.map((segment, index) => `
-      <div class="segment-row" data-segment-index="${index}">
-        <input type="time" class="segment-start" value="${escapeHtml(segment.start || "")}" aria-label="第 ${index + 1} 段上班時間" />
+    const segment = segments[0] || { start: "", end: "" };
+    $("#segment-list").innerHTML = `
+      <div class="segment-row" data-segment-index="0">
+        <input type="time" class="segment-start" value="${escapeHtml(segment.start || "")}" aria-label="上班時間" />
         <span>到</span>
-        <input type="time" class="segment-end" value="${escapeHtml(segment.end || "")}" aria-label="第 ${index + 1} 段下班時間" />
-        <button type="button" class="remove-segment" aria-label="刪除此時段">刪除</button>
+        <input type="time" class="segment-end" value="${escapeHtml(segment.end || "")}" aria-label="下班時間" />
       </div>
-    `).join("");
+    `;
   }
 
   function normalizeKeyinTime(value) {
@@ -2627,7 +2627,7 @@
       const scheduleText = schedule.start
         ? `${schedule.start}－${schedule.end || "未設定"}`
         : (employeeAt(employee, date).payType === "hourly" ? "依實際打卡計薪" : "當日未排班");
-      const values = Array.from({ length: 3 }, (_, index) => [
+      const values = Array.from({ length: 1 }, (_, index) => [
         record?.segments?.[index]?.start || "",
         record?.segments?.[index]?.end || ""
       ]).flat();
@@ -2644,8 +2644,8 @@
           </div>
           ${values.map((value, index) => `
             <label class="keyin-time-cell">
-              <span>${Math.floor(index / 2) + 1} 段${index % 2 === 0 ? "上班" : "下班"}</span>
-              <input class="keyin-time" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${index % 2 === 0 ? "0800" : "1400"}" value="${escapeHtml(value)}" data-time-column="${index}" aria-label="${date} 第 ${Math.floor(index / 2) + 1} 段${index % 2 === 0 ? "上班" : "下班"}" />
+              <span>${index % 2 === 0 ? "上班時間" : "下班時間"}</span>
+              <input class="keyin-time" type="text" inputmode="numeric" autocomplete="off" maxlength="5" placeholder="${index % 2 === 0 ? "0800" : "1400"}" value="${escapeHtml(value)}" data-time-column="${index}" aria-label="${date} ${index % 2 === 0 ? "上班" : "下班"}時間" />
             </label>
           `).join("")}
           <button class="clear-keyin-row" type="button">清除</button>
@@ -2666,7 +2666,7 @@
     const weekdayLike = value => /^(週|星期)?[一二三四五六日天]$/.test(value);
     if (cells.length >= 4 && dateLike(cells[0]) && weekdayLike(cells[1])) cells = cells.slice(2);
     else if ([3, 5, 7].includes(cells.length) && dateLike(cells[0])) cells = cells.slice(1);
-    return cells.slice(0, 6);
+    return cells.slice(0, 2);
   }
 
   function pasteAttendanceKeyin(event, input) {
@@ -3585,7 +3585,7 @@
     return rows.map(row => {
       const cropDay = row.cropDay || row.day;
       const rowIndex = cropDay - sheet.geometry.startDay;
-      const suggestedSegments = Array.from({ length: 3 }, (_, segmentIndex) => ({
+      const suggestedSegments = Array.from({ length: 1 }, (_, segmentIndex) => ({
         start: row.cells[segmentIndex * 2]?.time || "",
         end: row.cells[segmentIndex * 2 + 1]?.time || ""
       }));
@@ -4007,7 +4007,7 @@
         const key = attendanceKey(upload.employeeId, date);
         if (state.attendance[key]?.status === "confirmed") return;
         const partialSegments = [];
-        for (let column = 0; column < OCR_COLUMN_COUNT; column += 2) {
+        for (let column = 0; column < 2; column += 2) {
           const start = row.cells[column]?.time || "";
           const end = row.cells[column + 1]?.time || "";
           if (start || end) partialSegments.push({ start, end });
@@ -4016,7 +4016,7 @@
         state.attendance[key] = {
           employeeId: upload.employeeId,
           date,
-          segments: hasCompleteSegment ? row.segments : partialSegments,
+          segments: hasCompleteSegment ? row.segments.slice(0, 1) : partialSegments,
           status: hasCompleteSegment ? "review" : "unreadable",
           source: `AI：${upload.file.name}`,
           confidence: Math.round(row.confidence),
@@ -4659,6 +4659,9 @@
         open.end = time;
         existing.status = "confirmed";
         action = "下班";
+      } else if (segments.some(segment => segment.start && segment.end)) {
+        toast("今天的上、下班打卡已完成；如需修正請到出勤紀錄編輯。");
+        return;
       } else {
         segments.push({ start: time, end: "" });
         existing.status = "review";
@@ -4675,25 +4678,6 @@
       toast(`${employee.name} ${action}打卡成功。`);
     });
 
-    $("#add-segment").addEventListener("click", () => {
-      const segments = $$(".segment-row").map(row => ({
-        start: $(".segment-start", row).value,
-        end: $(".segment-end", row).value
-      }));
-      segments.push({ start: "", end: "" });
-      renderSegmentInputs(segments);
-    });
-    $("#segment-list").addEventListener("click", event => {
-      const button = event.target.closest(".remove-segment");
-      if (!button) return;
-      const rows = $$(".segment-row");
-      if (rows.length === 1) {
-        $(".segment-start", rows[0]).value = "";
-        $(".segment-end", rows[0]).value = "";
-      } else {
-        button.closest(".segment-row").remove();
-      }
-    });
     $("#attendance-form").addEventListener("submit", event => {
       event.preventDefault();
       if (!requirePermission("attendance") || !requireUnlockedMonth()) return;

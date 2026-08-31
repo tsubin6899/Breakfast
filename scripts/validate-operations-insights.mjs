@@ -48,5 +48,7 @@ for (const id of ["home-month", "home-cloud-state", "home-actions", "home-budget
 for (const id of ["ai-queue-summary", "recognize-all-uploads", "retry-failed-uploads"]) {
   assert(salaryHtml.includes(`id="${id}"`), `打卡 AI 佇列缺少 ${id}`);
 }
+assert(!salaryHtml.includes("第 2 段") && !salaryHtml.includes("第 3 段"), "早餐店打卡介面不得顯示多餘時段");
+assert(!salaryHtml.includes('id="add-segment"'), "單日打卡不得新增第二時段");
 
 console.log("營運中心、預算異常與 AI 佇列檢查完成。");

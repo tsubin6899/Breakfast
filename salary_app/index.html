@@ -848,8 +848,8 @@
       </div>
       <input id="attendance-date" type="date" required />
       <div id="attendance-source-preview" class="attendance-source-preview" hidden></div>
+      <p class="single-shift-note"><strong>早餐店單一班段</strong><span>每天只需填寫一次上班與下班時間。</span></p>
       <div id="segment-list" class="segment-list"></div>
-      <button class="text-btn" id="add-segment" type="button">＋ 新增一段工作時間</button>
       <div class="form-grid two-col">
         <label>
           <span>假別／排休日</span>
@@ -911,7 +911,7 @@
       </div>
       <div class="keyin-guide">
         <span><b>快速輸入</b>：輸入 0800 會自動變成 08:00，按 Enter 前往下一天同一欄。</span>
-        <span><b>整批貼上</b>：可從 Excel 複製每列 2、4 或 6 個時間欄位，一次貼上多天資料。</span>
+        <span><b>整批貼上</b>：可從 Excel 複製每列「上班、下班」2 個時間欄位，一次貼上多天資料。</span>
         <span><b>安全儲存</b>：只有改過的日期會更新；空白不會刪除舊資料，需按該列「清除」才會刪除。</span>
       </div>
       <div class="keyin-legend" aria-label="日期顏色說明">
@@ -922,7 +922,7 @@
       </div>
       <div class="keyin-grid-wrap">
         <div class="keyin-grid keyin-grid-head" aria-hidden="true">
-          <span>日期</span><span>應上班時間</span><span>第 1 段上班</span><span>第 1 段下班</span><span>第 2 段上班</span><span>第 2 段下班</span><span>第 3 段上班</span><span>第 3 段下班</span><span>操作</span>
+          <span>日期</span><span>應上班時間</span><span>上班時間</span><span>下班時間</span><span>操作</span>
         </div>
         <div id="attendance-keyin-body" class="attendance-keyin-body"></div>
       </div>

@@ -2072,9 +2072,24 @@ dialog::backdrop {
   gap: 9px;
 }
 
+.single-shift-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  color: var(--green-2);
+  background: var(--green-soft);
+  font-size: 12px;
+}
+
+.single-shift-note span { color: var(--muted); }
+
 .segment-row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
+  grid-template-columns: 1fr auto 1fr;
   gap: 8px;
   align-items: center;
 }
@@ -2105,7 +2120,7 @@ dialog::backdrop {
 }
 
 .attendance-keyin-dialog {
-  width: min(1260px, calc(100vw - 28px));
+  width: min(860px, calc(100vw - 28px));
 }
 
 .attendance-keyin-form {
@@ -2179,8 +2194,8 @@ dialog::backdrop {
 .keyin-grid,
 .attendance-keyin-row {
   display: grid;
-  grid-template-columns: 102px 146px repeat(6, minmax(92px, 1fr)) 68px;
-  min-width: 1080px;
+  grid-template-columns: 102px 180px repeat(2, minmax(150px, 1fr)) 68px;
+  min-width: 700px;
 }
 
 .keyin-grid-head {
