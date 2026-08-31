@@ -21,10 +21,12 @@
     $("#month-label").textContent = statement.monthLabel || statement.month || "";
     $("#expires-label").textContent = `連結有效至 ${new Date(expiresAt).toLocaleString("zh-TW")}`;
     const payroll = statement.payroll || {};
+    const leave = statement.leave || {};
     $("#summary-cards").innerHTML = `
       <article><span>一般薪資</span><strong>${money(payroll.regularPay)}</strong></article>
       <article><span>加班與特殊加給</span><strong>${money(Number(payroll.overtimePay || 0) + Number(payroll.specialPay || 0))}</strong></article>
       <article><span>獎金／加給</span><strong>${money(payroll.earnings)}</strong></article>
+      <article><span>年假試算餘額</span><strong>${Number(leave.annualRemaining || 0).toLocaleString("zh-TW", { maximumFractionDigits: 2 })} 天</strong></article>
       <article class="total"><span>本月實領</span><strong>${money(payroll.total)}</strong></article>
     `;
     $("#attendance-body").innerHTML = (statement.attendance || []).map(day => `

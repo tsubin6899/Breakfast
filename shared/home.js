@@ -62,6 +62,11 @@
     const unresolved = reconciliations.filter(item => String(item?.date || "").startsWith(month) && Math.abs(number(item?.difference)) > 1).length;
     const unclassified = rows.filter(item => !item.group || !item.category || /未分類/.test(`${item.group || ""}${item.category || ""}`)).length;
     const attendance = Object.values(payroll.attendance || {});
+    const activeEmployees = (payroll.employees || []).filter(item => item.active !== false);
+    const birthdayEmployees = activeEmployees.filter(item => String(item.birthday || "").slice(5, 7) === month.slice(5, 7));
+    const anniversaryEmployees = activeEmployees.filter(item => String(item.hireDate || "").slice(5, 7) === month.slice(5, 7));
+    const openPayables = (accounting.payables || []).filter(item => item.status !== "paid");
+    const overduePayables = openPayables.filter(item => item.dueDate && item.dueDate < today);
     const closure = payroll.closedMonths?.[month] || {};
     const payrollRows = Array.isArray(closure?.snapshot?.rows) ? closure.snapshot.rows : [];
     const audit = [...(accounting.auditLog || []), ...(payroll.auditLog || [])].sort((a, b) => String(b.timestamp || "").localeCompare(String(a.timestamp || ""))).slice(0, 8);
@@ -84,11 +89,14 @@
         expenseGroups: [...expenseGroups.entries()].sort((a, b) => b[1] - a[1]).map(([name, amount]) => ({ name, amount }))
       },
       payroll: {
-        employeeCount: (payroll.employees || []).filter(item => item.active !== false).length,
+        employeeCount: activeEmployees.length,
         pendingAttendance: attendance.filter(item => String(item?.date || "").startsWith(month) && item?.status !== "confirmed").length,
+        birthdays: birthdayEmployees.map(item => ({ name: item.name, date: item.birthday, gift: number(item.birthdayGiftAmount ?? 1000) })),
+        anniversaries: anniversaryEmployees.map(item => ({ name: item.name, date: item.hireDate })),
         locked: closure.locked === true,
         total: payrollRows.reduce((sum, item) => sum + number(item.total), 0)
       },
+      payables: { open: openPayables.length, overdue: overduePayables.length, amount: openPayables.reduce((sum, item) => sum + number(item.amount), 0) },
       sync: {
         accounting: {
           updatedAt: accountingCloudMeta.lastSuccessAt || store?.modules?.accounting?.updatedAt || "",
@@ -120,6 +128,7 @@
       ...cloud,
       accounting: hasLocalAccounting ? { ...cloud.accounting, ...local.accounting } : cloud.accounting,
       payroll: hasLocalPayroll ? { ...cloud.payroll, ...local.payroll } : cloud.payroll,
+      payables: local.payables || cloud.payables,
       sync: {
         accounting: mergeSyncItem(local.sync?.accounting, cloud.sync?.accounting),
         payroll: mergeSyncItem(local.sync?.payroll, cloud.sync?.payroll)
@@ -176,7 +185,14 @@
     if (payroll.pendingAttendance) actions.push({ tone: "warning", icon: "卡", title: `${payroll.pendingAttendance} 筆打卡仍待人工確認`, detail: "待確認紀錄不會納入薪資。", href: "/salary_app/#attendance", link: "前往核對" });
     if (accounting.unresolvedReconciliations) actions.push({ tone: "danger", icon: "核", title: `${accounting.unresolvedReconciliations} 天對帳仍有差額`, detail: "請確認漏登、平台入帳時間差或現金差異。", href: "/accounting/#ledger", link: "處理差額" });
     if (accounting.unclassified) actions.push({ tone: "warning", icon: "類", title: `${accounting.unclassified} 筆收支尚未正確分類`, detail: "完成分類後供應商與成本分析會更準確。", href: "/accounting/#catalog", link: "整理分類" });
+    if (summary.payables?.overdue) actions.push({ tone: "danger", icon: "付", title: `${summary.payables.overdue} 筆應付帳款已逾期`, detail: `目前共有 ${summary.payables.open} 筆待付、合計 ${money.format(number(summary.payables.amount))}。`, href: "/accounting/", link: "前往付款" });
+    if (payroll.birthdays?.length) actions.push({ tone: "good", icon: "禮", title: `${monthLabel}有 ${payroll.birthdays.length} 位員工生日`, detail: payroll.birthdays.map(item => `${item.name} ${String(item.date).slice(5).replace("-", "/")}・${money.format(item.gift)}`).join("、"), href: "/salary_app/#employees", link: "查看員工" });
+    if (payroll.anniversaries?.length) actions.push({ tone: "good", icon: "年", title: `${monthLabel}有 ${payroll.anniversaries.length} 位到職週年`, detail: payroll.anniversaries.map(item => `${item.name} ${String(item.date).slice(5).replace("-", "/")}`).join("、"), href: "/salary_app/#employees", link: "查看年資" });
     if (!payroll.locked) actions.push({ tone: "warning", icon: "薪", title: `${monthLabel}薪資尚未鎖定月結`, detail: "完成核對、試算與核准後再鎖定。", href: "/salary_app/#payroll", link: "查看薪資" });
+    const pendingSync = Object.values(summary.sync || {}).filter(item => item?.dirty).length;
+    if (pendingSync) actions.push({ tone: "warning", icon: "雲", title: `${pendingSync} 個模組有資料等待同步`, detail: navigator.onLine ? "網路正常，系統將自動重試；也可以進入同步中心立即處理。" : "目前離線，資料已安全保留在本機。", href: "/accounting/#safety", link: "同步狀態" });
+    const staleSync = Object.values(summary.sync || {}).filter(item => item?.revision && !item?.dirty && (!item?.lastSuccessAt || Date.now() - Date.parse(item.lastSuccessAt) > 24 * 60 * 60 * 1000)).length;
+    if (!pendingSync && staleSync) actions.push({ tone: "warning", icon: "備", title: `${staleSync} 個模組超過 24 小時未成功備份`, detail: "請開啟同步中心確認網路、登入狀態與最新雲端版本。", href: "/accounting/#safety", link: "檢查備份" });
     if (summary.services?.geminiConfigured === false) actions.push({ tone: "danger", icon: "AI", title: "AI 打卡辨識尚未設定", detail: "請在雲端環境設定 Gemini 或 OpenAI 金鑰。", href: "/salary_app/#attendance", link: "查看打卡" });
     if (!actions.length) actions.push({ tone: "good", icon: "✓", title: "目前沒有高優先待辦", detail: "固定收入、出勤與對帳狀態正常。", href: "/accounting/", link: "開始記帳" });
     $("#home-action-count").textContent = `${actions.filter(item => item.tone !== "good").length} 項`;

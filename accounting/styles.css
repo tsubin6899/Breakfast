@@ -81,6 +81,31 @@
 .vendor-summary h3 { margin: 17px 0 0; font-size: 14px; }
 .vendor-summary > div > strong { color: var(--navy); }
 .operation-subheading { margin: 18px 0 9px; color: var(--muted); font-size: 12px; font-weight: 900; letter-spacing: .08em; }
+.payable-form { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.payable-form label { display:grid; gap:5px; color:var(--muted); font-size:10px; font-weight:900; }
+.payable-form input,.payable-form select { width:100%; min-height:40px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; background:#fff; font:inherit; }
+.payable-form button { grid-column:1 / -1; min-height:40px; }
+.payable-list { display:grid; gap:8px; margin-top:14px; }
+.payable-item { display:grid; grid-template-columns:minmax(0,1fr) auto auto; gap:10px; align-items:center; padding:11px 12px; border:1px solid var(--line); border-radius:11px; background:#faf9f5; }
+.payable-item.is-overdue { border-color:#e7b5b1; background:#fff0ef; }
+.payable-item.is-paid { opacity:.66; }
+.payable-item strong,.payable-item small { display:block; }
+.payable-item small { margin-top:3px; color:var(--muted); font-size:10px; }
+.payable-item b { color:var(--red); white-space:nowrap; }
+.payable-actions { display:flex; gap:6px; }
+.payable-actions button { min-height:34px; padding:6px 9px; }
+.batch-income-dialog { width:min(1180px,calc(100vw - 24px)); max-height:92vh; }
+.batch-income-dialog form { display:grid; gap:14px; }
+.batch-income-controls { display:flex; flex-wrap:wrap; gap:10px; align-items:end; }
+.batch-income-controls label { display:grid; gap:5px; color:var(--muted); font-size:11px; font-weight:900; }
+.batch-income-controls input { min-height:42px; padding:8px 10px; border:1px solid var(--line); border-radius:9px; }
+.batch-income-note { margin:0; color:var(--muted); font-size:11px; }
+.batch-income-table-wrap { max-height:56vh; overflow:auto; border:1px solid var(--line); border-radius:12px; }
+.batch-income-table { width:100%; min-width:850px; border-collapse:collapse; }
+.batch-income-table th { position:sticky; z-index:1; top:0; padding:10px 8px; color:#fff; background:var(--navy); font-size:10px; }
+.batch-income-table td { padding:7px 8px; border-bottom:1px solid var(--line); }
+.batch-income-table input { width:100%; min-width:105px; padding:8px; border:1px solid #ccd7dd; border-radius:8px; text-align:right; }
+.batch-income-table tr.is-closed { opacity:.55; background:#eee; }
 .daily-reconciliation-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); }
 .daily-reconciliation-form label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; font-weight: 800; }
 .daily-reconciliation-form input { width: 100%; min-height: 40px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: #fff; }
@@ -144,12 +169,18 @@
   .accounting-cloud-actions { justify-content: stretch; }
   .accounting-cloud-actions button { flex: 1 1 auto; }
   .cloud-sync-metrics { grid-template-columns: 1fr; }
+  .payable-form { grid-template-columns:1fr 1fr; }
+  .payable-form button { grid-column:1 / -1; }
+  .payable-item { grid-template-columns:1fr auto; }
+  .payable-actions { grid-column:1 / -1; }
 }
 @media (max-width: 520px) {
   .daily-reconciliation-form { grid-template-columns: 1fr; }
   .daily-reconciliation-form .wide,
   .daily-reconciliation-form button,
   .reconcile-result { grid-column: 1; }
+  .payable-form { grid-template-columns:1fr; }
+  .payable-form button { grid-column:1; }
 }
 
 * { box-sizing: border-box; }

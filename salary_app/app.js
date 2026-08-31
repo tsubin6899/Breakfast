@@ -2320,7 +2320,32 @@
     `;
   }
 
+  function renderEmployeeReminders() {
+    const month = state.settings.month;
+    const selectedYear = Number(month.slice(0, 4));
+    const selectedMonth = month.slice(5, 7);
+    const active = state.employees.filter(employee => employee.active !== false);
+    const reminders = [];
+    active.filter(employee => String(employee.birthday || "").slice(5, 7) === selectedMonth).forEach(employee => {
+      reminders.push({ tone: "is-gift", icon: "禮", title: `${employee.name}・${String(employee.birthday).slice(5).replace("-", "/")} 生日`, detail: `薪資將自動加入 ${money(employee.birthdayGiftAmount ?? 1000)} 生日禮金` });
+    });
+    active.filter(employee => String(employee.hireDate || "").slice(5, 7) === selectedMonth).forEach(employee => {
+      const years = Math.max(0, selectedYear - Number(String(employee.hireDate).slice(0, 4)));
+      reminders.push({ tone: "", icon: "年", title: `${employee.name}・到職${years ? ` ${years} 週年` : "月份"}`, detail: `${String(employee.hireDate).slice(5).replace("-", "/")} 到職・請確認年假與薪資規則` });
+    });
+    active.filter(employee => String(employee.endDate || "").startsWith(month)).forEach(employee => {
+      reminders.push({ tone: "is-warning", icon: "離", title: `${employee.name}・本月離職`, detail: `${employee.endDate}・請完成末次薪資與打卡核對` });
+    });
+    const missingBirthday = active.filter(employee => !employee.birthday);
+    if (missingBirthday.length) reminders.push({ tone: "is-warning", icon: "補", title: `${missingBirthday.length} 位在職員工尚未設定生日`, detail: missingBirthday.map(employee => employee.name).join("、") });
+    $("#employee-reminder-count").textContent = `${reminders.length} 項`;
+    $("#employee-reminders").innerHTML = reminders.length ? reminders.map(item => `
+      <article class="employee-reminder ${item.tone}"><i>${item.icon}</i><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.detail)}</small></div></article>
+    `).join("") : '<p class="empty-copy">本月沒有生日、週年或離職提醒，所有在職員工生日皆已設定。</p>';
+  }
+
   function renderEmployees() {
+    renderEmployeeReminders();
     $("#employee-grid").innerHTML = employeesForDisplay().map(employee => {
       const current = employeeAt(employee, state.settings.month);
       return `
@@ -3073,6 +3098,7 @@
       month,
       monthLabel: monthLabel(month),
       attendance: records,
+      leave: employeeLeaveSummary(employee, month),
       payroll: {
         regularPay: row.regularPay,
         overtimePay: row.overtimePay,
@@ -5310,10 +5336,10 @@
     updateClock();
     window.setInterval(updateClock, 1000);
     renderAll();
-    const requestedView = ({ attendance: "attendance", payroll: "payroll", settings: "settings" })[window.location.hash.slice(1)];
+    const requestedView = ({ attendance: "attendance", payroll: "payroll", employees: "employees", settings: "settings" })[window.location.hash.slice(1)];
     if (requestedView) showView(requestedView);
     window.addEventListener("hashchange", () => {
-      const view = ({ attendance: "attendance", payroll: "payroll", settings: "settings" })[window.location.hash.slice(1)];
+      const view = ({ attendance: "attendance", payroll: "payroll", employees: "employees", settings: "settings" })[window.location.hash.slice(1)];
       if (view) showView(view);
     });
     publishPayrollBridge();

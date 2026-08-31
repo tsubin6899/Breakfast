@@ -211,6 +211,7 @@
       catalogItemSettings: {},
       dayLabor: [],
       recurringTemplates: [],
+      payables: [],
       budgets: {},
       importBatches: [],
       reconciliations: {},
@@ -232,6 +233,11 @@
       transactions: Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions,
       dayLabor: Array.isArray(value?.dayLabor) ? value.dayLabor : [],
       recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates.map(normalizeTransactionNames) : [],
+      payables: Array.isArray(value?.payables) ? value.payables.map(item => ({
+        ...item,
+        amount: Math.max(0, Number(item?.amount || 0)),
+        status: item?.status === "paid" ? "paid" : "open"
+      })) : [],
       budgets: value?.budgets && typeof value.budgets === "object" ? value.budgets : {},
       importBatches: Array.isArray(value?.importBatches) ? value.importBatches : [],
       reconciliations: value?.reconciliations && typeof value.reconciliations === "object" ? value.reconciliations : {},
@@ -1004,11 +1010,21 @@
     const importedSources = new Set(["workbook", "accounting-backup", "uber-statement"]);
     const unreceiptedLargeExpenses = transactions.filter(item => item.type === "expense" && Number(item.amount || 0) >= 5000 && !item.receiptDataUrl && !importedSources.has(item.source));
     const missingCounterparty = transactions.filter(item => item.type === "expense" && !item.counterparty && !importedSources.has(item.source));
+    const openPayables = state.payables.filter(item => item.status !== "paid");
+    const overduePayables = openPayables.filter(item => item.dueDate && item.dueDate < localDateString());
+    const duplicateKeys = new Map();
+    transactions.filter(item => ["manual", "batch-daily-income", "recurring"].includes(item.source)).forEach(item => {
+      const key = [item.date, item.type, canonicalIncomeItem(item.category), Number(item.amount || 0), item.counterparty || ""].join("|");
+      duplicateKeys.set(key, (duplicateKeys.get(key) || 0) + 1);
+    });
+    const duplicateCount = [...duplicateKeys.values()].filter(count => count > 1).reduce((sum, count) => sum + count - 1, 0);
     const exceptions = [];
     if (!stats.payroll.ready) exceptions.push({ tone: "danger", title: "正式員工薪資尚未月結", detail: "記帳與分析目前無法取得本月正式薪資。" });
     if (unresolvedReconciliations.length) exceptions.push({ tone: "danger", title: `${unresolvedReconciliations.length} 天對帳有差額`, detail: unresolvedReconciliations.slice(0, 4).map(item => `${item.date.slice(5)} ${money(item.difference)}`).join("、") });
     if (unreceiptedLargeExpenses.length) exceptions.push({ tone: "warning", title: `${unreceiptedLargeExpenses.length} 筆大額支出沒有收據照片`, detail: "限本機新增且單筆達 $5,000 的支出。" });
     if (missingCounterparty.length) exceptions.push({ tone: "warning", title: `${missingCounterparty.length} 筆支出未填往來對象`, detail: "補上供應商後，成本分析與搜尋會更準確。" });
+    if (duplicateCount) exceptions.push({ tone: "warning", title: `${duplicateCount} 筆疑似重複記帳`, detail: "同日、同項目、同金額且往來對象相同，請在月份明細確認。" });
+    if (overduePayables.length) exceptions.push({ tone: "danger", title: `${overduePayables.length} 筆應付帳款已逾期`, detail: overduePayables.slice(0, 4).map(item => `${item.vendor} ${money(item.amount)}`).join("、") });
     return exceptions;
   }
 
@@ -1513,6 +1529,60 @@
     result.textContent = Math.abs(difference) <= 1 ? "當日實際金額與帳面收入相符。" : `實際與帳面相差 ${money(difference)}，請確認漏登或入帳時間差。`;
   }
 
+  const BATCH_DAILY_INCOME_ITEMS = [
+    { key: "cash", item: "現金營業收入", group: "現金收入", paymentMethod: "現金" },
+    { key: "quick", item: "快一點line pay收入", group: "現金收入", paymentMethod: "電子支付" },
+    { key: "line", item: "line Pay經營收入", group: "現金收入", paymentMethod: "電子支付" },
+    { key: "uber", item: "Uber eat外送", group: "平台收入", paymentMethod: "平台入帳" },
+    { key: "foodpanda", item: "Foodpanda外送", group: "平台收入", paymentMethod: "平台入帳" }
+  ];
+
+  function dateRange(start, end, maximum = 31) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start || "") || !/^\d{4}-\d{2}-\d{2}$/.test(end || "") || start > end) return [];
+    const rows = [];
+    const cursor = new Date(`${start}T12:00:00`);
+    const finish = new Date(`${end}T12:00:00`);
+    while (cursor <= finish && rows.length < maximum) {
+      rows.push(localDateString(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    return rows;
+  }
+
+  function renderBatchIncomeRows() {
+    const dates = dateRange($("#batch-income-start").value, $("#batch-income-end").value);
+    if (!dates.length) {
+      $("#batch-income-body").innerHTML = '<tr><td colspan="6">請選擇正確日期範圍，最多一次 31 天。</td></tr>';
+      return;
+    }
+    $("#batch-income-body").innerHTML = dates.map(date => {
+      const closed = Boolean(state.shopClosures?.[date]?.closed);
+      const locked = isDateLocked(date);
+      return `<tr data-batch-date="${date}" class="${closed ? "is-closed" : ""}"><td><strong>${date.slice(5)}</strong><small>${closed ? "店休" : locked ? "已鎖定" : ""}</small></td>${BATCH_DAILY_INCOME_ITEMS.map(definition => {
+        const existing = state.transactions.find(item => item.date === date && item.type === "income" && canonicalIncomeItem(item.category || item.counterparty || item.group) === definition.item);
+        return `<td><input type="number" min="0" step="1" inputmode="numeric" data-batch-income="${definition.key}" value="${existing ? Number(existing.amount || 0) : ""}" placeholder="${existing ? "已記帳" : "0"}" ${existing || closed || locked ? "disabled" : ""} title="${existing ? "此日已記帳，不會重複新增" : closed ? "店休日" : locked ? "日期已鎖定" : definition.item}" /></td>`;
+      }).join("")}</tr>`;
+    }).join("");
+  }
+
+  function renderPayables() {
+    const today = localDateString();
+    const open = state.payables.filter(item => item.status !== "paid").sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+    const recentPaid = state.payables.filter(item => item.status === "paid" && String(item.paidDate || "").startsWith(state.selectedMonth)).slice(-5).reverse();
+    const rows = [...open, ...recentPaid];
+    const overdue = open.filter(item => item.dueDate && item.dueDate < today);
+    const chip = $("#payable-summary-chip");
+    chip.textContent = overdue.length ? `${overdue.length} 筆逾期・${open.length} 筆待付` : `${open.length} 筆待付款`;
+    chip.className = `panel-chip ${overdue.length ? "red" : "gold"}`;
+    $("#payable-list").innerHTML = rows.length ? rows.map(item => `
+      <article class="payable-item ${item.status === "paid" ? "is-paid" : item.dueDate < today ? "is-overdue" : ""}">
+        <div><strong>${escapeHtml(item.vendor)}・${escapeHtml(item.category)}</strong><small>${item.status === "paid" ? `${escapeHtml(item.paidDate || "")} 已付款` : `期限 ${escapeHtml(item.dueDate)}${item.note ? `・${escapeHtml(item.note)}` : ""}`}</small></div>
+        <b>${money(item.amount)}</b>
+        <div class="payable-actions">${item.status === "paid" ? '<span class="panel-chip">已入帳</span>' : `<button class="primary-btn pay-payable" type="button" data-id="${escapeHtml(item.id)}">付款並入帳</button><button class="danger-btn delete-payable" type="button" data-id="${escapeHtml(item.id)}">刪除</button>`}</div>
+      </article>
+    `).join("") : '<p class="empty-state">目前沒有待付款帳款。</p>';
+  }
+
   function renderRecurringAndVendors() {
     const templates = state.recurringTemplates.filter(template => template.active !== false);
     $("#recurring-list").innerHTML = templates.length ? templates.map(template => `
@@ -1643,6 +1713,7 @@
     renderLabor();
     renderLedger();
     renderRecurringAndVendors();
+    renderPayables();
     renderBudgetInsights();
     renderSafety();
     publishAccountingBridge();
@@ -1653,6 +1724,8 @@
     const preferred = today.startsWith(month) ? today : `${month}-01`;
     $("#entry-date").value = preferred;
     $("#labor-date").value = preferred;
+    $("#payable-due-date").value = preferred;
+    $("#payable-group").innerHTML = GROUPS.expense.map(group => `<option value="${escapeHtml(group)}">${escapeHtml(group)}</option>`).join("");
   }
 
   async function compressedReceipt(file) {
@@ -2610,6 +2683,49 @@
     });
     $("#copy-yesterday").addEventListener("click", () => copyEntriesFrom(1));
     $("#copy-last-week").addEventListener("click", () => copyEntriesFrom(7));
+    $("#open-batch-income").addEventListener("click", () => {
+      const today = localDateString();
+      const end = today.startsWith(state.selectedMonth) ? today : `${state.selectedMonth}-${String(daysInMonth(state.selectedMonth)).padStart(2, "0")}`;
+      const startDate = new Date(`${end}T12:00:00`);
+      startDate.setDate(Math.max(1, startDate.getDate() - 6));
+      $("#batch-income-start").value = localDateString(startDate);
+      $("#batch-income-end").value = end;
+      renderBatchIncomeRows();
+      $("#batch-income-dialog").showModal();
+    });
+    $("#generate-batch-income").addEventListener("click", renderBatchIncomeRows);
+    document.querySelectorAll('[data-close-dialog="batch-income-dialog"]').forEach(button => button.addEventListener("click", () => $("#batch-income-dialog").close()));
+    $("#batch-income-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const created = [];
+      document.querySelectorAll("#batch-income-body tr[data-batch-date]").forEach(row => {
+        const date = row.dataset.batchDate;
+        if (isDateLocked(date) || state.shopClosures?.[date]?.closed) return;
+        BATCH_DAILY_INCOME_ITEMS.forEach(definition => {
+          const input = row.querySelector(`[data-batch-income="${definition.key}"]`);
+          const amount = Number(input?.value || 0);
+          if (!input || input.disabled || !(amount > 0)) return;
+          const exists = state.transactions.some(item => item.date === date && item.type === "income" && canonicalIncomeItem(item.category || item.counterparty || item.group) === definition.item);
+          if (exists) return;
+          created.push({
+            id: uid("entry"), date, type: "income", group: definition.group, category: definition.item,
+            amount, paymentMethod: definition.paymentMethod, counterparty: definition.item,
+            note: "固定收入批次補登", receiptDataUrl: "", source: "batch-daily-income", locked: false,
+            recurringTemplateId: "", createdAt: new Date().toISOString()
+          });
+        });
+      });
+      if (!created.length) { toast("沒有可新增的金額；既有項目不會重複寫入。" ); return; }
+      state.transactions.push(...created);
+      pushUndo(`批次補登 ${created.length} 筆固定收入`, "batch", "remove", { ids: created.map(item => item.id) });
+      logAudit("固定收入批次補登", `${created[0].date}～${created.at(-1).date}・${created.length} 筆`, created[0].date.slice(0, 7));
+      state.selectedMonth = created.at(-1).date.slice(0, 7);
+      selectedLedgerDate = created.at(-1).date;
+      saveState(`已批次新增 ${created.length} 筆收入`);
+      $("#batch-income-dialog").close();
+      renderAll();
+      toast(`已安全補登 ${created.length} 筆固定收入。`);
+    });
     $("#mobile-quick-add").addEventListener("click", () => {
       setAccountingPage("entry");
       window.setTimeout(() => $("#entry-amount").focus(), 60);
@@ -2718,6 +2834,13 @@
         createdAt: new Date().toISOString()
       };
       if (!transaction.date || !transaction.group || !transaction.category || !(transaction.amount > 0)) return;
+      const duplicate = state.transactions.find(item => (
+        item.date === transaction.date && item.type === transaction.type &&
+        canonicalIncomeItem(item.category) === canonicalIncomeItem(transaction.category) &&
+        Number(item.amount || 0) === transaction.amount &&
+        String(item.counterparty || "").trim() === transaction.counterparty
+      ));
+      if (duplicate && !window.confirm(`發現疑似重複記帳：\n${transaction.date}・${transaction.category}・${money(transaction.amount)}\n\n仍要新增嗎？`)) return;
       state.transactions.push(transaction);
       pushUndo(`新增 ${transaction.category}`, "transaction", "remove", { id: transaction.id });
       logAudit("新增記帳", `${transaction.date}・${transaction.category}・${money(transaction.amount)}`, transaction.date.slice(0, 7));
@@ -2895,6 +3018,11 @@
         renderAll();
         return;
       }
+      const requiredStatus = requiredDailyIncomeStatus(selectedLedgerDate);
+      if (requiredStatus.shouldWarn) {
+        toast(`尚有 ${requiredStatus.missing.length} 項固定收入未登錄，請補齊或先標記店休。`);
+        return;
+      }
       const reconciliation = state.reconciliations[selectedLedgerDate];
       if (!reconciliation) { toast("請先輸入實際現金與電子支付，儲存當日對帳後再關帳。"); return; }
       let reason = reconciliation.note || "核對完成";
@@ -2907,6 +3035,58 @@
       saveState("每日關帳已完成");
       renderAll();
       toast(`${selectedLedgerDate} 已完成關帳。`);
+    });
+
+    $("#payable-form").addEventListener("submit", event => {
+      event.preventDefault();
+      if (isMonthLocked()) { toast("本月已鎖定，請先解除月結。" ); return; }
+      const payable = {
+        id: uid("payable"), vendor: $("#payable-vendor").value.trim(), amount: Number($("#payable-amount").value || 0),
+        dueDate: $("#payable-due-date").value, group: $("#payable-group").value,
+        category: $("#payable-category").value.trim(), note: $("#payable-note").value.trim(),
+        status: "open", createdAt: new Date().toISOString()
+      };
+      if (!payable.vendor || !payable.dueDate || !payable.category || !(payable.amount > 0)) return;
+      state.payables.push(payable);
+      logAudit("新增應付帳款", `${payable.vendor}・${money(payable.amount)}・期限 ${payable.dueDate}`, payable.dueDate.slice(0, 7));
+      event.target.reset();
+      setFormDates();
+      saveState("應付帳款已新增");
+      renderAll();
+      toast("應付帳款已加入提醒。" );
+    });
+    $("#payable-list").addEventListener("click", event => {
+      const payButton = event.target.closest(".pay-payable");
+      const deleteButton = event.target.closest(".delete-payable");
+      const id = payButton?.dataset.id || deleteButton?.dataset.id;
+      const payable = state.payables.find(item => item.id === id);
+      if (!payable) return;
+      if (deleteButton) {
+        if (!window.confirm(`確定刪除「${payable.vendor}」${money(payable.amount)} 的待付款提醒？`)) return;
+        state.payables = state.payables.filter(item => item.id !== id);
+        logAudit("刪除應付帳款", `${payable.vendor}・${money(payable.amount)}`);
+        saveState("應付帳款已刪除");
+        renderAll();
+        return;
+      }
+      const paidDate = localDateString();
+      if (!requireUnlockedDate(paidDate, "付款入帳")) return;
+      if (!window.confirm(`確認已支付 ${payable.vendor} ${money(payable.amount)}，並新增為 ${paidDate} 支出？`)) return;
+      const transaction = {
+        id: uid("entry"), date: paidDate, type: "expense", group: payable.group || "其他支出", category: payable.category,
+        amount: Number(payable.amount || 0), paymentMethod: "銀行轉帳", counterparty: payable.vendor,
+        note: [payable.note, `應付帳款付款・原期限 ${payable.dueDate}`].filter(Boolean).join("・"), receiptDataUrl: "",
+        source: "payable", payableId: payable.id, locked: false, recurringTemplateId: "", createdAt: new Date().toISOString()
+      };
+      state.transactions.push(transaction);
+      payable.status = "paid";
+      payable.paidDate = paidDate;
+      payable.transactionId = transaction.id;
+      payable.paidAt = new Date().toISOString();
+      logAudit("應付帳款付款入帳", `${payable.vendor}・${money(payable.amount)}`, paidDate.slice(0, 7));
+      saveState("付款已入帳");
+      renderAll();
+      toast("付款完成，已同步新增正式支出。" );
     });
 
     $("#apply-recurring").addEventListener("click", () => {

@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="../shared/operations-brandbar.css" />
   <link rel="stylesheet" href="../shared/operations-shell.css" />
   <script src="../shared/operations-store.js"></script>
+  <script src="../shared/operations-planning.js"></script>
   <script defer src="../shared/operations-shell.js"></script>
   <script defer src="../accounting/data/revenue-history-2022-2025.js"></script>
   <script defer src="../accounting/data/revenue-history-2026.js"></script>
@@ -55,6 +56,7 @@
         <a href="#analysis-trends"><i aria-hidden="true">勢</i><span><strong>營運趨勢</strong><small>月份與同比環比</small></span></a>
         <a href="#analysis-costs"><i aria-hidden="true">本</i><span><strong>成本分析</strong><small>五大成本與目標</small></span></a>
         <a href="#analysis-channels"><i aria-hidden="true">通</i><span><strong>通路與供應商</strong><small>平台占比與採購變化</small></span></a>
+        <a href="#analysis-planning"><i aria-hidden="true">預</i><span><strong>預測與毛利</strong><small>現金流與商品貢獻</small></span></a>
         <a href="#analysis-alerts"><i aria-hidden="true">警</i><span><strong>異常與預警</strong><small>跨系統待處理事項</small></span></a>
       </nav>
       <div class="analytics-sidebar-note"><strong>跨系統月份同步</strong><p>在任一系統切換月份，另外兩套系統會自動沿用。</p></div>
@@ -174,6 +176,32 @@
     <section class="panel vendor-trend-panel">
       <div class="panel-heading"><div><p class="eyebrow">VENDOR MOVEMENT</p><h2>主要供應商採購變化</h2><p>比較目前期間與前一個相同長度期間，快速找出成本增加來源。</p></div><div class="panel-tools"><span>顯示前 10 名</span><button class="export-chart" type="button" data-filename="供應商採購變化" data-export-width="1040" aria-label="將供應商採購變化儲存成 JPG"><b aria-hidden="true">⇩</b> JPG</button></div></div>
       <div id="vendor-trend-chart" class="vendor-trend-chart"></div>
+    </section>
+
+    <section class="planning-section" id="analysis-planning" aria-labelledby="planning-title">
+      <div class="section-heading">
+        <div><p class="eyebrow">FORWARD PLANNING</p><h2 id="planning-title">現金流預測與商品毛利</h2></div>
+        <p>現金流採最近三個有資料月份的平均值，並把尚未付款的應付帳款加入到期月份；商品毛利可自行維護售價、成本與月銷量。</p>
+      </div>
+      <div class="planning-grid">
+        <article class="panel cash-forecast-panel">
+          <div class="panel-heading"><div><p class="eyebrow">90-DAY CASH FORECAST</p><h2>未來三個月現金流</h2></div><button id="save-forecast-settings" type="button">儲存期初現金</button></div>
+          <label class="forecast-cash-control">目前可用現金<input id="forecast-opening-cash" type="number" min="0" step="1000" inputmode="numeric" /><span>元</span></label>
+          <p id="cash-forecast-assumption" class="planning-note"></p>
+          <div id="cash-forecast-list" class="cash-forecast-list"></div>
+        </article>
+        <article class="panel product-margin-panel">
+          <div class="panel-heading"><div><p class="eyebrow">PRODUCT CONTRIBUTION</p><h2>商品毛利試算</h2></div><span id="product-margin-summary">尚未設定</span></div>
+          <form id="product-margin-form" class="product-margin-form">
+            <label>商品名稱<input name="name" required placeholder="例：招牌蛋餅" /></label>
+            <label>售價<input name="price" type="number" min="0" step="1" required inputmode="numeric" /></label>
+            <label>單份成本<input name="cost" type="number" min="0" step="1" required inputmode="numeric" /></label>
+            <label>每月銷量<input name="units" type="number" min="0" step="1" required inputmode="numeric" /></label>
+            <button type="submit">新增商品</button>
+          </form>
+          <div id="product-margin-list" class="product-margin-list"></div>
+        </article>
+      </div>
     </section>
 
     <section class="panel table-panel">

@@ -296,7 +296,7 @@
       <article class="panel entry-panel">
         <div class="panel-heading">
           <div><p class="eyebrow">NEW ENTRY</p><h2>新增收入／支出</h2></div>
-          <div class="entry-heading-actions"><button class="secondary-btn compact-btn" id="copy-yesterday" type="button">複製昨日</button><button class="secondary-btn compact-btn" id="copy-last-week" type="button">複製上週同日</button><span class="panel-chip">一般記帳</span></div>
+          <div class="entry-heading-actions"><button class="primary-btn compact-btn" id="open-batch-income" type="button">固定收入批次補登</button><button class="secondary-btn compact-btn" id="copy-yesterday" type="button">複製昨日</button><button class="secondary-btn compact-btn" id="copy-last-week" type="button">複製上週同日</button><span class="panel-chip">一般記帳</span></div>
         </div>
         <div id="quick-entry-presets" class="quick-entry-presets" aria-label="常用記帳項目"></div>
         <form id="transaction-form" class="entry-form">
@@ -475,6 +475,22 @@
         </div>
         <div id="recurring-list" class="recurring-list"></div>
       </article>
+      <article class="panel payable-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">ACCOUNTS PAYABLE</p><h2>應付帳款與付款期限</h2><p class="panel-copy">先登錄尚未付款的供應商帳款；付款時一鍵轉成正式支出，避免月底漏帳。</p></div>
+          <span id="payable-summary-chip" class="panel-chip gold">0 筆待付款</span>
+        </div>
+        <form id="payable-form" class="payable-form">
+          <label>供應商<input id="payable-vendor" type="text" list="counterparty-options" required /></label>
+          <label>金額<input id="payable-amount" type="number" min="1" step="1" required inputmode="numeric" /></label>
+          <label>付款期限<input id="payable-due-date" type="date" required /></label>
+          <label>支出分類<select id="payable-group"></select></label>
+          <label>支出項目<input id="payable-category" type="text" list="category-options" required /></label>
+          <label>備註<input id="payable-note" type="text" placeholder="發票號碼或採購內容" /></label>
+          <button class="primary-btn" type="submit">加入待付款</button>
+        </form>
+        <div id="payable-list" class="payable-list"></div>
+      </article>
     </section>
     <section class="operations-grid operations-grid-single" data-accounting-page="ledger">
       <article class="panel vendor-panel">
@@ -530,6 +546,20 @@
   </div>
 
   <button id="mobile-quick-add" class="mobile-quick-add" type="button" aria-label="快速新增收入或支出">＋</button>
+
+  <dialog id="batch-income-dialog" class="batch-income-dialog">
+    <form id="batch-income-form" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">DAILY INCOME BATCH</p><h2>固定收入批次補登</h2><p>選擇日期範圍後，可一次補齊每天固定會有的五項收入；既有同日項目不會重複新增。</p></div><button class="dialog-close" type="button" data-close-dialog="batch-income-dialog" aria-label="關閉">×</button></div>
+      <div class="batch-income-controls">
+        <label>開始日期<input id="batch-income-start" type="date" required /></label>
+        <label>結束日期<input id="batch-income-end" type="date" required /></label>
+        <button id="generate-batch-income" class="secondary-btn" type="button">產生輸入表</button>
+      </div>
+      <p class="batch-income-note">店休日請整列留白；金額為 0 或空白時不會新增。</p>
+      <div class="batch-income-table-wrap"><table class="batch-income-table"><thead><tr><th>日期</th><th>現金營業</th><th>快一點</th><th>LINE Pay</th><th>Uber</th><th>Foodpanda</th></tr></thead><tbody id="batch-income-body"></tbody></table></div>
+      <div class="dialog-actions"><button class="secondary-btn" type="button" data-close-dialog="batch-income-dialog">取消</button><button id="save-batch-income" class="primary-btn" type="submit">儲存批次收入</button></div>
+    </form>
+  </dialog>
 
   <dialog id="catalog-manage-dialog" class="catalog-manage-dialog">
     <form id="catalog-manage-form" method="dialog">

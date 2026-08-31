@@ -1669,6 +1669,15 @@ progress::-webkit-progress-value { background: var(--green); }
   gap: 13px;
 }
 
+.employee-reminder-panel { margin-bottom:16px; border-top:4px solid var(--gold); }
+.employee-reminders { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.employee-reminder { display:grid; grid-template-columns:34px minmax(0,1fr); gap:10px; align-items:center; padding:11px 12px; border:1px solid #e2ddd2; border-radius:12px; background:#faf8f2; }
+.employee-reminder > i { display:grid; width:34px; height:34px; place-items:center; border-radius:10px; color:#fff; background:var(--navy); font-size:11px; font-style:normal; font-weight:950; }
+.employee-reminder.is-gift > i { background:var(--purple); }
+.employee-reminder.is-warning > i { background:var(--gold); }
+.employee-reminder strong,.employee-reminder small { display:block; }
+.employee-reminder small { margin-top:3px; color:var(--muted); font-size:11px; line-height:1.45; }
+
 .employee-card {
   position: relative;
   overflow: hidden;
@@ -3081,6 +3090,7 @@ tfoot th {
   .employee-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .employee-reminders { grid-template-columns:1fr 1fr; }
 
   .adjustment-groups {
     grid-template-columns: 1fr;
@@ -3143,6 +3153,7 @@ tfoot th {
 
   .metric-grid,
   .employee-grid,
+  .employee-reminders,
   .adjustment-summary-grid,
   .form-grid.two-col,
   .payslip-summary {

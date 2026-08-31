@@ -7,6 +7,7 @@
   const ACCOUNTING_BRIDGE_KEY = "breakfast-accounting-summary-v1";
   const ANALYSIS_SETTINGS_KEY = "breakfast-analysis-settings-v1";
   const ACCOUNTING_CLOUD_META_KEY = "breakfast-accounting-cloud-meta-v1";
+  const PAYROLL_CLOUD_META_KEY = "breakfast-payroll-cloud-meta-v1";
   const ACCOUNTING_HISTORIES = [
     window.BREAKFAST_ACCOUNTING_HISTORY_2022_2025,
     window.BREAKFAST_ACCOUNTING_HISTORY_2026,
@@ -37,7 +38,7 @@
     "雜貨成本": "#b84f55",
     "其他支出": "#7b8580"
   };
-  const DEFAULT_ANALYSIS_SETTINGS = { foodRate: 35, laborRate: 30, fixedRate: 15 };
+  const DEFAULT_ANALYSIS_SETTINGS = { foodRate: 35, laborRate: 30, fixedRate: 15, openingCash: 0, products: [] };
 
   let accounting = loadAccounting();
   let analysisSettings = { ...DEFAULT_ANALYSIS_SETTINGS, ...(safeJson(ANALYSIS_SETTINGS_KEY) || {}) };
@@ -63,9 +64,10 @@
       const session = await sessionResponse.json().catch(() => ({}));
       if (!session.user) return;
       const accountingMeta = safeJson(ACCOUNTING_CLOUD_META_KEY) || {};
+      const payrollMeta = safeJson(PAYROLL_CLOUD_META_KEY) || {};
       const [accountingResponse, payrollResponse] = await Promise.all([
         accountingMeta.dirty ? null : fetch("/api/operations-state", { credentials: "same-origin", cache: "no-store" }),
-        fetch("/api/payroll-state", { credentials: "same-origin", cache: "no-store" })
+        payrollMeta.dirty ? null : fetch("/api/payroll-state", { credentials: "same-origin", cache: "no-store" })
       ]);
       if (accountingResponse?.ok) {
         const remote = await accountingResponse.json();
@@ -75,16 +77,20 @@
             reason: `雲端版本 ${remote.revision || "未知"}`
           }).catch(() => null);
           localStorage.setItem(ACCOUNTING_KEY, JSON.stringify(remote.state));
-          localStorage.setItem(ACCOUNTING_CLOUD_META_KEY, JSON.stringify({ revision: remote.revision || "", dirty: false, updatedAt: remote.updatedAt || "" }));
+          localStorage.setItem(ACCOUNTING_CLOUD_META_KEY, JSON.stringify({ ...accountingMeta, revision: remote.revision || "", dirty: false, lastSuccessAt: remote.updatedAt || accountingMeta.lastSuccessAt || "" }));
         }
       }
-      if (payrollResponse.ok) {
+      if (payrollResponse?.ok) {
         const remote = await payrollResponse.json();
-        if (remote.state) localStorage.setItem(PAYROLL_KEY, JSON.stringify(remote.state));
+        if (remote.state) {
+          localStorage.setItem(PAYROLL_KEY, JSON.stringify(remote.state));
+          localStorage.setItem(PAYROLL_CLOUD_META_KEY, JSON.stringify({ ...payrollMeta, revision: remote.revision || "", dirty: false, lastSuccessAt: remote.updatedAt || payrollMeta.lastSuccessAt || "" }));
+        }
       }
       renderFilters();
       render();
-      showToast(accountingMeta.dirty ? "本機記帳尚未同步，分析暫時保留本機資料。" : "已載入 Vercel 雲端最新資料。", accountingMeta.dirty ? "" : "success");
+      const localPending = [accountingMeta.dirty && "記帳", payrollMeta.dirty && "薪資"].filter(Boolean);
+      showToast(localPending.length ? `${localPending.join("、")}尚未同步，分析保留本機最新資料。` : "已載入 Vercel 雲端最新資料。", localPending.length ? "" : "success");
     } catch (error) {
       console.warn("Unable to refresh analysis cloud data", error);
     }
@@ -436,6 +442,27 @@
     }).join("") : '<p class="empty">目前沒有供應商採購資料。</p>';
   }
 
+  function renderPlanning() {
+    const planning = window.BreakfastOperationsPlanning;
+    if (!planning) return;
+    const historical = availableMonths().map(monthStats);
+    const forecast = planning.buildCashForecast({
+      historical,
+      payables: Array.isArray(accounting.payables) ? accounting.payables : [],
+      openingCash: analysisSettings.openingCash,
+      months: 3
+    });
+    $("#forecast-opening-cash").value = Number(analysisSettings.openingCash || 0);
+    const basisLabel = forecast.basis.length ? forecast.basis.map(item => item.month).join("、") : "尚無足夠月份";
+    $("#cash-forecast-assumption").textContent = `預測基準：${basisLabel}；平均月收入 ${money(forecast.averageIncome)}、平均月支出 ${money(forecast.averageExpenses)}。`;
+    $("#cash-forecast-list").innerHTML = forecast.rows.some(row => row.month) ? forecast.rows.map(row => `<article class="cash-forecast-row${row.endingCash < 0 ? " is-negative" : ""}"><strong>${escapeHtml(row.month)}</strong><span>預估收入<b>${money(row.income)}</b></span><span>預估支出<b>${money(row.expenses)}</b>${row.payableAmount ? `<small>含應付 ${money(row.payableAmount)}</small>` : ""}</span><span>月底可用<b>${money(row.endingCash)}</b></span></article>`).join("") : '<p class="empty">至少需要一個有收入或支出的月份，才能建立現金流預測。</p>';
+
+    const products = Array.isArray(analysisSettings.products) ? analysisSettings.products : [];
+    const metrics = planning.productMetrics(products);
+    $("#product-margin-summary").textContent = metrics.rows.length ? `整體毛利率 ${pct(metrics.totals.marginRate)}・月貢獻 ${money(metrics.totals.monthlyContribution)}` : "尚未設定";
+    $("#product-margin-list").innerHTML = metrics.rows.length ? metrics.rows.map(row => `<article class="product-margin-row${row.marginRate < .5 ? " is-low" : ""}" data-product-id="${escapeHtml(row.id)}"><div><strong>${escapeHtml(row.name)}</strong><small>售價 ${money(row.price)}・成本 ${money(row.cost)}・月銷 ${row.units.toLocaleString("zh-TW")} 份</small></div><span>單份毛利<b>${money(row.unitMargin)}</b></span><span>毛利率<b>${pct(row.marginRate)}</b></span><span>月貢獻<b>${money(row.monthlyContribution)}</b></span><button type="button" data-remove-product="${escapeHtml(row.id)}" aria-label="刪除 ${escapeHtml(row.name)}">刪除</button></article>`).join("") : '<p class="empty">新增常賣商品後，即可比較哪些品項真正有貢獻。</p>';
+  }
+
   function renderKpis(stats) {
     const total = aggregate(stats);
     const daily = dailyIncomeRows(stats);
@@ -668,6 +695,7 @@
     renderWeekdays(stats);
     renderPayroll(stats);
     renderVendorTrend(stats);
+    renderPlanning();
     renderInsights(stats);
     renderTable(stats);
   }
@@ -691,6 +719,7 @@
     });
     $("#save-analysis-targets").addEventListener("click", () => {
       analysisSettings = {
+        ...analysisSettings,
         foodRate: Math.min(100, Math.max(1, Number($("#target-food-rate").value || 35))),
         laborRate: Math.min(100, Math.max(1, Number($("#target-labor-rate").value || 30))),
         fixedRate: Math.min(100, Math.max(1, Number($("#target-fixed-rate").value || 15)))
@@ -698,6 +727,37 @@
       localStorage.setItem(ANALYSIS_SETTINGS_KEY, JSON.stringify(analysisSettings));
       render();
       showToast("成本目標已儲存，異常中心已重新檢查。", "success");
+    });
+    $("#save-forecast-settings").addEventListener("click", () => {
+      analysisSettings = { ...analysisSettings, openingCash: Math.max(0, Number($("#forecast-opening-cash").value || 0)) };
+      localStorage.setItem(ANALYSIS_SETTINGS_KEY, JSON.stringify(analysisSettings));
+      renderPlanning();
+      showToast("期初現金已儲存，預測已更新。", "success");
+    });
+    $("#product-margin-form").addEventListener("submit", event => {
+      event.preventDefault();
+      const data = new FormData(event.currentTarget);
+      const product = {
+        id: `product-${Date.now()}`,
+        name: String(data.get("name") || "").trim(),
+        price: Math.max(0, Number(data.get("price") || 0)),
+        cost: Math.max(0, Number(data.get("cost") || 0)),
+        units: Math.max(0, Number(data.get("units") || 0))
+      };
+      if (!product.name || product.price <= 0) return;
+      analysisSettings = { ...analysisSettings, products: [...(Array.isArray(analysisSettings.products) ? analysisSettings.products : []), product] };
+      localStorage.setItem(ANALYSIS_SETTINGS_KEY, JSON.stringify(analysisSettings));
+      event.currentTarget.reset();
+      renderPlanning();
+      showToast("商品毛利資料已新增。", "success");
+    });
+    $("#product-margin-list").addEventListener("click", event => {
+      const button = event.target.closest("[data-remove-product]");
+      if (!button) return;
+      analysisSettings = { ...analysisSettings, products: (Array.isArray(analysisSettings.products) ? analysisSettings.products : []).filter(item => String(item.id) !== button.dataset.removeProduct) };
+      localStorage.setItem(ANALYSIS_SETTINGS_KEY, JSON.stringify(analysisSettings));
+      renderPlanning();
+      showToast("商品已從毛利試算移除。", "success");
     });
     $(".analytics-mobile-menu").addEventListener("click", () => setAnalyticsMenu(!document.body.classList.contains("analytics-menu-open")));
     $(".analytics-sidebar-backdrop").addEventListener("click", () => setAnalyticsMenu(false));
