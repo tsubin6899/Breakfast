@@ -31,6 +31,7 @@
   };
   const $ = selector => document.querySelector(selector);
   const INSIGHTS = window.BreakfastOperationsInsights;
+  const ACCOUNTING_STORAGE = window.BreakfastAccountingStorage;
   const CLOUD_SYNC = window.BreakfastCloudSync;
   const moneyFormatter = new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 });
 
@@ -204,7 +205,7 @@
 
   function initialState() {
     return {
-      version: 6,
+      version: 7,
       selectedMonth: currentMonth(),
       transactions: (HISTORY.transactions || []).map(normalizeTransactionNames),
       categoryCatalog: buildDefaultCategoryCatalog(HISTORY.transactions || []),
@@ -220,6 +221,7 @@
       closedMonths: {},
       auditLog: [],
       undoLog: [],
+      historyDeletedIds: [],
       importedSources: HISTORY.id ? { [HISTORY.id]: { source: HISTORY.source, importedAt: "2026-08-01" } } : {}
     };
   }
@@ -229,8 +231,12 @@
     const normalized = {
       ...base,
       ...(value || {}),
-      version: 6,
-      transactions: Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions,
+      version: 7,
+      transactions: ACCOUNTING_STORAGE?.hydrateTransactions(
+        Array.isArray(value?.transactions) ? value.transactions : base.transactions,
+        HISTORY.transactions,
+        { normalizeTransaction: normalizeTransactionNames, deletedIds: value?.historyDeletedIds }
+      ) || (Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions),
       dayLabor: Array.isArray(value?.dayLabor) ? value.dayLabor : [],
       recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates.map(normalizeTransactionNames) : [],
       payables: Array.isArray(value?.payables) ? value.payables.map(item => ({
@@ -246,13 +252,15 @@
       closedMonths: value?.closedMonths && typeof value.closedMonths === "object" ? value.closedMonths : {},
       auditLog: Array.isArray(value?.auditLog) ? value.auditLog.slice(0, 300) : [],
       undoLog: Array.isArray(value?.undoLog) ? value.undoLog.slice(0, 20) : [],
+      historyDeletedIds: Array.isArray(value?.historyDeletedIds) ? value.historyDeletedIds.map(String) : [],
       catalogItemSettings: value?.catalogItemSettings && typeof value.catalogItemSettings === "object" ? value.catalogItemSettings : {},
       importedSources: { ...base.importedSources, ...(value?.importedSources || {}) }
     };
-    if (HISTORY.id && !value?.importedSources?.[HISTORY.id]) {
+    if (!ACCOUNTING_STORAGE && HISTORY.id) {
       const existing = new Set(normalized.transactions.map(item => item.id));
+      const deleted = new Set(normalized.historyDeletedIds);
       for (const item of HISTORY.transactions || []) {
-        if (!existing.has(item.id)) normalized.transactions.push(normalizeTransactionNames(item));
+        if (!existing.has(item.id) && !deleted.has(String(item.id))) normalized.transactions.push(normalizeTransactionNames(item));
       }
       normalized.importedSources[HISTORY.id] = { source: HISTORY.source, importedAt: "2026-08-01" };
     }
@@ -263,20 +271,46 @@
     return normalized;
   }
 
+  function persistAccountingState(value) {
+    if (!ACCOUNTING_STORAGE) {
+      const serialized = JSON.stringify(value);
+      localStorage.setItem(STORAGE_KEY, serialized);
+      return { compact: value, bytes: new Blob([serialized]).size, reduced: false };
+    }
+    const result = ACCOUNTING_STORAGE.persist(STORAGE_KEY, value, HISTORY.transactions, { normalizeTransaction: normalizeTransactionNames });
+    value.historyDeletedIds = [...(result.compact.historyDeletedIds || [])];
+    return result;
+  }
+
   function loadState() {
+    let parsed = null;
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      const normalized = normalizeState(raw ? JSON.parse(raw) : null);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
-      return normalized;
+      parsed = raw ? JSON.parse(raw) : null;
     } catch (error) {
       console.warn("Unable to load accounting state", error);
       return initialState();
     }
+    const normalized = normalizeState(parsed);
+    try {
+      persistAccountingState(normalized);
+    } catch (error) {
+      console.warn("Unable to compact accounting state", error);
+    }
+    return normalized;
   }
 
   function saveState(message = "已儲存於本機") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    let storageResult = null;
+    try {
+      storageResult = persistAccountingState(state);
+    } catch (error) {
+      console.error("Unable to persist accounting state", error);
+      const indicator = $("#save-status");
+      if (indicator) indicator.textContent = error instanceof Error ? error.message : "瀏覽器空間不足，無法儲存";
+      toast(error instanceof Error ? error.message : "瀏覽器空間不足，請先下載備份。", "error");
+      return false;
+    }
     if (!cloudApplying) {
       const meta = readCloudMeta();
       writeCloudMeta({ ...meta, dirty: true, lastLocalChangeAt: new Date().toISOString() });
@@ -293,8 +327,9 @@
     });
     publishAccountingBridge();
     const indicator = $("#save-status");
-    indicator.textContent = message;
+    indicator.textContent = storageResult?.reduced ? `${message}・已自動精簡舊操作紀錄` : message;
     window.setTimeout(() => { indicator.textContent = "已儲存於本機"; }, 1300);
+    return true;
   }
 
   function readCloudMeta() {
@@ -435,10 +470,13 @@
     }
     const selectedMonth = state.selectedMonth;
     cloudApplying = true;
-    state = normalizeState(remote.state);
-    if (/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth || "")) state.selectedMonth = selectedMonth;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    cloudApplying = false;
+    try {
+      state = normalizeState(remote.state);
+      if (/^\d{4}-(0[1-9]|1[0-2])$/.test(selectedMonth || "")) state.selectedMonth = selectedMonth;
+      persistAccountingState(state);
+    } finally {
+      cloudApplying = false;
+    }
     writeCloudMeta({
       ...readCloudMeta(),
       revision: remote.revision || "",

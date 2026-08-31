@@ -27,6 +27,7 @@
   };
   const SALARY_HISTORY = { payroll: Object.assign({}, ...SALARY_HISTORIES.map(item => item.payroll || {})) };
   const $ = selector => document.querySelector(selector);
+  const ACCOUNTING_STORAGE = window.BreakfastAccountingStorage;
   const moneyFormat = new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 });
   const compactFormat = new Intl.NumberFormat("zh-TW", { notation: "compact", maximumFractionDigits: 1 });
   const COLORS = ["#257058", "#2f6f9f", "#c67c27", "#b84f55", "#7e9f4f", "#7864a6", "#4a9da4", "#9a6a45"];
@@ -76,7 +77,11 @@
             label: "分析頁載入雲端資料前快照",
             reason: `雲端版本 ${remote.revision || "未知"}`
           }).catch(() => null);
-          localStorage.setItem(ACCOUNTING_KEY, JSON.stringify(remote.state));
+          if (ACCOUNTING_STORAGE) {
+            ACCOUNTING_STORAGE.persist(ACCOUNTING_KEY, remote.state, HISTORY.transactions, { normalizeTransaction: normalizeStorageTransaction });
+          } else {
+            localStorage.setItem(ACCOUNTING_KEY, JSON.stringify(remote.state));
+          }
           localStorage.setItem(ACCOUNTING_CLOUD_META_KEY, JSON.stringify({ ...accountingMeta, revision: remote.revision || "", dirty: false, lastSuccessAt: remote.updatedAt || accountingMeta.lastSuccessAt || "" }));
         }
       }
@@ -229,12 +234,37 @@
   function loadAccounting() {
     const saved = safeJson(ACCOUNTING_KEY);
     if (!saved) return { transactions: HISTORY.transactions || [], dayLabor: [] };
-    const transactions = Array.isArray(saved.transactions) ? [...saved.transactions] : [];
-    if (HISTORY.id && !saved.importedSources?.[HISTORY.id]) {
-      const ids = new Set(transactions.map(item => item.id));
-      for (const item of HISTORY.transactions || []) if (!ids.has(item.id)) transactions.push(item);
-    }
+    const transactions = ACCOUNTING_STORAGE?.hydrateTransactions(saved.transactions, HISTORY.transactions, {
+      normalizeTransaction: normalizeStorageTransaction,
+      deletedIds: saved.historyDeletedIds
+    }) || (Array.isArray(saved.transactions) ? [...saved.transactions] : []);
     return { ...saved, transactions, dayLabor: Array.isArray(saved.dayLabor) ? saved.dayLabor : [] };
+  }
+
+  function normalizeStorageTransaction(row) {
+    if (!row || row.type !== "income") return { ...row };
+    const category = canonicalIncomeStorage(row.category || row.counterparty || row.group);
+    const groups = {
+      "現金營業收入": "現金收入", "line Pay經營收入": "現金收入", "快一點line pay收入": "現金收入",
+      "全支付收入": "平台收入", "街口支付收入": "平台收入", "Uber eat外送": "平台收入", "Foodpanda外送": "平台收入",
+      "其他收入": "其他收入", "廢油收入": "其他收入"
+    };
+    const canonicalCounterparty = canonicalIncomeStorage(row.counterparty);
+    return { ...row, group: groups[category] || row.group || "現金收入", category, counterparty: groups[canonicalCounterparty] ? canonicalCounterparty : row.counterparty };
+  }
+
+  function canonicalIncomeStorage(value) {
+    const text = String(value || "").trim();
+    const key = text.toLowerCase().replace(/[\s_\-]/g, "");
+    if (/uber/.test(key)) return "Uber eat外送";
+    if (/foodpanda|熊貓/.test(key)) return "Foodpanda外送";
+    if (/快一點/.test(key)) return "快一點line pay收入";
+    if (/linepay|line收入/.test(key)) return "line Pay經營收入";
+    if (/全支付/.test(key)) return "全支付收入";
+    if (/街口/.test(key)) return "街口支付收入";
+    if (/現金/.test(key)) return "現金營業收入";
+    if (/廢油/.test(key)) return "廢油收入";
+    return text;
   }
 
   function money(value) { return moneyFormat.format(Number(value) || 0); }

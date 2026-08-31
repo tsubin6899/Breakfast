@@ -49,18 +49,22 @@
     const transactions = Array.isArray(accounting.transactions) ? accounting.transactions : [];
     const rows = transactions.filter(item => String(item.date || "").startsWith(month));
     const previousRows = transactions.filter(item => String(item.date || "").startsWith(previousMonth(month)));
-    const income = rows.filter(item => item.type === "income").reduce((sum, item) => sum + number(item.amount), 0);
-    const expense = rows.filter(item => item.type === "expense").reduce((sum, item) => sum + number(item.amount), 0);
+    const storedSummary = accounting.localSummaries?.[month];
+    const previousStoredSummary = accounting.localSummaries?.[previousMonth(month)];
+    const income = storedSummary ? number(storedSummary.income) : rows.filter(item => item.type === "income").reduce((sum, item) => sum + number(item.amount), 0);
+    const expense = storedSummary ? number(storedSummary.expense) : rows.filter(item => item.type === "expense").reduce((sum, item) => sum + number(item.amount), 0);
     const dayLabor = (Array.isArray(accounting.dayLabor) ? accounting.dayLabor : []).filter(item => String(item.date || "").startsWith(month)).reduce((sum, item) => sum + number(item.amount || item.dailyWage), 0);
     const expenseGroups = new Map();
-    rows.filter(item => item.type === "expense").forEach(item => expenseGroups.set(item.group || "其他支出", (expenseGroups.get(item.group || "其他支出") || 0) + number(item.amount)));
+    if (storedSummary?.expenseGroups) Object.entries(storedSummary.expenseGroups).forEach(([name, amount]) => expenseGroups.set(name, number(amount)));
+    else rows.filter(item => item.type === "expense").forEach(item => expenseGroups.set(item.group || "其他支出", (expenseGroups.get(item.group || "其他支出") || 0) + number(item.amount)));
     const today = todayDate();
     const shopClosed = Boolean(accounting.shopClosures?.[today]);
-    const recorded = new Set(rows.filter(item => item.type === "income" && item.date === today && number(item.amount) > 0).map(item => canonicalIncome(item.category || item.counterparty || item.group)));
+    const summarizedIncomeItems = storedSummary?.incomeItemsByDay?.[today.slice(8, 10)] || [];
+    const recorded = new Set((summarizedIncomeItems.length ? summarizedIncomeItems : rows.filter(item => item.type === "income" && item.date === today && number(item.amount) > 0).map(item => item.category || item.counterparty || item.group)).map(canonicalIncome));
     const missingToday = month === today.slice(0, 7) && !shopClosed ? REQUIRED_INCOME.filter(item => !recorded.has(item)) : [];
     const reconciliations = Object.values(accounting.reconciliations || {});
     const unresolved = reconciliations.filter(item => String(item?.date || "").startsWith(month) && Math.abs(number(item?.difference)) > 1).length;
-    const unclassified = rows.filter(item => !item.group || !item.category || /未分類/.test(`${item.group || ""}${item.category || ""}`)).length;
+    const unclassified = storedSummary ? number(storedSummary.unclassified) : rows.filter(item => !item.group || !item.category || /未分類/.test(`${item.group || ""}${item.category || ""}`)).length;
     const attendance = Object.values(payroll.attendance || {});
     const activeEmployees = (payroll.employees || []).filter(item => item.active !== false);
     const birthdayEmployees = activeEmployees.filter(item => String(item.birthday || "").slice(5, 7) === month.slice(5, 7));
@@ -79,13 +83,13 @@
         income,
         expense: expense + dayLabor,
         net: income - expense - dayLabor,
-        transactionCount: rows.length,
+        transactionCount: storedSummary ? number(storedSummary.transactionCount) : rows.length,
         missingToday,
         shopClosed,
         unresolvedReconciliations: unresolved,
         unclassified,
         budgets: accounting.budgets?.[month] || {},
-        previousExpense: previousRows.filter(item => item.type === "expense").reduce((sum, item) => sum + number(item.amount), 0),
+        previousExpense: previousStoredSummary ? number(previousStoredSummary.expense) : previousRows.filter(item => item.type === "expense").reduce((sum, item) => sum + number(item.amount), 0),
         expenseGroups: [...expenseGroups.entries()].sort((a, b) => b[1] - a[1]).map(([name, amount]) => ({ name, amount }))
       },
       payroll: {
