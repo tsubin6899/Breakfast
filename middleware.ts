@@ -43,6 +43,7 @@ export default async function middleware(request: Request) {
 export const config = {
   runtime: "nodejs",
   matcher: [
+    "/",
     "/salary_app/:path*",
     "/accounting/:path*",
     "/dashboard_cost/:path*"

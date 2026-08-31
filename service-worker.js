@@ -1,7 +1,6 @@
-const CACHE_NAME = "breakfast-operations-pwa-v2-public-only";
+const CACHE_NAME = "breakfast-operations-pwa-v3-protected-home";
 const OFFLINE_URL = "/offline.html";
 const CORE_FILES = [
-  "/",
   OFFLINE_URL,
   "/manifest.webmanifest",
   "/login/",
@@ -33,8 +32,8 @@ self.addEventListener("fetch", event => {
   const url = new URL(request.url);
   if (url.origin !== self.location.origin || url.pathname.startsWith("/api/")) return;
 
-  const isProtected = ["/salary_app/", "/accounting/", "/dashboard_cost/"]
-    .some(prefix => url.pathname.startsWith(prefix)) &&
+  const isProtected = (url.pathname === "/" || ["/salary_app/", "/accounting/", "/dashboard_cost/"]
+    .some(prefix => url.pathname.startsWith(prefix))) &&
     !url.pathname.startsWith("/salary_app/assets/") &&
     url.pathname !== "/salary_app/service-worker.js";
   if (isProtected) {

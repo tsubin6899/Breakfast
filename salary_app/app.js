@@ -529,6 +529,7 @@
   const sharedPayrollMonth = window.BreakfastOperationsStore?.getGlobalMonth(state.settings.month);
   if (/^\d{4}-(0[1-9]|1[0-2])$/.test(sharedPayrollMonth || "")) state.settings.month = sharedPayrollMonth;
   let runtimeUploads = [];
+  let aiQueueRunning = false;
   let ocrWorker = null;
   let ocrPhase = { label: "", start: 0, span: 100 };
   let toastTimer = null;
@@ -2355,6 +2356,23 @@
 
   function renderUploads() {
     const list = $("#upload-list");
+    const counts = runtimeUploads.reduce((summary, upload) => {
+      summary[upload.status] = (summary[upload.status] || 0) + 1;
+      return summary;
+    }, { queued: 0, processing: 0, done: 0, error: 0 });
+    const summary = $("#ai-queue-summary");
+    if (summary) {
+      summary.textContent = runtimeUploads.length
+        ? `共 ${runtimeUploads.length} 張・待辨識 ${counts.queued}・完成 ${counts.done}・失敗 ${counts.error}`
+        : "尚未選擇照片";
+    }
+    const recognizeAll = $("#recognize-all-uploads");
+    const retryFailed = $("#retry-failed-uploads");
+    if (recognizeAll) {
+      recognizeAll.disabled = aiQueueRunning || !counts.queued;
+      recognizeAll.textContent = aiQueueRunning ? "批次辨識中…" : `批次 AI 辨識${counts.queued ? `（${counts.queued}）` : ""}`;
+    }
+    if (retryFailed) retryFailed.disabled = aiQueueRunning || !counts.error;
     if (!runtimeUploads.length) {
       list.className = "upload-list empty-state";
       list.innerHTML = "<p>尚未選擇照片</p>";
@@ -3944,15 +3962,15 @@
     }
   }
 
-  async function recognizeUpload(uploadId) {
-    if (!requirePermission("attendance") || !requireUnlockedMonth()) return;
+  async function recognizeUpload(uploadId, { openReview = true, quiet = false } = {}) {
+    if (!requirePermission("attendance") || !requireUnlockedMonth()) return false;
     const upload = runtimeUploads.find(item => item.id === uploadId);
-    if (!upload) return;
+    if (!upload) return false;
     const accessToken = $("#ai-access-token").value.trim();
     if (!LOCAL_MODE && !cloudUser && !accessToken) {
       toast("請先輸入 AI 辨識連線密碼。");
       $("#ai-access-token").focus();
-      return;
+      return false;
     }
     if (accessToken) localStorage.setItem(AI_TOKEN_STORAGE_KEY, accessToken);
 
@@ -4023,24 +4041,49 @@
       );
       saveState("AI 辨識結果已儲存");
       renderAll();
-      showView("attendance");
+      if (!quiet) showView("attendance");
       $("#ocr-progress-label").textContent = "AI 辨識完成";
       $("#ocr-progress-percent").textContent = "100%";
       $("#ocr-progress-bar").value = 100;
       const unknownText = aiRows.unknownPunches ? `；另有 ${aiRows.unknownPunches} 個印章日期與位置皆不清楚` : "";
-      toast(punchCount
-        ? `AI 找到 ${punchCount} 個印章${unknownText}，請逐項核對。`
-        : "AI 未找到可讀取的印章，請使用放大圖人工核對。");
-      if (upload.reviewRows.length) openOcrQuickReview(upload.id);
+      if (!quiet) {
+        toast(punchCount
+          ? `AI 找到 ${punchCount} 個印章${unknownText}，請逐項核對。`
+          : "AI 未找到可讀取的印章，請使用放大圖人工核對。");
+      }
+      if (openReview && upload.reviewRows.length) openOcrQuickReview(upload.id);
+      return true;
     } catch (error) {
       console.warn("Cloud AI recognition failed", error);
       upload.status = "error";
       upload.statusText = "AI 辨識失敗；可查看原圖或稍後重試";
       renderUploads();
-      toast(error instanceof Error ? error.message : "AI 辨識無法完成，請稍後重試。");
+      if (!quiet) toast(error instanceof Error ? error.message : "AI 辨識無法完成，請稍後重試。");
+      return false;
     } finally {
       bitmap?.close();
       $("#ocr-progress").hidden = true;
+    }
+  }
+
+  async function processAiQueue(status) {
+    if (aiQueueRunning) return;
+    const queue = runtimeUploads.filter(upload => upload.status === status);
+    if (!queue.length) return;
+    if (!requirePermission("attendance") || !requireUnlockedMonth()) return;
+    aiQueueRunning = true;
+    renderUploads();
+    let completed = 0;
+    try {
+      for (const upload of queue) {
+        if (await recognizeUpload(upload.id, { openReview: false, quiet: true })) completed += 1;
+      }
+      const failed = queue.length - completed;
+      showView("attendance");
+      toast(`批次辨識完成：成功 ${completed} 張${failed ? `、失敗 ${failed} 張` : ""}；請進行人工核對。`);
+    } finally {
+      aiQueueRunning = false;
+      renderUploads();
     }
   }
 
@@ -4885,6 +4928,8 @@
         renderUploads();
       }
     });
+    $("#recognize-all-uploads").addEventListener("click", () => processAiQueue("queued"));
+    $("#retry-failed-uploads").addEventListener("click", () => processAiQueue("error"));
     $("#save-ocr-review").addEventListener("click", saveOcrQuickReview);
     $("#ocr-review-list").addEventListener("input", event => {
       if (!event.target.classList.contains("ocr-review-day")) return;
@@ -5140,6 +5185,12 @@
     updateClock();
     window.setInterval(updateClock, 1000);
     renderAll();
+    const requestedView = ({ attendance: "attendance", payroll: "payroll", settings: "settings" })[window.location.hash.slice(1)];
+    if (requestedView) showView(requestedView);
+    window.addEventListener("hashchange", () => {
+      const view = ({ attendance: "attendance", payroll: "payroll", settings: "settings" })[window.location.hash.slice(1)];
+      if (view) showView(view);
+    });
     publishPayrollBridge();
     updateCloudUi();
     initializeCloudIdentity();

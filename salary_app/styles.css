@@ -1052,6 +1052,30 @@ progress::-webkit-progress-value { background: var(--green); }
   gap: 10px;
 }
 
+.upload-queue-heading {
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ai-queue-summary {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ai-queue-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.ai-queue-actions button:disabled {
+  cursor: not-allowed;
+  opacity: .45;
+}
+
 .upload-list.empty-state {
   min-height: 210px;
   place-items: center;
@@ -3146,6 +3170,19 @@ tfoot th {
     grid-column: 1 / -1;
     flex-direction: row;
     flex-wrap: wrap;
+  }
+
+  .upload-queue-heading,
+  .ai-queue-actions {
+    width: 100%;
+  }
+
+  .ai-queue-actions {
+    justify-content: stretch;
+  }
+
+  .ai-queue-actions button {
+    flex: 1 1 145px;
   }
 
   .segment-row {

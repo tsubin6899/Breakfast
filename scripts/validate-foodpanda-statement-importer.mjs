@@ -1,4 +1,4 @@
-import { readFile, stat } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import vm from "node:vm";
 import { webcrypto } from "node:crypto";
@@ -6,6 +6,11 @@ import { webcrypto } from "node:crypto";
 const ROOT = resolve(import.meta.dirname, "..");
 const SOURCE_NAME = "20260715_200102892078.xlsx";
 const SOURCE_PATH = resolve("C:\\Users\\TNUA-BIN\\Downloads\\payoutArchive_630007373001_20260727", SOURCE_NAME);
+
+if (!await access(SOURCE_PATH).then(() => true).catch(() => false)) {
+  console.log(`略過 foodpanda XLSX 實檔回歸測試：找不到選用測試檔 ${SOURCE_NAME}。`);
+  process.exit(0);
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);

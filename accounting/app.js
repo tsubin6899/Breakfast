@@ -29,6 +29,7 @@
     payroll: Object.assign({}, ...SALARY_HISTORIES.map(item => item.payroll || {}))
   };
   const $ = selector => document.querySelector(selector);
+  const INSIGHTS = window.BreakfastOperationsInsights;
   const moneyFormatter = new Intl.NumberFormat("zh-TW", { style: "currency", currency: "TWD", maximumFractionDigits: 0 });
 
   const GROUPS = {
@@ -199,13 +200,14 @@
 
   function initialState() {
     return {
-      version: 5,
+      version: 6,
       selectedMonth: currentMonth(),
       transactions: (HISTORY.transactions || []).map(normalizeTransactionNames),
       categoryCatalog: buildDefaultCategoryCatalog(HISTORY.transactions || []),
       catalogItemSettings: {},
       dayLabor: [],
       recurringTemplates: [],
+      budgets: {},
       importBatches: [],
       reconciliations: {},
       dailyClosures: {},
@@ -222,10 +224,11 @@
     const normalized = {
       ...base,
       ...(value || {}),
-      version: 5,
+      version: 6,
       transactions: Array.isArray(value?.transactions) ? value.transactions.map(normalizeTransactionNames) : base.transactions,
       dayLabor: Array.isArray(value?.dayLabor) ? value.dayLabor : [],
       recurringTemplates: Array.isArray(value?.recurringTemplates) ? value.recurringTemplates.map(normalizeTransactionNames) : [],
+      budgets: value?.budgets && typeof value.budgets === "object" ? value.budgets : {},
       importBatches: Array.isArray(value?.importBatches) ? value.importBatches : [],
       reconciliations: value?.reconciliations && typeof value.reconciliations === "object" ? value.reconciliations : {},
       dailyClosures: value?.dailyClosures && typeof value.dailyClosures === "object" ? value.dailyClosures : {},
@@ -965,6 +968,8 @@
           .filter(item => item.type === "expense" && /食材|飲品|雜貨/.test(`${item.group} ${item.category}`))
           .reduce((sum, item) => sum + Number(item.amount || 0), 0);
         const reconciliations = Object.values(state.reconciliations).filter(item => item.date?.startsWith(month));
+        const today = localDateString();
+        const todayStatus = today.startsWith(month) ? requiredDailyIncomeStatus(today) : null;
         months[month] = {
           income: stats.income,
           operating: stats.operating,
@@ -977,10 +982,12 @@
           transactionCount: transactions.length,
           reconciledDays: reconciliations.length,
           reconciliationDifference: reconciliations.reduce((sum, item) => sum + Math.abs(Number(item.difference || 0)), 0),
+          budget: budgetForMonth(month),
+          todayRequiredIncome: todayStatus ? { missing: todayStatus.missing, isShopClosed: todayStatus.isShopClosed, isComplete: todayStatus.isComplete } : null,
           exceptions: accountingExceptions(month)
         };
       }
-      const payload = { version: 2, generatedAt: new Date().toISOString(), months };
+      const payload = { version: 3, generatedAt: new Date().toISOString(), months };
       localStorage.setItem(ACCOUNTING_BRIDGE_KEY, JSON.stringify(payload));
       window.BreakfastOperationsStore?.publish("accounting", payload);
     } catch (error) {
@@ -1474,6 +1481,50 @@
     $("#vendor-summary").innerHTML = vendorRows.length ? `<h3>本月主要供應商</h3>${vendorRows.map(([name, amount]) => `<div><span>${escapeHtml(name)}</span><strong>${money(amount)}</strong></div>`).join("")}` : "";
   }
 
+  function adjacentMonth(month, delta) {
+    const [year, value] = month.split("-").map(Number);
+    const date = new Date(year, value - 1 + delta, 1, 12);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  }
+
+  function budgetForMonth(month = state.selectedMonth) {
+    return INSIGHTS.normalizeBudget(state.budgets?.[month], GROUPS.expense);
+  }
+
+  function renderBudgetInsights() {
+    const month = state.selectedMonth;
+    const budget = budgetForMonth(month);
+    const stats = monthStats(month);
+    $("#budget-target-income").value = budget.targetIncome || "";
+    $("#budget-target-expense").value = budget.targetExpense || "";
+    $("#budget-target-net").value = budget.targetNet || "";
+    $("#budget-group-inputs").innerHTML = GROUPS.expense.map(group => `<label>${escapeHtml(group)}<input type="number" min="0" step="1000" inputmode="numeric" data-budget-group="${escapeHtml(group)}" value="${budget.groups[group] || ""}" /></label>`).join("");
+
+    const groupTotals = Object.fromEntries(GROUPS.expense.map(group => [group, 0]));
+    monthTransactions(month).filter(item => item.type === "expense").forEach(item => {
+      const group = GROUPS.expense.includes(item.group) ? item.group : "其他支出";
+      groupTotals[group] += Number(item.amount || 0);
+    });
+    groupTotals["人事成本"] += Number(stats.payroll.amount || 0) + Number(stats.labor || 0);
+    const rows = INSIGHTS.buildBudgetRows(budget, { income: stats.income, expense: stats.expenses, net: stats.net }, groupTotals);
+    const overCount = rows.filter(item => item.inverse ? item.ratio > 1 : false).length;
+    const warningCount = rows.filter(item => item.ratio >= .85 && item.ratio <= 1).length;
+    const configured = rows.length > 0;
+    const chip = $("#budget-status-chip");
+    chip.textContent = !configured ? "尚未設定" : overCount ? `${overCount} 項超標` : warningCount ? `${warningCount} 項接近上限` : "預算正常";
+    chip.className = `panel-chip${overCount ? " red" : warningCount ? " gold" : ""}`;
+    $("#budget-progress-list").innerHTML = rows.length ? rows.map(item => {
+      const ratio = Math.round(item.ratio * 100);
+      const tone = item.inverse && item.ratio > 1 ? "is-over" : item.ratio >= .85 ? "is-warning" : "";
+      return `<article class="budget-progress-item ${tone}"><div><span>${escapeHtml(item.label)}</span><span>${money(item.actual)}／${money(item.limit)}・${ratio}%</span></div><div class="budget-progress-track" style="--budget-progress:${Math.min(100, Math.max(0, ratio))}%"><i></i></div></article>`;
+    }).join("") : '<p class="empty-state">設定本月預算後，這裡會顯示執行進度。</p>';
+
+    const currentExpenses = monthTransactions(month).filter(item => item.type === "expense");
+    const previousExpenses = monthTransactions(adjacentMonth(month, -1)).filter(item => item.type === "expense");
+    const anomalies = INSIGHTS.detectMonthAnomalies(currentExpenses, previousExpenses, { minimumAmount: 3000, threshold: .25 });
+    $("#budget-anomalies").innerHTML = anomalies.length ? `<h3>本月採購升幅提醒</h3>${anomalies.slice(0, 6).map(item => `<article class="budget-anomaly"><strong>${escapeHtml(item.name)}增加 ${Math.round(item.change * 100)}%</strong>本月 ${money(item.amount)}・上月 ${money(item.previousAmount)}</article>`).join("")}` : '<p class="empty-state">目前沒有單一廠商或項目達到異常升幅門檻。</p>';
+  }
+
   function renderLedger() {
     const entries = filteredLedgerEntries();
     const month = state.selectedMonth;
@@ -1537,6 +1588,7 @@
     renderLabor();
     renderLedger();
     renderRecurringAndVendors();
+    renderBudgetInsights();
     renderSafety();
     publishAccountingBridge();
   }
@@ -2407,6 +2459,25 @@
     $("#month-filter").addEventListener("change", event => {
       changeLedgerMonth(event.target.value);
     });
+    $("#budget-form").addEventListener("submit", event => {
+      event.preventDefault();
+      if (isMonthLocked(state.selectedMonth)) {
+        toast("本月已鎖定，請先解除月結後再調整預算。");
+        return;
+      }
+      const groups = Object.fromEntries([...document.querySelectorAll("[data-budget-group]")].map(input => [input.dataset.budgetGroup, Math.max(0, Number(input.value || 0))]));
+      state.budgets[state.selectedMonth] = INSIGHTS.normalizeBudget({
+        targetIncome: $("#budget-target-income").value,
+        targetExpense: $("#budget-target-expense").value,
+        targetNet: $("#budget-target-net").value,
+        groups,
+        updatedAt: new Date().toISOString()
+      }, GROUPS.expense);
+      logAudit("更新月度預算", `${state.selectedMonth}・收入目標 ${money(state.budgets[state.selectedMonth].targetIncome)}・支出上限 ${money(state.budgets[state.selectedMonth].targetExpense)}`);
+      saveState("本月預算已儲存");
+      renderAll();
+      toast("本月預算與成本上限已更新。");
+    });
     document.querySelector(".report-grain-switch").addEventListener("click", event => {
       const button = event.target.closest("[data-report-grain]");
       if (button) setReportGrain(button.dataset.reportGrain);
@@ -3124,7 +3195,9 @@
     const params = new URLSearchParams(window.location.search);
     const requestedPage = params.get("view");
     const savedPage = localStorage.getItem(ACCOUNTING_PAGE_KEY);
-    const initialPage = ACCOUNTING_PAGES[requestedPage] ? requestedPage : ACCOUNTING_PAGES[savedPage] ? savedPage : "entry";
+    const hashTarget = window.location.hash.slice(1);
+    const hashPage = ({ today: "ledger", ledger: "ledger", budget: "ledger", catalog: "catalog", safety: "safety" })[hashTarget];
+    const initialPage = hashPage || (ACCOUNTING_PAGES[requestedPage] ? requestedPage : ACCOUNTING_PAGES[savedPage] ? savedPage : "entry");
     const requestedMonth = params.get("month");
     const sharedMonth = window.BreakfastOperationsStore?.getGlobalMonth("");
     if (/^\d{4}-(0[1-9]|1[0-2])$/.test(requestedMonth || "")) state.selectedMonth = requestedMonth;
@@ -3133,6 +3206,7 @@
     renderMonthOptions();
     const requestedDate = params.get("date");
     if (requestedDate?.startsWith(state.selectedMonth)) selectedLedgerDate = requestedDate;
+    else if (hashTarget === "today" && localDateString().startsWith(state.selectedMonth)) selectedLedgerDate = localDateString();
     if (["all", "income", "expense"].includes(params.get("type"))) $("#type-filter").value = params.get("type");
     if (params.get("search")) $("#search-filter").value = params.get("search");
     const created = materializeRecurring(state.selectedMonth);
@@ -3145,6 +3219,16 @@
     installEvents();
     renderAll();
     setAccountingPage(initialPage, { updateUrl: false });
+    if (hashTarget === "budget") window.requestAnimationFrame(() => document.querySelector("#budget")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    window.addEventListener("hashchange", () => {
+      const target = window.location.hash.slice(1);
+      const page = ({ today: "ledger", ledger: "ledger", budget: "ledger", catalog: "catalog", safety: "safety" })[target];
+      if (!page) return;
+      if (target === "today" && localDateString().startsWith(state.selectedMonth)) selectedLedgerDate = localDateString();
+      setAccountingPage(page, { updateUrl: false });
+      renderAll();
+      if (target === "budget") window.requestAnimationFrame(() => document.querySelector("#budget")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    });
     window.BreakfastOperationsStore?.autoSnapshot("accounting", state, {
       label: "記帳每日自動快照",
       summary: { month: state.selectedMonth, transactions: state.transactions.length, labor: state.dayLabor.length }

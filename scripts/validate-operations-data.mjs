@@ -222,7 +222,7 @@ for (const capability of ["getGlobalMonth", "setGlobalMonth", "createSnapshot", 
 }
 
 const root = await readFile(resolve(ROOT, "index.html"), "utf8");
-for (const link of ["./salary_app/", "./accounting/", "./dashboard_cost/"]) {
+for (const link of ["/salary_app/", "/accounting/", "/dashboard_cost/"]) {
   assert(root.includes(`href="${link}"`), `首頁缺少連結 ${link}`);
 }
 

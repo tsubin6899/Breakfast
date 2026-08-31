@@ -17,7 +17,10 @@
   <link rel="icon" type="image/png" href="../salary_app/assets/favicon-32.png" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="../shared/operations-brandbar.css" />
+  <link rel="stylesheet" href="../shared/operations-shell.css" />
   <script src="../shared/operations-store.js"></script>
+  <script src="../shared/operations-insights.js"></script>
+  <script defer src="../shared/operations-shell.js"></script>
   <script defer src="./data/revenue-history-2022-2025.js"></script>
   <script defer src="./data/revenue-history-2026.js"></script>
   <script defer src="./data/accounting-backup-2026-07-22.js"></script>
@@ -472,6 +475,24 @@
         <div class="panel-heading"><div><p class="eyebrow">VENDORS & EXCEPTIONS</p><h2>供應商與待處理提醒</h2></div></div>
         <div id="accounting-exceptions" class="accounting-exceptions"></div>
         <div id="vendor-summary" class="vendor-summary"></div>
+      </article>
+    </section>
+
+    <section id="budget" class="operations-grid operations-grid-single" data-accounting-page="ledger">
+      <article class="panel budget-settings-panel">
+        <div class="panel-heading">
+          <div><p class="eyebrow">MONTHLY BUDGET</p><h2>月度預算與異常警示</h2><p class="panel-copy">設定收入目標與成本上限；達到 85% 或超出預算時，首頁會主動提醒。</p></div>
+          <span id="budget-status-chip" class="panel-chip">尚未設定</span>
+        </div>
+        <form id="budget-form" class="budget-form">
+          <label>收入目標<input id="budget-target-income" type="number" min="0" step="1000" inputmode="numeric" /></label>
+          <label>總支出上限<input id="budget-target-expense" type="number" min="0" step="1000" inputmode="numeric" /></label>
+          <label>淨額目標<input id="budget-target-net" type="number" min="0" step="1000" inputmode="numeric" /></label>
+          <div class="wide"><span class="budget-form-label">各類成本上限</span><div id="budget-group-inputs" class="budget-group-inputs"></div></div>
+          <button class="primary-btn wide" type="submit">儲存本月預算</button>
+        </form>
+        <div id="budget-progress-list" class="budget-progress-list"></div>
+        <div id="budget-anomalies" class="budget-anomalies"></div>
       </article>
     </section>
 

@@ -16,6 +16,32 @@
   --accounting-sidebar-width: 238px;
 }
 
+/* Monthly budget and anomaly control center. */
+.budget-settings-panel { overflow: hidden; }
+.budget-form { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.budget-form label, .budget-form .wide { display: grid; gap: 7px; color: #526572; font-size: 12px; font-weight: 900; }
+.budget-form .wide { grid-column: 1 / -1; }
+.budget-form input { width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid #ccd7dd; border-radius: 11px; color: #102b42; background: #fff; font: inherit; }
+.budget-form-label { display: block; margin-top: 3px; }
+.budget-group-inputs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.budget-group-inputs label { padding: 10px; border: 1px solid #dde4e1; border-radius: 13px; background: #f8faf9; }
+.budget-progress-list { display: grid; margin-top: 20px; gap: 9px; }
+.budget-progress-item { display: grid; gap: 7px; padding: 11px 13px; border: 1px solid #dde4e1; border-radius: 14px; background: #fff; }
+.budget-progress-item > div:first-child { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 900; }
+.budget-progress-track { overflow: hidden; height: 9px; border-radius: 999px; background: #e7ece9; }
+.budget-progress-track i { display: block; width: min(100%, var(--budget-progress)); height: 100%; border-radius: inherit; background: #2a8062; }
+.budget-progress-item.is-warning .budget-progress-track i { background: #d49a2d; }
+.budget-progress-item.is-over .budget-progress-track i { background: #bd4d52; }
+.budget-anomalies { display: grid; margin-top: 15px; gap: 8px; }
+.budget-anomaly { padding: 12px 14px; border-left: 4px solid #d49a2d; border-radius: 0 13px 13px 0; color: #684b10; background: #fff6d9; font-size: 12px; line-height: 1.65; }
+.budget-anomaly strong { display: block; color: #513b10; }
+
+@media (max-width: 760px) {
+  .budget-form { grid-template-columns: 1fr; }
+  .budget-form .wide { grid-column: auto; }
+  .budget-group-inputs { grid-template-columns: 1fr 1fr; }
+}
+
 /* 固定支出、憑證、每日對帳與供應商管理 */
 .receipt-field small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
 .checkbox-field { display: flex !important; min-height: 48px; align-items: center; gap: 9px; }
@@ -378,6 +404,7 @@ input:focus, select:focus { outline: 3px solid rgba(14, 75, 134, .15); border-co
 h2 { margin: 4px 0 0; font-size: 28px; }
 .panel-chip { padding: 7px 10px; border-radius: 999px; color: var(--navy); background: var(--navy-soft); font-size: 11px; font-weight: 900; }
 .panel-chip.gold { color: #74491a; background: var(--gold-soft); }
+.panel-chip.red { color: #8d3035; background: var(--red-soft); }
 .panel-copy { margin: -7px 0 18px; color: var(--muted); line-height: 1.65; }
 
 .entry-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 13px; }
@@ -889,7 +916,8 @@ tbody tr:hover { background:#faf8f2; }
   .calendar-day-top small { display: none; }
   .calendar-required-note { margin: 2px 0; padding: 3px 4px; font-size: 8px; }
   .calendar-required-note.is-missing { font-size: 0; }
-  .calendar-required-note.is-missing::before { content: "! 漏記"; font-size: 8px; }
+.calendar-required-note.is-missing::before { content: "! 漏記"; font-size: 8px; }
+
   .calendar-required-note.is-complete { font-size: 0; }
   .calendar-required-note.is-complete::before { content: "✓ 完整"; font-size: 8px; }
   .calendar-day.is-today .calendar-day-top strong { width: 24px; height: 24px; }

@@ -16,8 +16,10 @@
   <script defer src="/shared/pwa-install.js"></script>
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="../shared/operations-brandbar.css" />
+  <link rel="stylesheet" href="../shared/operations-shell.css" />
   <script src="./local-mode.js"></script>
   <script src="../shared/operations-store.js"></script>
+  <script defer src="../shared/operations-shell.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <script defer src="./data/salary-history-2022-2025.js"></script>
@@ -225,10 +227,15 @@
             </article>
 
             <article class="panel">
-              <div class="panel-heading">
+              <div class="panel-heading upload-queue-heading">
                 <div>
                   <p class="eyebrow">FILES</p>
                   <h3>本次上傳</h3>
+                  <p id="ai-queue-summary" class="ai-queue-summary">尚未選擇照片</p>
+                </div>
+                <div class="ai-queue-actions">
+                  <button class="secondary-btn compact-btn" id="retry-failed-uploads" type="button" disabled>重試失敗項目</button>
+                  <button class="primary-btn compact-btn" id="recognize-all-uploads" type="button" disabled>批次 AI 辨識</button>
                 </div>
               </div>
               <div id="upload-list" class="upload-list empty-state">
