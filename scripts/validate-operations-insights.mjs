@@ -70,8 +70,8 @@ assert(accountingJs.includes('source: "batch-daily-income"'), "批次每日收�
 assert(accountingJs.includes("疑似重複") && accountingJs.includes("payableId"), "重複帳務或應付入帳防護未啟用");
 assert(shellJs.includes('href: "/accounting/?view=ledger"') && shellJs.includes('label: "收支表"'), "手機第一個入口未指向月份收支明細");
 assert(shellJs.includes('href: "/accounting/?view=report"') && shellJs.includes('label: "統計表"'), "手機第二個入口未指向收入支出統計報表");
-for (const icon of ["calendar", "statistics", "wallet", "report", "settings"]) {
-  assert(shellJs.includes(`icon: icons.${icon}`), `手機選單缺少 ${icon} 圖示`);
+for (const icon of ["calendar", "analytics", "payroll", "report", "settings"]) {
+  assert(shellJs.includes(`icon("${icon}")`), `手機選單缺少 ${icon} 圖示`);
 }
 assert(accountingCss.includes("grid-template-columns: repeat(4, minmax(0, 1fr))") && accountingCss.includes(".calendar-day.is-outside { display: none; }"), "手機月曆未採一列四欄");
 assert(accountingJs.includes('closest("[data-calendar-date]")'), "手機月曆日期未串接當日收支明細");

@@ -150,7 +150,8 @@
 }
 
 .suite-home-link:hover { color: var(--suite-blue); border-color: #aebfd0; }
-.suite-home-link b { font-size: 17px; line-height: 1; }
+.suite-home-link b { display:grid; width:18px; height:18px; place-items:center; font-size:17px; line-height:1; }
+.suite-home-link b .operations-icon { width:18px; height:18px; }
 
 body.has-suite-brandbar .sidebar { top: var(--suite-brandbar-height); }
 body.has-suite-brandbar .workspace > .topbar { top: var(--suite-brandbar-height); }
