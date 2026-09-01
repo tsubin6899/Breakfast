@@ -36,14 +36,16 @@ const rows = insights.buildBudgetRows(budget, { income: 400000, expense: 260000,
 assert(rows.some(row => row.key === "income" && row.ratio === .8), "收入目標進度錯誤");
 assert(rows.some(row => row.key === "group:食材成本" && Math.abs(row.ratio - (5 / 6)) < .0001), "分類預算進度錯誤");
 
-const [homeHtml, homeJs, salaryHtml, salaryJs, accountingHtml, accountingJs, portalJs] = await Promise.all([
+const [homeHtml, homeJs, salaryHtml, salaryJs, accountingHtml, accountingJs, accountingCss, portalJs, shellJs] = await Promise.all([
   readFile(resolve(ROOT, "index.html"), "utf8"),
   readFile(resolve(ROOT, "shared/home.js"), "utf8"),
   readFile(resolve(ROOT, "salary_app/index.html"), "utf8"),
   readFile(resolve(ROOT, "salary_app/app.js"), "utf8"),
   readFile(resolve(ROOT, "accounting/index.html"), "utf8"),
   readFile(resolve(ROOT, "accounting/app.js"), "utf8"),
-  readFile(resolve(ROOT, "employee_portal/app.js"), "utf8")
+  readFile(resolve(ROOT, "accounting/styles.css"), "utf8"),
+  readFile(resolve(ROOT, "employee_portal/app.js"), "utf8"),
+  readFile(resolve(ROOT, "shared/operations-shell.js"), "utf8")
 ]);
 for (const id of ["home-month", "home-cloud-state", "home-actions", "home-budget", "home-sync", "home-audit"]) {
   assert(homeHtml.includes(`id="${id}"`), `今日店務中心缺少 ${id}`);
@@ -66,6 +68,10 @@ for (const id of ["open-batch-income", "batch-income-dialog", "payable-form", "p
 }
 assert(accountingJs.includes('source: "batch-daily-income"'), "批次每日收入未標示資料來源");
 assert(accountingJs.includes("疑似重複") && accountingJs.includes("payableId"), "重複帳務或應付入帳防護未啟用");
+assert(shellJs.includes('href: "/accounting/?view=ledger"') && shellJs.includes('label: "月份收支明細"'), "手機第一個入口未指向月份收支明細");
+assert(shellJs.includes('href: "/accounting/?view=report"') && shellJs.includes('label: "收入支出統計報表"'), "手機第二個入口未指向收入支出統計報表");
+assert(accountingCss.includes("grid-template-columns: repeat(4, minmax(0, 1fr))") && accountingCss.includes(".calendar-day.is-outside { display: none; }"), "手機月曆未採一列四欄");
+assert(accountingJs.includes('closest("[data-calendar-date]")'), "手機月曆日期未串接當日收支明細");
 assert(portalJs.includes("年假試算餘額") && portalJs.includes("annualRemaining"), "員工入口未顯示個人年假摘要");
 assert(!salaryHtml.includes("第 2 段") && !salaryHtml.includes("第 3 段"), "早餐店打卡介面不得顯示多餘時段");
 assert(!salaryHtml.includes('id="add-segment"'), "單日打卡不得新增第二時段");

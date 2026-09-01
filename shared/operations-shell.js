@@ -3,15 +3,21 @@
 
   const path = location.pathname.toLowerCase();
   const items = [
-    { key: "home", href: "/", icon: "今", label: "今日" },
-    { key: "accounting", href: "/accounting/", icon: "帳", label: "記帳" },
+    { key: "ledger", href: "/accounting/?view=ledger", icon: "曆", label: "月份收支明細" },
+    { key: "accounting-report", href: "/accounting/?view=report", icon: "表", label: "收入支出統計報表" },
     { key: "salary", href: "/salary_app/", icon: "薪", label: "薪資" },
     { key: "analytics", href: "/dashboard_cost/", icon: "析", label: "報表" },
     { key: "settings", href: "/accounting/#safety", icon: "設", label: "設定" }
   ];
 
   function currentKey() {
-    if (path.startsWith("/accounting/")) return location.hash === "#safety" ? "settings" : "accounting";
+    if (path.startsWith("/accounting/")) {
+      if (location.hash === "#safety") return "settings";
+      const view = new URLSearchParams(location.search).get("view");
+      if (["ledger", "today"].includes(view) || ["#ledger", "#today"].includes(location.hash)) return "ledger";
+      if (view === "report" || location.hash === "#report") return "accounting-report";
+      return "";
+    }
     if (path.startsWith("/salary_app/")) return "salary";
     if (path.startsWith("/dashboard_cost/")) return "analytics";
     return "home";

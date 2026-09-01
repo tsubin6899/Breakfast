@@ -34,7 +34,8 @@
     color: #64717a;
     font-size: 10px;
     font-weight: 900;
-    line-height: 1;
+    line-height: 1.2;
+    text-align: center;
     text-decoration: none;
   }
 
@@ -49,6 +50,8 @@
     font-size: 13px;
     font-style: normal;
   }
+
+  .operations-mobile-dock a span { font-size: 9px; }
 
   .operations-mobile-dock a[aria-current="page"] {
     color: #123e5d;
