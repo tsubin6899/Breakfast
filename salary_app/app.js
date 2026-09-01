@@ -554,6 +554,7 @@
   let pendingAuditEvents = [];
   let currentPayslipEmployeeId = "";
   let employeeSpecialRulesDraft = [];
+  let employeePayProfileBaseline = "";
 
   function saveState(message = "已儲存於本機") {
     const persisted = persistLocalState(state);
@@ -2755,6 +2756,7 @@
     const employee = employeeId ? getEmployee(employeeId) : null;
     if (!employee && !requireUnlockedMonth()) return;
     const profile = employee ? employeeAt(employee, state.settings.month) : null;
+    employeePayProfileBaseline = profile ? payProfileSignature(profile) : "";
     $("#employee-dialog-title").textContent = employee ? `編輯 ${employee.name}` : "新增員工";
     $("#employee-locked-note").hidden = !employee || !isMonthLocked();
     $("#delete-employee").hidden = !employee;
@@ -4845,8 +4847,7 @@
       // The dialog is populated from the profile active in the viewed month. Compare
       // against that same profile, otherwise a later-in-month history entry can make an
       // unchanged form look modified and incorrectly block basic-data saves.
-      const existingProfile = existing ? payProfileAt(existing, state.settings.month) : null;
-      const profileChanged = !existingProfile || payProfileSignature(existingProfile) !== payProfileSignature(profile);
+      const profileChanged = !existing || employeePayProfileBaseline !== payProfileSignature(profile);
       const affectedLockedMonth = profileChanged
         ? Object.entries(state.closedMonths).find(([month, monthState]) => monthState?.locked && month >= effectiveFrom.slice(0, 7))
         : null;

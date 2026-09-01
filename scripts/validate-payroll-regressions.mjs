@@ -242,6 +242,28 @@ assert(
   "已鎖定月份的歷史員工表單不得在未改費率時阻止基本資料儲存"
 );
 
+// 免打卡固定月薪員工的隱藏班表／加班欄位不應影響基本資料儲存。
+for (const employeeId of ["yixin", "yuexia"]) {
+  const employee = hydratedHistoryState.employees.find(item => item.id === employeeId);
+  assert(employee, `找不到固定月薪測試員工 ${employeeId}`);
+  const fixedMonthlyProfile = api.payProfileAt(employee, "2025-12");
+  const fixedMonthlyDialogProfile = {
+    ...fixedMonthlyProfile,
+    attendanceRequired: false,
+    scheduleStart: "",
+    scheduleEnd: "",
+    overtimeMode: "none",
+    overtimeHourlyRate: 0,
+    monthlySpecialDayMode: "none",
+    expectedWorkdays: [],
+    weeklySchedule: {}
+  };
+  assert(
+    api.payProfileSignature(fixedMonthlyProfile) === api.payProfileSignature(fixedMonthlyDialogProfile),
+    `${employee.name} 的生日與基本資料不得因免打卡隱藏欄位而無法儲存`
+  );
+}
+
 birthdayEmployee.birthdayGiftAmount = 1500;
 state = api.setState(state);
 birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");
