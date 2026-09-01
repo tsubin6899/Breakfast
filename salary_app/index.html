@@ -20,6 +20,7 @@
   <script src="./local-mode.js"></script>
   <script src="../shared/operations-store.js"></script>
   <script src="../shared/cloud-sync.js"></script>
+  <script defer src="../shared/operations-icons.js"></script>
   <script defer src="../shared/operations-shell.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -40,9 +41,9 @@
       <small>HEALTHY · FULL · DELICIOUS｜薪資、記帳與收支分析一站管理</small>
     </div>
     <nav class="suite-system-nav" aria-label="三大管理系統">
-      <a href="./" aria-current="page"><i aria-hidden="true">薪</i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
-      <a href="../accounting/"><i aria-hidden="true">帳</i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
-      <a href="../dashboard_cost/"><i aria-hidden="true">析</i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
+      <a href="./" aria-current="page"><i aria-hidden="true" data-icon="payroll"></i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
+      <a href="../accounting/"><i aria-hidden="true" data-icon="accounting"></i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
+      <a href="../dashboard_cost/"><i aria-hidden="true" data-icon="analytics"></i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
     </nav>
     <a class="suite-home-link" href="../"><b aria-hidden="true">⌂</b><span>營運首頁</span></a>
   </header>
@@ -50,19 +51,19 @@
     <aside class="sidebar" aria-label="主要選單">
       <nav class="nav-list">
         <button class="nav-item is-active" type="button" data-view="dashboard">
-          <span aria-hidden="true">總</span>總覽
+          <span aria-hidden="true" data-icon="dashboard"></span>總覽
         </button>
         <button class="nav-item" type="button" data-view="attendance">
-          <span aria-hidden="true">卡</span>打卡與工時
+          <span aria-hidden="true" data-icon="attendance"></span>打卡與工時
         </button>
         <button class="nav-item" type="button" data-view="payroll">
-          <span aria-hidden="true">薪</span>薪資試算
+          <span aria-hidden="true" data-icon="payroll"></span>薪資試算
         </button>
         <button class="nav-item" type="button" data-view="employees">
-          <span aria-hidden="true">人</span>員工設定
+          <span aria-hidden="true" data-icon="employees"></span>員工設定
         </button>
         <button class="nav-item" type="button" data-view="settings">
-          <span aria-hidden="true">設</span>規則與備份
+          <span aria-hidden="true" data-icon="settings"></span>規則與備份
         </button>
       </nav>
 
@@ -563,7 +564,7 @@
               <div class="panel-heading">
                 <div>
                   <p class="eyebrow">SECURE CLOUD</p>
-                  <h3>管理者登入與雲端資料</h3>
+                  <h3>管理者登入與共用營運雲端</h3>
                 </div>
                 <span id="cloud-panel-status" class="cloud-sync-status is-local"><i></i><span>僅存此裝置</span></span>
               </div>
@@ -571,7 +572,7 @@
                 <span>目前帳號</span>
                 <strong id="cloud-account-email">尚未登入</strong>
                 <span>權限：<b id="cloud-account-role">—</b></span>
-                <p id="cloud-panel-detail">登入後才會將薪資資料同步到網站。</p>
+                <p id="cloud-panel-detail">薪資與記帳使用同一份營運資料包；登入後會自動採用時間較新的版本。</p>
               </div>
               <div class="cloud-sync-metrics" aria-label="薪資雲端同步狀態">
                 <span>最後成功<strong id="payroll-cloud-last-success">尚未完成</strong></span>
@@ -731,11 +732,11 @@
   </div>
 
   <nav class="mobile-bottom-nav" aria-label="手機快速選單">
-    <button class="is-active" type="button" data-view="dashboard"><span>總</span>總覽</button>
-    <button type="button" data-view="attendance"><span>卡</span>打卡</button>
-    <button type="button" data-view="payroll"><span>薪</span>薪資</button>
-    <button type="button" data-view="employees"><span>人</span>員工</button>
-    <button type="button" data-view="settings"><span>設</span>設定</button>
+    <button class="is-active" type="button" data-view="dashboard"><span aria-hidden="true" data-icon="dashboard"></span>總覽</button>
+    <button type="button" data-view="attendance"><span aria-hidden="true" data-icon="attendance"></span>打卡</button>
+    <button type="button" data-view="payroll"><span aria-hidden="true" data-icon="payroll"></span>薪資</button>
+    <button type="button" data-view="employees"><span aria-hidden="true" data-icon="employees"></span>員工</button>
+    <button type="button" data-view="settings"><span aria-hidden="true" data-icon="settings"></span>設定</button>
   </nav>
 
   <dialog id="cloud-auth-dialog" class="cloud-dialog">

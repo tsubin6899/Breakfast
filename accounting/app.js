@@ -434,7 +434,7 @@
         baseRevision: options.force ? "" : (options.baseRevision ?? meta.revision),
         force: options.force === true
       });
-      const result = await CLOUD_SYNC.requestJson("/api/operations-state", {
+      const result = await CLOUD_SYNC.requestJson("/api/operations-workspace?module=accounting", {
         method: "PUT",
         headers: request.headers,
         body: request.body,
@@ -511,18 +511,18 @@
   }
 
   async function fetchCloudState() {
-    return CLOUD_SYNC.requestJson("/api/operations-state", { attempts: 3 });
+    return CLOUD_SYNC.requestJson("/api/operations-workspace?module=accounting", { attempts: 3 });
   }
 
   async function manualAccountingCloudSync() {
     const meta = readCloudMeta();
-    if (meta.dirty) return syncAccountingCloud();
     if (!cloudUser || !cloudReady || cloudSyncing || cloudConflictResolving) return false;
     setCloudStatus("正在確認雲端最新版本…", "working");
     try {
       const remote = await fetchCloudState();
-      if (!remote.state) return syncAccountingCloud({ baseRevision: "" });
-      if (remote.revision && remote.revision !== meta.revision) {
+      const decision = CLOUD_SYNC.decideSync(meta, remote);
+      if (decision === "upload") return syncAccountingCloud({ baseRevision: remote.revision || "" });
+      if (decision === "download") {
         await adoptCloudState(remote);
         toast("已下載並套用雲端最新資料。");
         return true;
@@ -575,22 +575,15 @@
       cloudReady = true;
       cloudRemote = remote;
       const meta = readCloudMeta();
-      if (!remote.state) {
-        writeCloudMeta({ ...meta, revision: "" });
-        await syncAccountingCloud();
-        return;
+      const decision = CLOUD_SYNC.decideSync(meta, remote);
+      if (decision === "upload") {
+        writeCloudMeta({ ...meta, revision: remote.revision || "" });
+        await syncAccountingCloud({ baseRevision: remote.revision || "" });
+      } else if (decision === "download") {
+        await adoptCloudState(remote);
+      } else {
+        setCloudStatus("本機與雲端已是最新版本", "success");
       }
-      if (meta.dirty && meta.revision !== remote.revision) {
-        updateCloudConflictDetail(remote);
-        showCloudConflict(true);
-        setCloudStatus("本機與雲端都有新資料，請選擇保留哪一份", "danger");
-        return;
-      }
-      if (meta.dirty && meta.revision === remote.revision) {
-        await syncAccountingCloud();
-        return;
-      }
-      await adoptCloudState(remote);
     } catch (error) {
       cloudReady = false;
       setCloudStatus(error instanceof Error ? error.message : "無法連接雲端，本機資料仍可使用", "danger");

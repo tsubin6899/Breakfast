@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="/shared/home.css" />
   <script src="/shared/operations-store.js"></script>
   <script src="/shared/cloud-sync.js"></script>
+  <script defer src="/shared/operations-icons.js"></script>
   <script defer src="/shared/operations-shell.js"></script>
   <script defer src="/shared/home.js"></script>
   <title>初一食午｜今日店務中心</title>
@@ -54,20 +55,20 @@
       </header>
       <div class="system-shortcuts" aria-label="營運系統主要入口">
         <a class="system-card accounting" href="/accounting/">
-          <i aria-hidden="true">帳</i><span><em>今日最常用</em><strong>開始記帳</strong><small>新增收入、支出與查看今日漏記</small></span><b aria-hidden="true">→</b>
+          <i aria-hidden="true" data-icon="accounting"></i><span><em>今日最常用</em><strong>開始記帳</strong><small>新增收入、支出與查看今日漏記</small></span><b aria-hidden="true">→</b>
         </a>
         <a class="system-card salary" href="/salary_app/">
-          <i aria-hidden="true">薪</i><span><strong>打卡與薪資</strong><small>AI 辨識、出勤核對與薪資試算</small></span><b aria-hidden="true">→</b>
+          <i aria-hidden="true" data-icon="payroll"></i><span><strong>打卡與薪資</strong><small>AI 辨識、出勤核對與薪資試算</small></span><b aria-hidden="true">→</b>
         </a>
         <a class="system-card analytics" href="/dashboard_cost/">
-          <i aria-hidden="true">析</i><span><strong>經營報表</strong><small>收入支出、成本與供應商占比</small></span><b aria-hidden="true">→</b>
+          <i aria-hidden="true" data-icon="analytics"></i><span><strong>經營報表</strong><small>收入支出、成本與供應商占比</small></span><b aria-hidden="true">→</b>
         </a>
       </div>
       <nav class="quick-tool-grid" aria-label="常用功能捷徑">
-        <a href="/accounting/#today"><i>今</i><span><strong>今日明細</strong><small>檢查漏記</small></span></a>
-        <a href="/salary_app/#attendance"><i>AI</i><span><strong>打卡辨識</strong><small>上傳與核對</small></span></a>
-        <a href="/accounting/?view=report"><i>表</i><span><strong>收支報表</strong><small>月／週／年</small></span></a>
-        <a href="/accounting/#safety"><i>雲</i><span><strong>同步備份</strong><small>查看雲端狀態</small></span></a>
+        <a href="/accounting/#today"><i aria-hidden="true" data-icon="today"></i><span><strong>今日明細</strong><small>檢查漏記</small></span></a>
+        <a href="/salary_app/#attendance"><i aria-hidden="true" data-icon="ai"></i><span><strong>打卡辨識</strong><small>上傳與核對</small></span></a>
+        <a href="/accounting/?view=report"><i aria-hidden="true" data-icon="analytics"></i><span><strong>收支報表</strong><small>月／週／年</small></span></a>
+        <a href="/accounting/#safety"><i aria-hidden="true" data-icon="cloud"></i><span><strong>同步備份</strong><small>查看雲端狀態</small></span></a>
       </nav>
     </section>
 

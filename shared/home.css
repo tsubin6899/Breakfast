@@ -80,6 +80,7 @@ a { color: inherit; }
 .system-card:hover { transform: translateY(-2px); border-color: rgba(14,75,134,.28); box-shadow: 0 18px 38px rgba(24,58,80,.11); }
 .system-card:focus-visible, .quick-tool-grid a:focus-visible { outline: 3px solid rgba(14,75,134,.24); outline-offset: 3px; }
 .system-card > i { display: grid; width: 54px; height: 54px; place-items: center; border-radius: 17px; color: #fff; background: var(--home-blue); box-shadow: 0 9px 20px rgba(14,75,134,.18); font-style: normal; font-weight: 950; }
+.system-card > i .operations-icon { width: 30px; height: 30px; max-width: none; max-height: none; }
 .system-card.accounting { color: #fff; border-color: transparent; background: linear-gradient(135deg, #b55c20, #dd8b2f); box-shadow: 0 16px 36px rgba(178,91,31,.2); }
 .system-card.accounting > i { color: #a95720; background: #fff7e8; box-shadow: none; }
 .system-card.salary > i { background: var(--home-green); }
@@ -94,6 +95,7 @@ a { color: inherit; }
 .quick-tool-grid a { display: flex; min-height: 64px; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid rgba(14,75,134,.1); border-radius: 15px; background: rgba(255,255,255,.7); text-decoration: none; transition: background .18s ease, transform .18s ease; }
 .quick-tool-grid a:hover { transform: translateY(-1px); background: #fff; }
 .quick-tool-grid i { display: grid; flex: 0 0 34px; width: 34px; height: 34px; place-items: center; border-radius: 11px; color: var(--home-blue); background: #e7f0f6; font-size: 11px; font-style: normal; font-weight: 950; }
+.quick-tool-grid i .operations-icon { width: 19px; height: 19px; }
 .quick-tool-grid strong, .quick-tool-grid small { display: block; }
 .quick-tool-grid strong { font-size: 12px; }
 .quick-tool-grid small { margin-top: 2px; color: var(--home-muted); font-size: 10px; }

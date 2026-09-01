@@ -9,6 +9,9 @@
     },
     "api/operations-state.ts": {
       "maxDuration": 60
+    },
+    "api/operations-workspace.ts": {
+      "maxDuration": 60
     }
   },
   "headers": [

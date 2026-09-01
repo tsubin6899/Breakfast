@@ -68,5 +68,20 @@
     return `${Math.floor(minutes / 1440)} 天前`;
   }
 
-  window.BreakfastCloudSync = { isRetryable, requestJson, retryDelay, relativeTime };
+  function timestamp(value) {
+    const parsed = Date.parse(value || "");
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function decideSync(meta = {}, remote = {}) {
+    if (!remote?.state) return "upload";
+    if (meta.revision && meta.revision === remote.revision) return meta.dirty ? "upload" : "current";
+    const remoteTime = timestamp(remote.updatedAt);
+    const localTime = timestamp(meta.lastLocalChangeAt);
+    if (remoteTime > localTime) return "download";
+    if (meta.dirty && localTime >= remoteTime) return "upload";
+    return "download";
+  }
+
+  window.BreakfastCloudSync = { isRetryable, requestJson, retryDelay, relativeTime, decideSync };
 })();

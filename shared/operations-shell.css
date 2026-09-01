@@ -1,3 +1,16 @@
+.operations-icon {
+  display: block;
+  width: 60%;
+  height: 60%;
+  max-width: 24px;
+  max-height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .operations-mobile-dock {
   display: none;
 }

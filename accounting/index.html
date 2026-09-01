@@ -22,6 +22,7 @@
   <script src="../shared/operations-insights.js"></script>
   <script src="../shared/accounting-storage.js"></script>
   <script src="../shared/cloud-sync.js"></script>
+  <script defer src="../shared/operations-icons.js"></script>
   <script defer src="../shared/operations-shell.js"></script>
   <script defer src="./data/revenue-history-2022-2025.js"></script>
   <script defer src="./data/revenue-history-2026.js"></script>
@@ -47,9 +48,9 @@
       <small>HEALTHY · FULL · DELICIOUS｜薪資、記帳與收支分析一站管理</small>
     </div>
     <nav class="suite-system-nav" aria-label="三大管理系統">
-      <a href="../salary_app/"><i aria-hidden="true">薪</i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
-      <a href="./" aria-current="page"><i aria-hidden="true">帳</i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
-      <a href="../dashboard_cost/"><i aria-hidden="true">析</i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
+      <a href="../salary_app/"><i aria-hidden="true" data-icon="payroll"></i><span><strong>薪資管理</strong><small>出勤、工時與計薪</small></span></a>
+      <a href="./" aria-current="page"><i aria-hidden="true" data-icon="accounting"></i><span><strong>記帳系統</strong><small>收入、支出與日薪</small></span></a>
+      <a href="../dashboard_cost/"><i aria-hidden="true" data-icon="analytics"></i><span><strong>收入支出分析</strong><small>損益、成本與圖表</small></span></a>
     </nav>
     <a class="suite-home-link" href="../"><b aria-hidden="true">⌂</b><span>營運首頁</span></a>
   </header>
@@ -57,16 +58,16 @@
   <div class="accounting-shell">
     <aside class="accounting-sidebar" aria-label="記帳系統選單">
       <div class="accounting-sidebar-heading">
-        <span aria-hidden="true">帳</span>
+        <span aria-hidden="true" data-icon="accounting"></span>
         <div><strong>記帳系統</strong><small>收入・支出與日薪</small></div>
       </div>
       <nav class="accounting-page-tabs" role="tablist" aria-label="記帳系統分頁">
-        <button id="accounting-tab-entry" class="accounting-page-tab" type="button" role="tab" aria-selected="true" data-accounting-tab="entry"><i aria-hidden="true">＋</i><span><strong>新增收入／支出</strong><small>一般記帳・日薪・固定收支</small></span></button>
-        <button id="accounting-tab-ledger" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="ledger"><i aria-hidden="true">曆</i><span><strong>月份收支明細</strong><small>月曆・每日明細・收支摘要</small></span></button>
-        <button id="accounting-tab-report" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="report"><i aria-hidden="true">表</i><span><strong>收入支出報表</strong><small>年報・月報・週報・廠商占比</small></span></button>
-        <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true">匯</i><span><strong>匯入中心</strong><small>記帳備份・平台對帳單・資料還原</small></span></button>
-        <button id="accounting-tab-catalog" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="catalog"><i aria-hidden="true">類</i><span><strong>分類與項目設定</strong><small>收入項目・支出廠商・新增項目</small></span></button>
-        <button id="accounting-tab-safety" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="safety"><i aria-hidden="true">安</i><span><strong>關帳與資料安全</strong><small>每日關帳・月結・版本救援</small></span></button>
+        <button id="accounting-tab-entry" class="accounting-page-tab" type="button" role="tab" aria-selected="true" data-accounting-tab="entry"><i aria-hidden="true" data-icon="entry"></i><span><strong>新增收入／支出</strong><small>一般記帳・日薪・固定收支</small></span></button>
+        <button id="accounting-tab-ledger" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="ledger"><i aria-hidden="true" data-icon="calendar"></i><span><strong>月份收支明細</strong><small>月曆・每日明細・收支摘要</small></span></button>
+        <button id="accounting-tab-report" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="report"><i aria-hidden="true" data-icon="analytics"></i><span><strong>收入支出報表</strong><small>年報・月報・週報・廠商占比</small></span></button>
+        <button id="accounting-tab-import" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="import"><i aria-hidden="true" data-icon="import"></i><span><strong>匯入中心</strong><small>記帳備份・平台對帳單・資料還原</small></span></button>
+        <button id="accounting-tab-catalog" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="catalog"><i aria-hidden="true" data-icon="catalog"></i><span><strong>分類與項目設定</strong><small>收入項目・支出廠商・新增項目</small></span></button>
+        <button id="accounting-tab-safety" class="accounting-page-tab" type="button" role="tab" aria-selected="false" data-accounting-tab="safety"><i aria-hidden="true" data-icon="safety"></i><span><strong>關帳與資料安全</strong><small>每日關帳・月結・版本救援</small></span></button>
       </nav>
       <div class="accounting-sidebar-note">
         <strong>本機優先・雲端備份</strong>
@@ -114,9 +115,9 @@
         </div>
         <div class="report-controls">
           <div class="report-grain-switch" role="group" aria-label="切換報表週期">
-            <button type="button" data-report-grain="year" aria-pressed="false">年報表</button>
-            <button type="button" data-report-grain="month" aria-pressed="true">月報表</button>
-            <button type="button" data-report-grain="week" aria-pressed="false">週報表</button>
+            <button type="button" data-report-grain="year" aria-pressed="false"><i aria-hidden="true" data-icon="year"></i>年報表</button>
+            <button type="button" data-report-grain="month" aria-pressed="true"><i aria-hidden="true" data-icon="month"></i>月報表</button>
+            <button type="button" data-report-grain="week" aria-pressed="false"><i aria-hidden="true" data-icon="week"></i>週報表</button>
           </div>
           <div class="report-period-navigation">
             <button id="report-period-prev" type="button" aria-label="上一期">‹</button>
@@ -385,7 +386,8 @@
       <article class="accounting-cloud-card">
         <div>
           <p class="eyebrow">VERCEL PRIVATE CLOUD</p>
-          <h3>雲端同步與跨裝置備份</h3>
+          <h3>共用營運雲端同步與跨裝置備份</h3>
+          <p>薪資與記帳使用同一份營運資料包；登入後會自動採用時間較新的版本。</p>
           <p id="accounting-cloud-status" data-tone="waiting">正在檢查 Vercel 雲端登入…</p>
           <div class="cloud-sync-metrics" aria-label="記帳雲端同步狀態">
             <span>最後成功<strong id="accounting-cloud-last-success">尚未完成</strong></span>
@@ -399,7 +401,7 @@
           <button class="primary-btn" id="accounting-cloud-sync" type="button">立即同步</button>
         </div>
         <div id="accounting-cloud-conflict-actions" class="accounting-cloud-conflict" hidden>
-          <strong>本機與雲端版本不同，系統不會自動覆蓋。</strong>
+          <strong>兩台裝置幾乎同時寫入，請確認要保留哪一份。</strong>
           <p id="accounting-cloud-conflict-detail">請確認要保留本機資料或雲端資料。</p>
           <button class="secondary-btn" id="accounting-cloud-use-remote" type="button">採用雲端資料</button>
           <button class="danger-btn" id="accounting-cloud-use-local" type="button">以本機資料覆蓋雲端</button>

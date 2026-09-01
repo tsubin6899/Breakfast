@@ -859,7 +859,7 @@
       localBackupButton.title = localBackupButton.disabled ? "目前沒有同步前備份" : "";
     }
     if (!cloudUser) {
-      setCloudStatus("僅存此裝置", "local", "登入後才會將薪資資料同步到網站。");
+      setCloudStatus("僅存此裝置", "local", "登入後會連接薪資與記帳共用的營運雲端資料包。");
     }
     updateCloudIndicators();
   }
@@ -871,7 +871,7 @@
   }
 
   async function cloudRequest(method, body) {
-    return CLOUD_SYNC.requestJson("/api/payroll-state", {
+    return CLOUD_SYNC.requestJson("/api/operations-workspace?module=payroll", {
       method,
       headers: body ? { "Content-Type": "application/json" } : {},
       body: body ? JSON.stringify(body) : undefined,
@@ -986,20 +986,25 @@
         await pushCloudState({ notify: true });
         return;
       }
-      if (!force && meta.dirty) {
+      const decision = force ? "download" : CLOUD_SYNC.decideSync(meta, result);
+      if (decision === "upload") {
+        cloudRevision = result.revision || "";
+        cloudReady = true;
+        await pushCloudState({ notify });
+        return;
+      }
+      if (decision === "current") {
         cloudRevision = result.revision || meta.revision || "";
-        if (meta.revision && meta.revision === result.revision) {
-          cloudReady = true;
-          await pushCloudState({ notify });
-          return;
-        }
-        cloudReady = false;
-        setCloudStatus(
-          "本機與雲端都有新版",
-          "conflict",
-          "尚未同步的本機內容已保留。請選擇下載雲端版本，或確認後以上傳本機資料為準。"
-        );
-        showView("settings");
+        cloudReady = true;
+        cloudRetryAttempt = 0;
+        writePayrollCloudMeta({
+          ...meta,
+          revision: cloudRevision,
+          dirty: false,
+          lastSuccessAt: result.updatedAt || meta.lastSuccessAt,
+          retryCount: 0
+        });
+        setCloudStatus("已同步雲端", "ready", "本機與雲端已是最新版本。");
         return;
       }
       const missingBundledHistoryIds = BUNDLED_HISTORIES
