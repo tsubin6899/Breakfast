@@ -1116,6 +1116,34 @@ tbody tr:hover { background:#faf8f2; }
 .uber-picker-grid { grid-template-columns: minmax(260px, .7fr) repeat(2, minmax(300px, 1fr)); }
 .uber-import-kpis .replace { background: #fcf9ff; }
 
+.foodpanda-settlement-guide {
+  display: grid;
+  grid-template-columns: minmax(330px, .8fr) minmax(520px, 1.2fr);
+  gap: 16px;
+  align-items: center;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid #efbfd1;
+  border-left: 5px solid #d70f64;
+  border-radius: 14px;
+  color: #54243a;
+  background: linear-gradient(135deg, #fff4f8, #fffafb);
+}
+.foodpanda-settlement-heading { display: flex; min-width: 0; align-items: center; gap: 12px; }
+.foodpanda-settlement-heading > span { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border-radius: 12px; color: #fff; background: #d70f64; font-size: 14px; font-weight: 900; }
+.foodpanda-settlement-heading h3 { margin: 0; color: #8f1248; font-size: 15px; }
+.foodpanda-settlement-heading p { margin: 5px 0 0; color: #795265; font-size: 11px; line-height: 1.5; }
+.foodpanda-settlement-days { display: flex; flex: 0 0 auto; gap: 6px; margin-left: auto; }
+.foodpanda-settlement-days b { padding: 6px 9px; border-radius: 999px; color: #fff; background: #d70f64; font-size: 11px; white-space: nowrap; }
+.foodpanda-settlement-guide table { overflow: hidden; border: 1px solid #efd5df; border-collapse: separate; border-spacing: 0; border-radius: 11px; background: rgba(255,255,255,.82); font-size: 11px; }
+.foodpanda-settlement-guide th,
+.foodpanda-settlement-guide td { position: static; padding: 8px 10px; border-right: 1px solid #f0dce4; text-align: left; }
+.foodpanda-settlement-guide th:last-child,
+.foodpanda-settlement-guide td:last-child { border-right: 0; }
+.foodpanda-settlement-guide th { color: #805064; background: #fbe7ef; font-size: 10px; }
+.foodpanda-settlement-guide tbody tr + tr td { border-top: 1px solid #f0dce4; }
+.foodpanda-settlement-guide td strong { color: #c30e58; }
+
 .import-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px; margin-top: 12px; }
 .import-actions button:disabled { cursor: not-allowed; opacity: .45; box-shadow: none; }
 
@@ -1124,6 +1152,11 @@ tbody tr:hover { background:#faf8f2; }
   .uber-picker-grid .import-policy-note:last-child { grid-column: auto; }
   .import-policy-note { grid-column: 1 / -1; }
   .import-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .foodpanda-settlement-guide { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 860px) {
+  .foodpanda-settlement-guide { display: none; }
 }
 
 @media (max-width: 640px) {

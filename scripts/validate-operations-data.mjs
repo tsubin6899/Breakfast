@@ -175,7 +175,7 @@ const featureChecks = [
     "accounting-tab-entry", "accounting-tab-ledger", "accounting-tab-import", "accounting-tab-catalog", "accounting-tab-safety",
     "accounting-page-title", "entry-receipt", "entry-recurring", "daily-reconciliation-form", "accounting-exceptions",
     "uber-statement-file", "uber-import-review", "uber-import-confirm",
-    "foodpanda-statement-file", "foodpanda-import-review", "foodpanda-import-confirm",
+    "foodpanda-statement-file", "foodpanda-import-review", "foodpanda-import-confirm", "foodpanda-settlement-schedule",
     "catalog-item-form", "catalog-item-type", "catalog-item-group", "catalog-item-name", "catalog-groups",
     "report-dashboard", "report-download-pdf", "report-trend-card", "report-expense-groups-card", "report-income-sources-card", "report-vendors-card", "report-matrix-card",
     "copy-yesterday", "copy-last-week", "quick-entry-presets", "mobile-quick-add",
@@ -209,6 +209,8 @@ for (const item of ["現金營業收入", "line Pay經營收入", "快一點line
 }
 assert(accountingApp.includes('"現金收入": ["現金營業收入", "line Pay經營收入", "快一點line pay收入"]'), "Line Pay 與快一點應列在現金收入預設項目");
 assert(!accountingApp.includes('"foodpanda外送"'), "記帳系統不得保留小寫 foodpanda 的顯示名稱");
+const accountingHtml = await readFile(resolve(ROOT, "accounting/index.html"), "utf8");
+assert(accountingHtml.includes("每月 5 日與 20 日記得匯入對帳單") && accountingHtml.includes("當月 1 日至 15 日") && accountingHtml.includes("次月 10 日"), "foodpanda 匯入區缺少結算與匯款提醒");
 
 const dashboardHtml = await readFile(resolve(ROOT, "dashboard_cost/index.html"), "utf8");
 assert(

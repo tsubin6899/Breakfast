@@ -259,6 +259,17 @@
         <div><p class="eyebrow">FOODPANDA STATEMENT IMPORT</p><h2 id="foodpanda-import-title">foodpanda 對帳單匯入</h2><p class="panel-copy">選擇 foodpanda 後台下載的 XLSX 對帳單。系統會依「訂單日期」分組，加總「foodpanda 應付(應收)金額」，逐日核對既有 foodpanda 外送收入。</p></div>
         <span class="panel-chip import-chip">本機解析・不需 AI</span>
       </div>
+      <aside id="foodpanda-settlement-schedule" class="foodpanda-settlement-guide" aria-labelledby="foodpanda-settlement-title">
+        <div class="foodpanda-settlement-heading">
+          <span aria-hidden="true">日</span>
+          <div><h3 id="foodpanda-settlement-title">每月 5 日與 20 日記得匯入對帳單</h3><p>foodpanda 合作商家對帳單固定於這兩天產出，匯款日通常在對帳單產出後 5 日。</p></div>
+          <div class="foodpanda-settlement-days" aria-label="對帳單產出日期"><b>5 日</b><b>20 日</b></div>
+        </div>
+        <table aria-label="foodpanda 帳務結算與匯款時程">
+          <thead><tr><th>帳務結算區間</th><th>對帳單產出日期</th><th>預計匯款日期</th></tr></thead>
+          <tbody><tr><td>當月 1 日至 15 日</td><td><strong>當月 20 日</strong></td><td>當月 25 日</td></tr><tr><td>當月 16 日至月底</td><td><strong>次月 5 日</strong></td><td>次月 10 日</td></tr></tbody>
+        </table>
+      </aside>
       <div class="import-picker-grid uber-picker-grid">
         <div class="import-file-field">
           <span>選擇 foodpanda 對帳單</span>
