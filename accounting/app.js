@@ -1019,7 +1019,8 @@
       if (!typeRows.length) continue;
       const typeTotal = typeRows.reduce((sum, item) => sum + item.amount, 0);
       const typeBuckets = bucketValuesFor(typeRows);
-      html.push(`<tr class="report-matrix-type ${type}"><th>${type === "income" ? "收入項目" : "支出項目"}</th><th aria-hidden="true"></th>${typeBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(typeTotal)}</th><th>100%</th></tr>`);
+      const typeLabel = type === "income" ? "收入項目" : "支出項目";
+      html.push(`<tr class="report-matrix-type ${type}"><th>${typeLabel}</th><th><span class="report-matrix-mobile-label">${typeLabel}</span></th>${typeBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(typeTotal)}</th><th>100%</th></tr>`);
       const configured = GROUPS[type] || [];
       const groups = [...new Set(typeRows.map(item => item.group || "未分類"))].sort((a, b) => {
         const first = configured.indexOf(a);
@@ -1030,7 +1031,7 @@
         const groupRows = typeRows.filter(item => (item.group || "未分類") === group);
         const groupTotal = groupRows.reduce((sum, item) => sum + item.amount, 0);
         const groupBuckets = bucketValuesFor(groupRows);
-        html.push(`<tr class="report-matrix-group ${type}"><th>${escapeHtml(group)}</th><th>分類小計</th>${groupBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(groupTotal)}</th><th>${decimal(groupTotal / typeTotal * 100)}%</th></tr>`);
+        html.push(`<tr class="report-matrix-group ${type}"><th>${escapeHtml(group)}</th><th><span class="report-matrix-desktop-label">分類小計</span><span class="report-matrix-mobile-label">${escapeHtml(group)}<small>分類小計</small></span></th>${groupBuckets.map(value => `<th>${money(value)}</th>`).join("")}<th>${money(groupTotal)}</th><th>${decimal(groupTotal / typeTotal * 100)}%</th></tr>`);
         const items = aggregateReportRows(groupRows, item => item.category || item.counterparty || "未分類");
         items.forEach(([category, total]) => {
           const itemRows = groupRows.filter(item => (item.category || item.counterparty || "未分類") === category);

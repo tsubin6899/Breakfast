@@ -75,6 +75,8 @@ for (const icon of ["calendar", "statistics", "wallet", "report", "settings"]) {
 }
 assert(accountingCss.includes("grid-template-columns: repeat(4, minmax(0, 1fr))") && accountingCss.includes(".calendar-day.is-outside { display: none; }"), "手機月曆未採一列四欄");
 assert(accountingJs.includes('closest("[data-calendar-date]")'), "手機月曆日期未串接當日收支明細");
+assert(accountingCss.includes("--report-sticky-item-width: 118px") && accountingCss.includes("tbody tr > :first-child:not(:only-child)"), "手機明細表未隱藏分類欄或縮窄項目欄");
+assert(accountingJs.includes('class="report-matrix-mobile-label"'), "手機明細表分類小計未保留分類脈絡");
 assert(portalJs.includes("年假試算餘額") && portalJs.includes("annualRemaining"), "員工入口未顯示個人年假摘要");
 assert(!salaryHtml.includes("第 2 段") && !salaryHtml.includes("第 3 段"), "早餐店打卡介面不得顯示多餘時段");
 assert(!salaryHtml.includes('id="add-segment"'), "單日打卡不得新增第二時段");

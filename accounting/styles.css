@@ -1430,6 +1430,7 @@ tbody tr:hover { background:#faf8f2; }
 .report-matrix-type.expense th { background: var(--red); }
 .report-matrix-group th { position: static; color: #315a49; background: var(--green-soft); }
 .report-matrix-group.expense th { color: #7e4648; background: var(--red-soft); }
+.report-matrix-mobile-label { display: none; }
 
 @media (max-width: 1180px) {
   .report-toolbar { grid-template-columns: 1fr; }
@@ -1462,28 +1463,21 @@ tbody tr:hover { background:#faf8f2; }
   .report-chart-bars { height: 214px; }
   .report-matrix-panel { margin-top: 12px; }
   .report-matrix-table {
-    --report-sticky-category-width: 82px;
-    --report-sticky-item-width: 148px;
-    min-width: 780px;
+    --report-sticky-item-width: 118px;
+    min-width: 690px;
   }
-  .report-matrix-table thead th:first-child,
-  .report-matrix-table tbody td:first-child,
-  .report-matrix-table tbody tr > th:first-child {
-    position: sticky;
-    z-index: 3;
-    left: 0;
-    width: var(--report-sticky-category-width);
-    min-width: var(--report-sticky-category-width);
-    max-width: var(--report-sticky-category-width);
-    background: #fffdf8;
-    background-clip: padding-box;
+  .report-matrix-table th,
+  .report-matrix-table td { padding: 8px 7px; }
+  .report-matrix-table thead tr > th:first-child,
+  .report-matrix-table tbody tr > :first-child:not(:only-child) {
+    display: none;
   }
   .report-matrix-table thead th:nth-child(2),
   .report-matrix-table tbody td:nth-child(2),
   .report-matrix-table tbody tr > th:nth-child(2) {
     position: sticky;
     z-index: 3;
-    left: var(--report-sticky-category-width);
+    left: 0;
     width: var(--report-sticky-item-width);
     min-width: var(--report-sticky-item-width);
     max-width: var(--report-sticky-item-width);
@@ -1494,21 +1488,15 @@ tbody tr:hover { background:#faf8f2; }
     background-clip: padding-box;
     box-shadow: 8px 0 12px -10px rgba(23, 35, 30, .7);
   }
-  .report-matrix-table thead th:first-child,
   .report-matrix-table thead th:nth-child(2) {
     z-index: 7;
     background: #f7f4ec;
   }
-  .report-matrix-table .report-matrix-type > th:first-child {
-    z-index: 5;
-    background: var(--green);
-    background-clip: padding-box;
-  }
   .report-matrix-table .report-matrix-type > th:nth-child(2) { z-index: 5; background: var(--green); }
-  .report-matrix-table .report-matrix-type.expense > th:first-child,
   .report-matrix-table .report-matrix-type.expense > th:nth-child(2) { background: var(--red); }
-  .report-matrix-table .report-matrix-group.income > th:first-child,
   .report-matrix-table .report-matrix-group.income > th:nth-child(2) { background: var(--green-soft); }
-  .report-matrix-table .report-matrix-group.expense > th:first-child,
   .report-matrix-table .report-matrix-group.expense > th:nth-child(2) { background: var(--red-soft); }
+  .report-matrix-desktop-label { display: none; }
+  .report-matrix-mobile-label { display: block; }
+  .report-matrix-mobile-label small { display: block; margin-top: 2px; opacity: .75; font-size: 9px; }
 }
