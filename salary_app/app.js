@@ -678,6 +678,8 @@
   }
 
   function payProfileSignature(profile = {}) {
+    const payType = profile.payType || "hourly";
+    const attendanceRequired = payType !== "monthly" || profile.attendanceRequired !== false;
     const expectedWorkdays = Array.isArray(profile.expectedWorkdays) ? profile.expectedWorkdays.map(Number) : [];
     const weeklySchedule = Array.from({ length: 7 }, (_, day) => {
       const weekly = profile.weeklySchedule?.[day] || profile.weeklySchedule?.[String(day)];
@@ -689,23 +691,30 @@
         end: expected ? weekly?.end || profile.scheduleEnd || "" : ""
       };
     });
-    return JSON.stringify({
-      payType: profile.payType || "hourly",
-      hourlyRate: Number(profile.hourlyRate || 0),
-      weekendRate: Number(profile.weekendRate || 0),
-      holidayRate: Number(profile.holidayRate || 0),
-      peakRate: Number(profile.peakRate || 0),
-      peakStart: profile.peakStart || "",
-      peakEnd: profile.peakEnd || "",
-      monthlySalary: Number(profile.monthlySalary || 0),
-      scheduleStart: profile.scheduleStart || "",
-      scheduleEnd: profile.scheduleEnd || "",
-      attendanceRequired: profile.attendanceRequired !== false,
-      overtimeMode: profile.overtimeMode || "none",
-      overtimeHourlyRate: Number(profile.overtimeHourlyRate || 0),
-      monthlySpecialDayMode: normalizeMonthlySpecialDayMode(profile.monthlySpecialDayMode),
-      weeklySchedule
-    });
+    const signature = { payType };
+    if (payType === "monthly") {
+      signature.monthlySalary = Number(profile.monthlySalary || 0);
+      signature.attendanceRequired = attendanceRequired;
+      if (attendanceRequired) {
+        signature.overtimeMode = profile.overtimeMode || "none";
+        if (signature.overtimeMode === "fixed_hourly") {
+          signature.overtimeHourlyRate = Number(profile.overtimeHourlyRate || 0);
+        }
+        signature.monthlySpecialDayMode = normalizeMonthlySpecialDayMode(profile.monthlySpecialDayMode);
+        signature.weeklySchedule = weeklySchedule;
+      }
+    } else {
+      signature.hourlyRate = Number(profile.hourlyRate || 0);
+      signature.weekendRate = Number(profile.weekendRate || 0);
+      signature.holidayRate = Number(profile.holidayRate || 0);
+      signature.peakRate = Number(profile.peakRate || 0);
+      if (signature.peakRate > 0) {
+        signature.peakStart = profile.peakStart || "";
+        signature.peakEnd = profile.peakEnd || "";
+      }
+      signature.weeklySchedule = weeklySchedule;
+    }
+    return JSON.stringify(signature);
   }
 
   function adjustmentAmount(adjustment) {
@@ -4833,7 +4842,10 @@
         expectedWorkdays,
         weeklySchedule
       };
-      const existingProfile = existing ? payProfileAt(existing, effectiveFrom) : null;
+      // The dialog is populated from the profile active in the viewed month. Compare
+      // against that same profile, otherwise a later-in-month history entry can make an
+      // unchanged form look modified and incorrectly block basic-data saves.
+      const existingProfile = existing ? payProfileAt(existing, state.settings.month) : null;
       const profileChanged = !existingProfile || payProfileSignature(existingProfile) !== payProfileSignature(profile);
       const affectedLockedMonth = profileChanged
         ? Object.entries(state.closedMonths).find(([month, monthState]) => monthState?.locked && month >= effectiveFrom.slice(0, 7))
@@ -5477,6 +5489,7 @@
       getState: () => state,
       stateForPersistence,
       normalizeEmployee,
+      payProfileAt,
       payProfileSignature,
       automaticBirthdayAdjustment,
       employeesForDisplay,

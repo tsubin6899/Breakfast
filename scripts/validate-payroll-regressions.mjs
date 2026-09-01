@@ -206,6 +206,42 @@ const unchangedDialogProfile = {
 };
 assert(api.payProfileSignature(storedProfile) === api.payProfileSignature(unchangedDialogProfile), "只更新生日時不得誤判為薪資費率或班表異動");
 
+// 歷史員工在已鎖定月份開啟表單時，畫面預設值不得被誤判成薪資異動。
+const lockedEmployee = hydratedHistoryState.employees.find(employee => employee.id === "shangqi");
+const lockedProfile = api.payProfileAt(lockedEmployee, "2025-12");
+const lockedExpectedWorkdays = Array.isArray(lockedProfile.expectedWorkdays)
+  ? lockedProfile.expectedWorkdays.map(Number)
+  : [];
+const lockedDialogProfile = {
+  payType: lockedProfile.payType || "hourly",
+  hourlyRate: Number(lockedProfile.hourlyRate || 200),
+  weekendRate: Number(lockedProfile.weekendRate || lockedProfile.hourlyRate || 200),
+  holidayRate: Number(lockedProfile.holidayRate || lockedProfile.hourlyRate || 200),
+  peakRate: Number(lockedProfile.peakRate || 0),
+  peakStart: lockedProfile.peakStart || "",
+  peakEnd: lockedProfile.peakEnd || "",
+  monthlySalary: Number(lockedProfile.monthlySalary || 0),
+  scheduleStart: lockedProfile.scheduleStart || "08:00",
+  scheduleEnd: lockedProfile.scheduleEnd || "15:00",
+  attendanceRequired: lockedProfile.payType !== "monthly" || lockedProfile.attendanceRequired !== false,
+  overtimeMode: lockedProfile.payType === "monthly" ? lockedProfile.overtimeMode || "salary_multiplier" : "none",
+  overtimeHourlyRate: 0,
+  monthlySpecialDayMode: lockedProfile.payType === "monthly" ? lockedProfile.monthlySpecialDayMode : "none",
+  expectedWorkdays: lockedExpectedWorkdays,
+  weeklySchedule: Object.fromEntries(Array.from({ length: 7 }, (_, day) => {
+    const weekly = lockedProfile.weeklySchedule?.[day] || lockedProfile.weeklySchedule?.[String(day)];
+    return [day, {
+      expected: weekly ? weekly.expected !== false : lockedExpectedWorkdays.includes(day),
+      start: weekly?.start || lockedProfile.scheduleStart || "",
+      end: weekly?.end || lockedProfile.scheduleEnd || ""
+    }];
+  }))
+};
+assert(
+  api.payProfileSignature(lockedProfile) === api.payProfileSignature(lockedDialogProfile),
+  "已鎖定月份的歷史員工表單不得在未改費率時阻止基本資料儲存"
+);
+
 birthdayEmployee.birthdayGiftAmount = 1500;
 state = api.setState(state);
 birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");
