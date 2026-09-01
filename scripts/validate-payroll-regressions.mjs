@@ -185,6 +185,27 @@ assert(result.earnings === 1000, "生日當月應自動加入 1,000 元生日禮
 assert(result.adjustments.some(adjustment => adjustment.automatic && adjustment.name === "生日禮金"), "生日禮金應標記為自動項目");
 assert(api.calculatePayroll(birthdayEmployee, "2026-08").earnings === 0, "非生日月份不得加入生日禮金");
 
+const storedProfile = {
+  payType: "hourly",
+  hourlyRate: 200,
+  weekendRate: 210,
+  holidayRate: 220,
+  attendanceRequired: true,
+  scheduleStart: "08:00",
+  scheduleEnd: "15:00",
+  expectedWorkdays: [1, 2, 3],
+  weeklySchedule: {}
+};
+const unchangedDialogProfile = {
+  ...storedProfile,
+  weeklySchedule: Object.fromEntries(Array.from({ length: 7 }, (_, day) => [day, {
+    expected: [1, 2, 3].includes(day),
+    start: "08:00",
+    end: "15:00"
+  }]))
+};
+assert(api.payProfileSignature(storedProfile) === api.payProfileSignature(unchangedDialogProfile), "只更新生日時不得誤判為薪資費率或班表異動");
+
 birthdayEmployee.birthdayGiftAmount = 1500;
 state = api.setState(state);
 birthdayEmployee = state.employees.find(employee => employee.id === "birthday-employee");

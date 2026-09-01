@@ -766,6 +766,7 @@
         <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
       </div>
       <input id="employee-id" type="hidden" />
+      <p id="employee-locked-note" class="alert warning" hidden>目前月份已鎖定，仍可更新生日、生日禮金、聯絡與基本資料；薪資費率或班表若會影響已鎖定月份，系統仍會阻止儲存。</p>
       <div class="form-grid two-col">
         <label><span>姓名</span><input id="employee-name" type="text" required /></label>
         <label>
@@ -990,6 +991,18 @@
         <button class="primary-btn" id="download-statement-jpg" type="button">儲存為 JPG</button>
       </div>
     </div>
+  </dialog>
+
+  <dialog id="workflow-reason-dialog" class="workflow-reason-dialog">
+    <form id="workflow-reason-form" class="dialog-form">
+      <div class="dialog-heading">
+        <div><p class="eyebrow">PAYROLL REVIEW</p><h2 id="workflow-reason-title">輸入主管覆核原因</h2></div>
+        <button class="icon-btn" type="button" data-close-dialog aria-label="關閉">×</button>
+      </div>
+      <p id="workflow-reason-message" class="dialog-copy"></p>
+      <label><span>主管覆核原因</span><textarea id="workflow-reason-input" rows="4" required placeholder="例如：本月部分員工尚未補齊打卡，已由主管確認實際工時。"></textarea></label>
+      <div class="dialog-actions"><button class="secondary-btn" type="button" data-close-dialog>取消</button><button class="primary-btn" type="submit">確認並繼續</button></div>
+    </form>
   </dialog>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>

@@ -677,6 +677,37 @@
     return { ...employee, ...payProfileAt(employee, dateOrMonth), id: employee.id, name: employee.name };
   }
 
+  function payProfileSignature(profile = {}) {
+    const expectedWorkdays = Array.isArray(profile.expectedWorkdays) ? profile.expectedWorkdays.map(Number) : [];
+    const weeklySchedule = Array.from({ length: 7 }, (_, day) => {
+      const weekly = profile.weeklySchedule?.[day] || profile.weeklySchedule?.[String(day)];
+      const expected = weekly ? weekly.expected !== false : expectedWorkdays.includes(day);
+      return {
+        day,
+        expected,
+        start: expected ? weekly?.start || profile.scheduleStart || "" : "",
+        end: expected ? weekly?.end || profile.scheduleEnd || "" : ""
+      };
+    });
+    return JSON.stringify({
+      payType: profile.payType || "hourly",
+      hourlyRate: Number(profile.hourlyRate || 0),
+      weekendRate: Number(profile.weekendRate || 0),
+      holidayRate: Number(profile.holidayRate || 0),
+      peakRate: Number(profile.peakRate || 0),
+      peakStart: profile.peakStart || "",
+      peakEnd: profile.peakEnd || "",
+      monthlySalary: Number(profile.monthlySalary || 0),
+      scheduleStart: profile.scheduleStart || "",
+      scheduleEnd: profile.scheduleEnd || "",
+      attendanceRequired: profile.attendanceRequired !== false,
+      overtimeMode: profile.overtimeMode || "none",
+      overtimeHourlyRate: Number(profile.overtimeHourlyRate || 0),
+      monthlySpecialDayMode: normalizeMonthlySpecialDayMode(profile.monthlySpecialDayMode),
+      weeklySchedule
+    });
+  }
+
   function adjustmentAmount(adjustment) {
     const quantity = Number(adjustment.quantity || 1);
     const unitRate = Number(adjustment.unitRate || adjustment.amount || 0);
@@ -2087,9 +2118,44 @@
     const pill = $("#payroll-workflow-status");
     pill.textContent = labels[status] || "草稿";
     pill.dataset.status = status;
-    $("#submit-payroll-review").disabled = status !== "draft" || !hasPermission("payroll");
-    $("#approve-payroll").disabled = status !== "review" || !hasPermission("approve");
-    $("#mark-payroll-paid").disabled = status !== "approved" || !hasPermission("approve");
+    const actions = [
+      { selector: "#submit-payroll-review", available: status === "draft" && hasPermission("payroll"), hint: workflowActionMessage("review", status) },
+      { selector: "#approve-payroll", available: status === "review" && hasPermission("approve"), hint: workflowActionMessage("approve", status) },
+      { selector: "#mark-payroll-paid", available: status === "approved" && hasPermission("approve"), hint: workflowActionMessage("paid", status) }
+    ];
+    actions.forEach(action => {
+      const button = $(action.selector);
+      button.disabled = false;
+      button.dataset.workflowAvailable = String(action.available);
+      button.classList.toggle("is-unavailable", !action.available);
+      button.title = action.available ? "可執行目前流程步驟" : action.hint;
+    });
+  }
+
+  function workflowActionMessage(action, status) {
+    if (status === "paid") return "本月薪資已完成發薪；如需修改，請先解除月份鎖定。";
+    if (action === "review") {
+      if (status === "review") return "本月已提交覆核，下一步請按「核准薪資」。";
+      if (status === "approved") return "本月薪資已核准，下一步請按「標記已發薪」。";
+    }
+    if (action === "approve") {
+      if (status === "draft") return "請先按「提交覆核」，才能核准薪資。";
+      if (status === "approved") return "本月薪資已完成核准，下一步請按「標記已發薪」。";
+    }
+    if (action === "paid") {
+      if (status === "draft") return "請先完成「提交覆核」與「核准薪資」。";
+      if (status === "review") return "請先按「核准薪資」，才能標記已發薪。";
+    }
+    return "目前流程狀態不允許執行這項操作。";
+  }
+
+  function requireWorkflowAction(action) {
+    const monthState = state.closedMonths?.[state.settings.month] || {};
+    const status = monthState.workflowStatus || (monthState.locked ? "approved" : "draft");
+    const requiredStatus = { review: "draft", approve: "review", paid: "approved" }[action];
+    if (status === requiredStatus) return true;
+    toast(workflowActionMessage(action, status));
+    return false;
   }
 
   function monthCloseChecks() {
@@ -2171,12 +2237,49 @@
 
   function requestCloseOverride(actionLabel) {
     const blockers = closeBlockers();
-    if (!blockers.length) return "";
-    const reason = window.prompt(
-      `目前仍有 ${blockers.length} 筆重要異常。若確定要${actionLabel}，請輸入主管覆核原因；取消或留白將停止操作。`,
-      ""
-    );
-    return reason?.trim() || null;
+    if (!blockers.length) return Promise.resolve("");
+    const dialog = $("#workflow-reason-dialog");
+    const form = $("#workflow-reason-form");
+    const input = $("#workflow-reason-input");
+    $("#workflow-reason-title").textContent = `${actionLabel}前需要主管覆核`;
+    $("#workflow-reason-message").textContent = `目前仍有 ${blockers.length} 筆重要異常：${blockers.map(item => item.title).join("、")}。請輸入原因後繼續。`;
+    input.value = "";
+    input.setCustomValidity("");
+    return new Promise(resolve => {
+      let settled = false;
+      const cleanup = () => {
+        form.removeEventListener("submit", handleSubmit);
+        dialog.removeEventListener("close", handleClose);
+        dialog.removeEventListener("cancel", handleCancel);
+      };
+      const settle = (value, shouldClose = true) => {
+        if (settled) return;
+        settled = true;
+        cleanup();
+        if (shouldClose && dialog.open) dialog.close();
+        resolve(value);
+      };
+      const handleSubmit = event => {
+        event.preventDefault();
+        const reason = input.value.trim();
+        if (!reason) {
+          input.setCustomValidity("請輸入主管覆核原因。");
+          input.reportValidity();
+          return;
+        }
+        settle(reason);
+      };
+      const handleClose = () => settle(null, false);
+      const handleCancel = event => {
+        event.preventDefault();
+        settle(null);
+      };
+      form.addEventListener("submit", handleSubmit);
+      dialog.addEventListener("close", handleClose);
+      dialog.addEventListener("cancel", handleCancel);
+      dialog.showModal();
+      window.setTimeout(() => input.focus(), 0);
+    });
   }
 
   function renderPayroll() {
@@ -2639,10 +2742,12 @@
   }
 
   function openEmployeeDialog(employeeId = "") {
-    if (!requirePermission("payroll") || !requireUnlockedMonth()) return;
+    if (!requirePermission("payroll")) return;
     const employee = employeeId ? getEmployee(employeeId) : null;
+    if (!employee && !requireUnlockedMonth()) return;
     const profile = employee ? employeeAt(employee, state.settings.month) : null;
     $("#employee-dialog-title").textContent = employee ? `編輯 ${employee.name}` : "新增員工";
+    $("#employee-locked-note").hidden = !employee || !isMonthLocked();
     $("#delete-employee").hidden = !employee;
     $("#employee-id").value = employee?.id || "";
     $("#employee-name").value = employee?.name || "";
@@ -4666,10 +4771,11 @@
     });
     $("#employee-form").addEventListener("submit", async event => {
       event.preventDefault();
-      if (!requirePermission("payroll") || !requireUnlockedMonth()) return;
+      if (!requirePermission("payroll")) return;
       const existingId = $("#employee-id").value;
       const id = existingId || uid("employee");
       const existing = existingId ? getEmployee(existingId) : null;
+      if (!existing && !requireUnlockedMonth()) return;
       const isMonthly = $("#employee-pay-type").value === "monthly";
       const attendanceRequired = !isMonthly || $("#employee-attendance-mode").value !== "none";
       const expectedWorkdays = attendanceRequired
@@ -4689,12 +4795,6 @@
         : [];
       if (specialOvertimeRules === null) return;
       const effectiveFrom = $("#employee-rate-effective").value;
-      const affectedLockedMonth = Object.entries(state.closedMonths)
-        .find(([month, monthState]) => monthState?.locked && month >= effectiveFrom.slice(0, 7));
-      if (affectedLockedMonth) {
-        toast(`費率生效日會影響已鎖定的 ${monthLabel(affectedLockedMonth[0])}，請改用較晚的生效日。`);
-        return;
-      }
       const existingSpecialRules = existing ? SPECIAL_OVERTIME.rulesForEmployee(existing) : [];
       const specialRulesChanged = JSON.stringify(existingSpecialRules) !== JSON.stringify(specialOvertimeRules);
       const affectedRuleLockedMonth = specialRulesChanged
@@ -4733,11 +4833,22 @@
         expectedWorkdays,
         weeklySchedule
       };
+      const existingProfile = existing ? payProfileAt(existing, effectiveFrom) : null;
+      const profileChanged = !existingProfile || payProfileSignature(existingProfile) !== payProfileSignature(profile);
+      const affectedLockedMonth = profileChanged
+        ? Object.entries(state.closedMonths).find(([month, monthState]) => monthState?.locked && month >= effectiveFrom.slice(0, 7))
+        : null;
+      if (affectedLockedMonth) {
+        toast(`薪資費率或班表會影響已鎖定的 ${monthLabel(affectedLockedMonth[0])}；生日等基本資料可直接更新，但費率請改用較晚的生效日。`);
+        return;
+      }
       const history = [...(existing?.payHistory || [])];
-      const sameDateIndex = history.findIndex(item => item.effectiveFrom === profile.effectiveFrom);
-      if (sameDateIndex >= 0) history[sameDateIndex] = { ...history[sameDateIndex], ...profile };
-      else history.push(profile);
-      history.sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+      if (profileChanged) {
+        const sameDateIndex = history.findIndex(item => item.effectiveFrom === profile.effectiveFrom);
+        if (sameDateIndex >= 0) history[sameDateIndex] = { ...history[sameDateIndex], ...profile };
+        else history.push(profile);
+        history.sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom));
+      }
       const pin = $("#employee-punch-pin").value.trim();
       const payload = normalizeEmployee({
         ...(existing || {}),
@@ -4760,7 +4871,7 @@
       const index = state.employees.findIndex(employee => employee.id === existingId);
       if (index >= 0) state.employees[index] = payload;
       else state.employees.push(payload);
-      logAudit(index >= 0 ? "新增／更新費率歷史" : "新增員工", `${payload.name}・${profile.effectiveFrom} 生效`);
+      logAudit(index < 0 ? "新增員工" : profileChanged ? "新增／更新費率歷史" : "更新員工基本資料", profileChanged ? `${payload.name}・${profile.effectiveFrom} 生效` : `${payload.name}・生日與基本資料`);
       saveState();
       $("#employee-dialog").close();
       renderAll();
@@ -5149,9 +5260,9 @@
       renderAll();
       toast("本月獎金、禮金與扣款已確認。" );
     });
-    $("#submit-payroll-review").addEventListener("click", () => {
-      if (!requirePermission("payroll") || !requireUnlockedMonth()) return;
-      const overrideReason = requestCloseOverride("提交覆核");
+    $("#submit-payroll-review").addEventListener("click", async () => {
+      if (!requireWorkflowAction("review") || !requirePermission("payroll") || !requireUnlockedMonth()) return;
+      const overrideReason = await requestCloseOverride("提交覆核");
       if (overrideReason === null) return;
       const month = state.settings.month;
       state.closedMonths[month] = {
@@ -5166,9 +5277,9 @@
       renderAll();
       toast("本月薪資已提交覆核。");
     });
-    $("#approve-payroll").addEventListener("click", () => {
-      if (!requirePermission("approve") || !requireUnlockedMonth()) return;
-      const overrideReason = requestCloseOverride("核准薪資");
+    $("#approve-payroll").addEventListener("click", async () => {
+      if (!requireWorkflowAction("approve") || !requirePermission("approve") || !requireUnlockedMonth()) return;
+      const overrideReason = await requestCloseOverride("核准薪資");
       if (overrideReason === null) return;
       const month = state.settings.month;
       const current = state.closedMonths[month] || {};
@@ -5189,7 +5300,7 @@
       toast("薪資已核准並建立不可變更快照。");
     });
     $("#mark-payroll-paid").addEventListener("click", () => {
-      if (!requirePermission("approve")) return;
+      if (!requireWorkflowAction("paid") || !requirePermission("approve")) return;
       const month = state.settings.month;
       const current = state.closedMonths[month] || {};
       if (!current.locked || current.workflowStatus !== "approved") return;
@@ -5204,12 +5315,12 @@
       renderAll();
       toast("本月薪資已標記為已發薪。");
     });
-    $("#toggle-month-lock").addEventListener("click", () => {
+    $("#toggle-month-lock").addEventListener("click", async () => {
       if (!requirePermission("approve")) return;
       const month = state.settings.month;
       const current = state.closedMonths[month] || {};
       if (!current.locked) {
-        const overrideReason = requestCloseOverride("鎖定月份");
+        const overrideReason = await requestCloseOverride("鎖定月份");
         if (overrideReason === null) return;
         const rows = calculateLivePayroll(month);
         state.closedMonths[month] = {
@@ -5366,6 +5477,7 @@
       getState: () => state,
       stateForPersistence,
       normalizeEmployee,
+      payProfileSignature,
       automaticBirthdayAdjustment,
       employeesForDisplay,
       calculatePayroll,

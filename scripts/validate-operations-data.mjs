@@ -170,7 +170,7 @@ for (const htmlPath of ["salary_app/index.html", "accounting/index.html", "dashb
 }
 
 const featureChecks = [
-  ["salary_app/index.html", ["month-close-checks", "payroll-revisions", "confirm-suggested-rests", "add-employee", "delete-employee", "deleted-employee-archive", "deleted-employee-list"]],
+  ["salary_app/index.html", ["month-close-checks", "payroll-revisions", "confirm-suggested-rests", "add-employee", "delete-employee", "deleted-employee-archive", "deleted-employee-list", "workflow-reason-dialog", "workflow-reason-input", "employee-locked-note"]],
   ["accounting/index.html", [
     "accounting-tab-entry", "accounting-tab-ledger", "accounting-tab-import", "accounting-tab-catalog", "accounting-tab-safety",
     "accounting-page-title", "entry-receipt", "entry-recurring", "daily-reconciliation-form", "accounting-exceptions",
@@ -197,7 +197,10 @@ for (const [htmlPath, requiredIds] of featureChecks) {
   for (const id of requiredIds) assert(html.includes(`id="${id}"`), `${htmlPath} 缺少營運功能 ${id}`);
 }
 
-const accountingApp = await readFile(resolve(ROOT, "accounting/app.js"), "utf8");
+const [accountingApp, salaryApp] = await Promise.all([
+  readFile(resolve(ROOT, "accounting/app.js"), "utf8"),
+  readFile(resolve(ROOT, "salary_app/app.js"), "utf8")
+]);
 for (const capability of ["catalogItemSettings", "dailyClosures", "closedMonths", "auditLog", "undoLog", "createSafetySnapshot", "applyCatalogMappings", "exportReportJpg", "exportFullReportPdf"]) {
   assert(accountingApp.includes(capability), `記帳系統缺少安全或分類管理能力：${capability}`);
 }
@@ -222,6 +225,11 @@ const sharedStore = await readFile(resolve(ROOT, "shared/operations-store.js"), 
 for (const capability of ["getGlobalMonth", "setGlobalMonth", "createSnapshot", "autoSnapshot", "listSnapshots", "getSnapshot"]) {
   assert(sharedStore.includes(capability), `跨系統資料層缺少能力：${capability}`);
 }
+
+for (const capability of ["workflowActionMessage", "requireWorkflowAction", "dataset.workflowAvailable", 'classList.toggle("is-unavailable"', '$("#workflow-reason-dialog")', "dialog.showModal()", "await requestCloseOverride"] ) {
+  assert(salaryApp.includes(capability), `薪資流程按鈕缺少狀態回饋：${capability}`);
+}
+assert(salaryApp.includes("payProfileSignature") && salaryApp.includes('if (!employee && !requireUnlockedMonth()) return;'), "已鎖定月份不得阻止既有員工開啟基本資料編輯");
 
 const root = await readFile(resolve(ROOT, "index.html"), "utf8");
 for (const link of ["/salary_app/", "/accounting/", "/dashboard_cost/"]) {

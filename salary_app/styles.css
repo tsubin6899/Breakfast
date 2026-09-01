@@ -3431,6 +3431,17 @@ tfoot th {
   background: var(--green-soft);
 }
 
+.button-row .is-unavailable {
+  opacity: .48;
+  cursor: help;
+  box-shadow: none;
+  filter: grayscale(.25);
+}
+
+.button-row .is-unavailable:hover {
+  transform: none;
+}
+
 .compact-metrics {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
