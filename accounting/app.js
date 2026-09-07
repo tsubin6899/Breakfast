@@ -551,7 +551,10 @@
         toast("已採用雲端資料，跨裝置版本已更新。");
         return true;
       }
-      const synced = await syncAccountingCloud({ baseRevision: remote.revision || "" });
+      // 此按鈕已由店主明確確認要保留本機資料。先讀取最新雲端版本後，
+      // 使用強制覆寫避開 Vercel Blob 偶發的 ETag 預條件衝突；一般自動同步
+      // 仍維持非強制模式，避免未確認時覆蓋其他裝置資料。
+      const synced = await syncAccountingCloud({ baseRevision: remote.revision || "", force: true });
       if (synced) toast("本機資料已成功同步到雲端。");
       return synced;
     } catch (error) {

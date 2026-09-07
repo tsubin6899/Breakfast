@@ -71,7 +71,7 @@ const [accountingApp, payrollApp, accountingHtml, workspaceApi] = await Promise.
 assert.ok(accountingApp.includes("manualAccountingCloudSync"), "手動同步未先確認雲端最新版本");
 assert.ok(accountingApp.includes("resolveAccountingCloudConflict"), "版本衝突選擇未集中處理");
 assert.ok(accountingApp.includes('syncAccountingCloud({ baseRevision: remote.revision || "" })'), "採用本機資料前未取得最新雲端版本號");
-assert.ok(!accountingApp.includes("syncAccountingCloud({ force: true })"), "衝突處理不應依賴僅店主可用的強制覆蓋");
+assert.ok(accountingApp.includes('syncAccountingCloud({ baseRevision: remote.revision || "", force: true })'), "確認保留本機資料時未使用店主強制覆寫");
 assert.ok(accountingApp.includes("CLOUD_SYNC.decideSync(meta, remote)"), "記帳登入後未依版本時間自動判斷同步方向");
 assert.ok(accountingApp.includes("/api/operations-workspace?module=accounting"), "記帳尚未改用共用營運雲端資料包");
 assert.ok(payrollApp.includes("/api/operations-workspace?module=payroll"), "薪資尚未改用共用營運雲端資料包");
