@@ -4,6 +4,8 @@
   const SQLITE_SIGNATURE = new Uint8Array([83, 81, 76, 105, 116, 101, 32, 102, 111, 114, 109, 97, 116, 32, 51, 0]);
   const REQUIRED_TABLES = ["transactions", "splitTransaction", "category"];
   const UUID_AT_END = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+  const BACKUP_SCAN_CHUNK_BYTES = 512 * 1024;
+  const MAX_DATABASE_BYTES = 512 * 1024 * 1024;
   let sqlEnginePromise;
 
   function compactName(value) {
@@ -80,17 +82,39 @@
     return -1;
   }
 
-  function extractSqliteBytes(arrayBuffer) {
-    const bytes = new Uint8Array(arrayBuffer);
-    const offset = findSignature(bytes);
-    if (offset < 0) throw new Error("SQLITE_NOT_FOUND");
+  function databaseSizeFromHeader(bytes, offset = 0) {
+    if (bytes.length < offset + 32) throw new Error("SQLITE_TRUNCATED");
     const view = new DataView(bytes.buffer, bytes.byteOffset + offset);
     let pageSize = view.getUint16(16, false);
     if (pageSize === 1) pageSize = 65536;
     const pageCount = view.getUint32(28, false);
     const databaseSize = pageSize * pageCount;
-    if (!pageSize || !pageCount || offset + databaseSize > bytes.length) throw new Error("SQLITE_TRUNCATED");
-    return bytes.slice(offset, offset + databaseSize);
+    if (!pageSize || !pageCount || !Number.isSafeInteger(databaseSize)) throw new Error("SQLITE_TRUNCATED");
+    if (databaseSize > MAX_DATABASE_BYTES) throw new Error("SQLITE_DATABASE_TOO_LARGE");
+    return databaseSize;
+  }
+
+  async function extractSqliteBytesFromFile(file) {
+    let scanOffset = 0;
+    let tail = new Uint8Array(0);
+    while (scanOffset < file.size) {
+      const end = Math.min(file.size, scanOffset + BACKUP_SCAN_CHUNK_BYTES);
+      const chunk = new Uint8Array(await file.slice(scanOffset, end).arrayBuffer());
+      const bytes = new Uint8Array(tail.length + chunk.length);
+      bytes.set(tail);
+      bytes.set(chunk, tail.length);
+      const offset = findSignature(bytes);
+      if (offset >= 0) {
+        const databaseOffset = scanOffset - tail.length + offset;
+        const header = new Uint8Array(await file.slice(databaseOffset, databaseOffset + 100).arrayBuffer());
+        const databaseSize = databaseSizeFromHeader(header);
+        if (databaseOffset + databaseSize > file.size) throw new Error("SQLITE_TRUNCATED");
+        return new Uint8Array(await file.slice(databaseOffset, databaseOffset + databaseSize).arrayBuffer());
+      }
+      tail = chunk.slice(Math.max(0, chunk.length - (SQLITE_SIGNATURE.length - 1)));
+      scanOffset = end;
+    }
+    throw new Error("SQLITE_NOT_FOUND");
   }
 
   async function sqlEngine() {
@@ -182,9 +206,9 @@
     if (!file || !/\.back$/i.test(file.name)) throw new Error("INVALID_EXTENSION");
     if (!/^20\d{2}-\d{2}-\d{2}$/.test(startDate || "")) throw new Error("INVALID_START_DATE");
 
-    const arrayBuffer = await file.arrayBuffer();
-    const [SQL, fingerprint] = await Promise.all([sqlEngine(), sha256(arrayBuffer)]);
-    const database = new SQL.Database(extractSqliteBytes(arrayBuffer));
+    const databaseBytes = await extractSqliteBytesFromFile(file);
+    const [SQL, fingerprint] = await Promise.all([sqlEngine(), sha256(databaseBytes)]);
+    const database = new SQL.Database(databaseBytes);
     let sourceRows;
     let excludedRows;
     try {
@@ -370,6 +394,7 @@
 
   window.BreakfastAccountingBackupImporter = {
     analyzeFile,
+    extractSqliteBytesFromFile,
     normalizeCategory,
     normalizeGroup,
     matchKey

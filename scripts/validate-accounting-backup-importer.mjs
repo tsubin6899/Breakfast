@@ -21,6 +21,14 @@ const backupBuffer = await readFile(backupPath);
 const sourceFile = {
   name: "初一食午_20260801233314.back",
   size: backupBuffer.length,
+  slice(start = 0, end = backupBuffer.length) {
+    const chunk = backupBuffer.subarray(start, Math.min(end, backupBuffer.length));
+    return {
+      async arrayBuffer() {
+        return chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
+      }
+    };
+  },
   async arrayBuffer() {
     return backupBuffer.buffer.slice(backupBuffer.byteOffset, backupBuffer.byteOffset + backupBuffer.byteLength);
   }
@@ -51,6 +59,24 @@ const sandbox = {
 vm.runInNewContext(await readFile(resolve(ROOT, "accounting", "backup-importer.js"), "utf8"), sandbox, { filename: "accounting/backup-importer.js" });
 const importer = sandbox.window.BreakfastAccountingBackupImporter;
 assert(importer, "記帳備份匯入模組未載入");
+const sqliteBytes = await importer.extractSqliteBytesFromFile(sourceFile);
+assert(sqliteBytes.byteLength > 0 && sqliteBytes.byteLength < sourceFile.size, "備份匯入應只擷取內嵌 SQLite 資料庫，不得整包載入");
+const paddedLargeFile = {
+  name: "初一食午_大型備份.back",
+  size: 130 * 1024 * 1024,
+  slice(start = 0, end = 130 * 1024 * 1024) {
+    const size = Math.max(0, Math.min(end, this.size) - Math.max(0, start));
+    const chunk = Buffer.alloc(size);
+    if (start < backupBuffer.length) backupBuffer.copy(chunk, 0, start, Math.min(end, backupBuffer.length));
+    return {
+      async arrayBuffer() {
+        return chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength);
+      }
+    };
+  }
+};
+const paddedSqliteBytes = await importer.extractSqliteBytesFromFile(paddedLargeFile);
+assert(paddedSqliteBytes.byteLength === sqliteBytes.byteLength, "超過 120MB 的備份包應能只擷取相同的 SQLite 資料庫");
 
 const workbook = await loadBrowserData("accounting/data/revenue-history-2026.js", "BREAKFAST_ACCOUNTING_HISTORY_2026");
 const bundledBackup = await loadBrowserData("accounting/data/accounting-backup-2026-07-22.js", "BREAKFAST_ACCOUNTING_BACKUP_2026_07_22");

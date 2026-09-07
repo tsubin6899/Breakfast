@@ -2432,6 +2432,7 @@
     if (code.includes("INVALID_EXTENSION")) return "請選擇副檔名為 .back 的記帳備份檔。";
     if (code.includes("SQLITE_NOT_FOUND")) return "檔案中找不到可讀取的記帳資料庫，請確認是原始 .back 備份。";
     if (code.includes("SQLITE_TRUNCATED")) return "備份內的資料庫不完整，可能是檔案尚未複製完成。";
+    if (code.includes("SQLITE_DATABASE_TOO_LARGE")) return "備份內真正的記帳資料庫超過 512MB，請改用電腦版並聯絡系統管理員協助處理。";
     if (code.includes("SCHEMA_MISSING")) return "這份備份的資料表格式與目前支援的記帳 APP 不同。";
     if (code.includes("SQL_ENGINE")) return "記帳解析元件尚未載入，請重新整理頁面後再試一次。";
     return "無法解析這份備份，原有記帳資料沒有被修改。";
@@ -2441,14 +2442,10 @@
     const file = $("#accounting-backup-file").files[0];
     const startDate = $("#backup-import-start").value;
     if (!file) return resetBackupImport();
-    if (file.size > 120 * 1024 * 1024) {
-      resetBackupImport("檔案超過 120MB，請確認是否選到正確的記帳備份。");
-      return;
-    }
     pendingBackupImport = null;
     $("#backup-import-review").hidden = true;
     $("#backup-import-progress").className = "import-progress is-working";
-    $("#backup-import-progress").textContent = `正在本機解析 ${file.name}，請稍候…`;
+    $("#backup-import-progress").textContent = `正在本機解析 ${file.name}（${Math.max(1, Math.round(file.size / 1024 / 1024)).toLocaleString("zh-TW")}MB），只會讀取內含的記帳資料，請稍候…`;
     try {
       const importer = window.BreakfastAccountingBackupImporter;
       if (!importer) throw new Error("SQL_ENGINE_MISSING");

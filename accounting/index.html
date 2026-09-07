@@ -181,7 +181,7 @@
 
     <section class="panel backup-import-panel" aria-labelledby="backup-import-title" data-accounting-page="import">
       <div class="panel-heading import-heading">
-        <div><p class="eyebrow">ACCOUNTING BACKUP IMPORT</p><h2 id="backup-import-title">記帳備份匯入中心</h2><p class="panel-copy">上傳「初一食午_日期.back」，系統會在這台裝置內解析、排除帳戶互轉並比對重複資料。看到核對結果後，按下確認才會寫入。</p></div>
+        <div><p class="eyebrow">ACCOUNTING BACKUP IMPORT</p><h2 id="backup-import-title">記帳備份匯入中心</h2><p class="panel-copy">上傳「初一食午_日期.back」，系統會在這台裝置內解析、排除帳戶互轉並比對重複資料。備份包再大也只會讀取內含的記帳資料；看到核對結果後，按下確認才會寫入。</p></div>
         <span class="panel-chip import-chip">免 AI・不耗雲端額度</span>
       </div>
       <div class="import-picker-grid">
@@ -191,7 +191,7 @@
           <label class="file-btn import-file-btn" for="accounting-backup-file"><b aria-hidden="true">＋</b> 選擇 .back 檔</label>
           <input id="accounting-backup-file" type="file" accept=".back,application/octet-stream" />
         </div>
-        <div class="import-policy-note"><b aria-hidden="true">安</b><span><strong>檔案只在瀏覽器內處理</strong><small>不會傳給 AI 或外部辨識服務；帳戶互轉、餘額調整及正式員工薪資會自動排除。</small></span></div>
+        <div class="import-policy-note"><b aria-hidden="true">安</b><span><strong>檔案只在瀏覽器內處理，沒有 120MB 整包限制</strong><small>系統會分段搜尋並只擷取內含的記帳 SQLite 資料，不會將附件或整包備份上傳；帳戶互轉、餘額調整及正式員工薪資會自動排除。</small></span></div>
       </div>
       <div id="backup-import-progress" class="import-progress" aria-live="polite">尚未選擇檔案。</div>
       <div id="backup-import-review" class="import-review" hidden>
