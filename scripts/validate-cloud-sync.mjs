@@ -75,9 +75,11 @@ assert.ok(!accountingApp.includes("syncAccountingCloud({ force: true })"), "衝�
 assert.ok(accountingApp.includes("CLOUD_SYNC.decideSync(meta, remote)"), "記帳登入後未依版本時間自動判斷同步方向");
 assert.ok(accountingApp.includes("/api/operations-workspace?module=accounting"), "記帳尚未改用共用營運雲端資料包");
 assert.ok(payrollApp.includes("/api/operations-workspace?module=payroll"), "薪資尚未改用共用營運雲端資料包");
+assert.ok(accountingApp.includes("timeout: 75_000") && payrollApp.includes("timeout: 75_000"), "共用營運資料包未放寬大型同步等待時間");
 assert.ok(payrollApp.includes("CLOUD_SYNC.decideSync(meta, result)"), "薪資登入後未依版本時間自動判斷同步方向");
 assert.ok(workspaceApi.includes('const WORKSPACE_PATH = "breakfast/state/operations-workspace-current.json"'), "共用營運雲端資料包路徑未建立");
 assert.ok(workspaceApi.includes("LEGACY_ACCOUNTING_PATH") && workspaceApi.includes("LEGACY_PAYROLL_PATH"), "舊薪資與記帳雲端資料未納入遷移");
+assert.ok(workspaceApi.includes("[operations-workspace] failed"), "共用營運資料包缺少雲端失敗記錄");
 assert.ok(accountingHtml.includes('id="accounting-cloud-conflict-detail"'), "版本衝突未顯示本機與雲端時間資訊");
 
 console.log("共用營運資料包、登入版本判斷、同步重試、衝突與離線保護檢查完成。");

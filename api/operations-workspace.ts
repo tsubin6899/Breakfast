@@ -174,8 +174,7 @@ function compressedJson(value: unknown) {
   } });
 }
 
-export default {
-  async fetch(request: Request) {
+async function handleWorkspaceRequest(request: Request) {
     const user = await getSession(request);
     if (!user) return json({ error: "UNAUTHORIZED", message: "請先登入後再同步營運資料。" }, 401);
 
@@ -340,5 +339,30 @@ export default {
       workspaceUpdatedAt: savedDocument.updatedAt,
       role
     });
+}
+
+export default {
+  async fetch(request: Request) {
+    const startedAt = Date.now();
+    const moduleName = moduleFromRequest(request) || "unknown";
+    console.info("[operations-workspace] request", { method: request.method, module: moduleName });
+    try {
+      const response = await handleWorkspaceRequest(request);
+      console.info("[operations-workspace] response", {
+        method: request.method,
+        module: moduleName,
+        status: response.status,
+        durationMs: Date.now() - startedAt
+      });
+      return response;
+    } catch (error) {
+      console.error("[operations-workspace] failed", {
+        method: request.method,
+        module: moduleName,
+        durationMs: Date.now() - startedAt,
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return json({ error: "WORKSPACE_SYNC_FAILED", message: "雲端同步暫時失敗，請稍後再試。" }, 500);
+    }
   }
 };

@@ -438,7 +438,10 @@
         method: "PUT",
         headers: request.headers,
         body: request.body,
-        attempts: 3
+        attempts: 3,
+        // 寫入前會保留一份雲端救援版本；大型帳務資料在 Vercel Blob
+        // 偶爾會超過共用同步預設的 20 秒，因此等待時間需大於函式 60 秒上限。
+        timeout: 75_000
       });
       cloudRetryAttempt = 0;
       writeCloudMeta({
@@ -511,7 +514,7 @@
   }
 
   async function fetchCloudState() {
-    return CLOUD_SYNC.requestJson("/api/operations-workspace?module=accounting", { attempts: 3 });
+    return CLOUD_SYNC.requestJson("/api/operations-workspace?module=accounting", { attempts: 3, timeout: 75_000 });
   }
 
   async function manualAccountingCloudSync() {

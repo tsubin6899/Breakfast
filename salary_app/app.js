@@ -875,7 +875,9 @@
       method,
       headers: body ? { "Content-Type": "application/json" } : {},
       body: body ? JSON.stringify(body) : undefined,
-      attempts: 3
+      attempts: 3,
+      // 薪資與記帳共用一個雲端資料包，寫入時可能同時建立救援版本。
+      timeout: 75_000
     });
   }
 
