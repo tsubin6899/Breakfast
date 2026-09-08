@@ -1535,3 +1535,7 @@ tbody tr:hover { background:#faf8f2; }
   .report-matrix-mobile-label { display: block; }
   .report-matrix-mobile-label small { display: block; margin-top: 2px; opacity: .75; font-size: 9px; }
 }
+.matrix-png-downloads { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+.matrix-png-downloads:empty { display:none; }
+.matrix-png-downloads p { flex-basis:100%; margin:0; line-height:1.6; }
+.matrix-png-downloads a { display:inline-flex; align-items:center; min-height:44px; text-decoration:none; }

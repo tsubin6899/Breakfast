@@ -2103,6 +2103,105 @@
     return reportRankedCanvas(target);
   }
 
+  let matrixPngUrls = [];
+
+  async function exportMatrixPng(button) {
+    button.disabled = true;
+    const originalText = button.textContent;
+    button.textContent = "正在產生清晰分頁…";
+    const target = $("#report-matrix-card");
+    let results = target.querySelector(".matrix-png-downloads");
+    if (!results) {
+      results = document.createElement("div");
+      results.className = "matrix-png-downloads";
+      results.setAttribute("aria-live", "polite");
+      target.querySelector(".report-panel-heading").after(results);
+    }
+    matrixPngUrls.forEach(url => URL.revokeObjectURL(url));
+    matrixPngUrls = [];
+    results.replaceChildren();
+    try {
+      await document.fonts.ready;
+      const table = target.querySelector("table");
+      const header = table.querySelector("thead tr");
+      const count = header.children.length;
+      const periods = Array.from({ length: count - 4 }, (_, i) => i + 2);
+      const chunks = [];
+      for (let i = 0; i < periods.length; i += 3) chunks.push(periods.slice(i, i + 3));
+      if (!chunks.length) chunks.push([]);
+      let contextLabel = "";
+      const rows = [...table.querySelectorAll("tbody tr")].map(row => {
+        if (row.classList.contains("report-matrix-type")) contextLabel = row.children[0].textContent.trim();
+        if (row.classList.contains("report-matrix-group")) contextLabel = row.children[0].textContent.trim();
+        return { row, contextLabel };
+      });
+      const pages = [];
+      for (const chunk of chunks) {
+        for (let offset = 0; offset < rows.length; offset += 18) {
+          pages.push({ chunk, rows: rows.slice(offset, offset + 18) });
+        }
+      }
+      const note = document.createElement("p");
+      note.textContent = `共 ${pages.length} 張無損 PNG，請逐張點選下載。每張右側合計與占比均為整個所選期間，請勿將各張合計相加。分享時請選原圖或檔案附件。`;
+      results.append(note);
+      for (const [pageIndex, page] of pages.entries()) {
+        await new Promise(resolve => requestAnimationFrame(resolve));
+        const selected = [1, ...page.chunk, count - 2, count - 1];
+        const widths = selected.map((_, i) => i === 0 ? 320 : 150);
+        const width = widths.reduce((sum, value) => sum + value, 0) + 72;
+        const { canvas, context } = createReportCanvas(width, 300 + (page.rows.length + 1) * 64);
+        drawReportHeading(context, target, width);
+        const range = page.chunk.map(i => header.children[i].textContent.trim()).join("／");
+        drawReportText(context, `${range} · 第 ${pageIndex + 1}/${pages.length} 張`, 36, 191, { size: 21, weight: 900 });
+        drawReportText(context, `本頁起始分類：${page.rows[0]?.contextLabel || "—"}；合計為整期金額`, 36, 225, { size: 18, maxWidth: width - 72 });
+        [header, ...page.rows.map(item => item.row)].forEach((row, rowIndex) => {
+          const group = row.classList.contains("report-matrix-group");
+          const type = row.classList.contains("report-matrix-type");
+          const expense = row.classList.contains("expense");
+          const color = type ? "#ffffff" : "#17231e";
+          const background = type ? (expense ? "#b54e52" : "#23684f") : group ? (expense ? "#fbe9e7" : "#e6f2eb") : "#ffffff";
+          const y = 254 + rowIndex * 64;
+          let x = 36;
+          selected.forEach((column, index) => {
+            const cellWidth = widths[index];
+            let label = row.children[column]?.textContent.trim() || "—";
+            if (index === 0) {
+              if (rowIndex === 0) label = "收入／支出項目";
+              else if (group || type) label = row.children[0].textContent.trim() + (group ? " 小計" : "");
+              else if (row.children.length === 1) label = row.children[0].textContent.trim();
+            }
+            context.fillStyle = rowIndex === 0 ? "#f7f4ec" : background;
+            context.fillRect(x, y, cellWidth, 64);
+            context.strokeStyle = "#d9d4c7";
+            context.strokeRect(x, y, cellWidth, 64);
+            drawReportText(context, label, index === 0 ? x + 12 : x + cellWidth - 12, y + 32, {
+              size: rowIndex === 0 ? 21 : 23, weight: group || type || rowIndex === 0 ? 900 : 500,
+              color, align: index === 0 ? "left" : "right", maxWidth: cellWidth - 24
+            });
+            x += cellWidth;
+          });
+        });
+        const blob = await new Promise((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error("PNG_FAILED")), "image/png"));
+        const url = URL.createObjectURL(blob);
+        matrixPngUrls.push(url);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = safeReportFilename(`初一食午_${$("#report-period-label").textContent}_收支明細_${pageIndex + 1}.png`);
+        link.textContent = `下載第 ${pageIndex + 1} 張（${range}）`;
+        link.className = "report-download-jpg";
+        results.append(link);
+        canvas.width = canvas.height = 1;
+      }
+      toast("清晰 PNG 已產生，請點選各張下載。");
+    } catch (error) {
+      console.warn("Unable to export matrix PNG", error);
+      toast("部分圖片未能產生，請重新嘗試。");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
   function reportMatrixPdfCanvases(target) {
     const table = target.querySelector(".report-matrix-table");
     const rows = [...table.querySelectorAll("tr")];
@@ -2712,6 +2811,8 @@
     $("#report-period-current").addEventListener("click", resetReportPeriod);
     $("#report-download-pdf").addEventListener("click", event => exportFullReportPdf(event.currentTarget));
     $("#report-dashboard").addEventListener("click", event => {
+      const pngButton = event.target.closest("[data-report-png]");
+      if (pngButton) { exportMatrixPng(pngButton); return; }
       const button = event.target.closest("[data-report-jpg]");
       if (button) exportReportJpg(button);
     });
