@@ -1897,6 +1897,24 @@
     return { canvas, context, scale };
   }
 
+  function createHighResolutionReportCanvas(width, height) {
+    // PNG is intended for zooming on a phone. Keep a high native resolution while
+    // staying below common mobile-browser canvas limits.
+    const maxSide = 16384;
+    const maxArea = 120_000_000;
+    const scale = Math.min(4, maxSide / width, maxSide / height, Math.sqrt(maxArea / (width * height)));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width * scale));
+    canvas.height = Math.max(1, Math.round(height * scale));
+    const context = canvas.getContext("2d", { alpha: false });
+    context.scale(scale, scale);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.fillStyle = "#fffdf8";
+    context.fillRect(0, 0, width, height);
+    return { canvas, context, scale };
+  }
+
   function fitReportText(context, value, maxWidth) {
     const text = String(value || "");
     if (context.measureText(text).width <= maxWidth) return text;
@@ -2106,16 +2124,8 @@
   async function exportMatrixPng(button) {
     button.disabled = true;
     const originalText = button.textContent;
-    button.textContent = "正在產生橫向清晰 PNG…";
+    button.textContent = "正在產生超高清 PNG…";
     const target = $("#report-matrix-card");
-    let results = target.querySelector(".matrix-png-downloads");
-    if (!results) {
-      results = document.createElement("div");
-      results.className = "matrix-png-downloads";
-      results.setAttribute("aria-live", "polite");
-      target.querySelector(".report-panel-heading").after(results);
-    }
-    results.replaceChildren();
     try {
       await document.fonts.ready;
       const table = target.querySelector("table");
@@ -2129,29 +2139,29 @@
         return { row, contextLabel };
       });
       const pages = [{ chunk: periods, rows }];
-      const note = document.createElement("p");
-      note.textContent = "單張橫向 PNG：所有期間與完整明細並排呈現。手機可橫放並放大查看，分享時請選原圖或檔案附件。";
-      results.append(note);
-      for (const [pageIndex, page] of pages.entries()) {
+      for (const page of pages) {
         await new Promise(resolve => requestAnimationFrame(resolve));
         const selected = [1, ...page.chunk, count - 2, count - 1];
         const measure = document.createElement("canvas").getContext("2d");
-        measure.font = `900 23px ${REPORT_JPG_FONT}`;
-        const itemWidth = Math.max(320, ...page.rows.map(({ row }) => measure.measureText(
+        measure.font = `900 27px ${REPORT_JPG_FONT}`;
+        const itemWidth = Math.max(380, ...page.rows.map(({ row }) => measure.measureText(
           row.classList.contains("report-matrix-group") ? `${row.children[0].textContent.trim()} 小計`
             : row.classList.contains("report-matrix-type") ? row.children[0].textContent.trim()
             : row.children[1]?.textContent.trim() || ""
-        ).width + 32));
-        const rowHeight = 46;
+        ).width + 42));
+        const rowHeight = 58;
         const height = 300 + (page.rows.length + 1) * rowHeight;
-        const baseWidths = selected.map((column, i) => i === 0 ? itemWidth : Math.max(150,
+        const baseWidths = selected.map((column, i) => i === 0 ? itemWidth : Math.max(180,
           ...[header, ...page.rows.map(item => item.row)].map(row => measure.measureText(row.children[column]?.textContent.trim() || "—").width + 32)));
         const baseWidth = baseWidths.reduce((sum, value) => sum + value, 0);
         const width = Math.ceil(Math.max(baseWidth + 72, height * 1.25));
         const extra = (width - 72 - baseWidth) / (selected.length - 1);
         const widths = baseWidths.map((value, i) => value + (i ? extra : 0));
-        const { canvas, context } = createReportCanvas(width, height);
+        const { canvas, context } = createHighResolutionReportCanvas(width, height);
         drawReportHeading(context, target, width);
+        drawReportText(context, `超高清 PNG｜${canvas.width.toLocaleString()} × ${canvas.height.toLocaleString()} px`, width - 36, 32, {
+          size: 16, weight: 800, color: "#31536f", align: "right"
+        });
         const range = page.chunk.map(i => header.children[i].textContent.trim()).join("／");
         drawReportText(context, "完整收入與支出明細 · 所有期間", 36, 191, { size: 21, weight: 900 });
         drawReportText(context, "右側合計與占比為整個所選期間；分類名稱保留於小計列。", 36, 225, { size: 18, maxWidth: width - 72 });
@@ -2176,8 +2186,8 @@
             context.strokeStyle = "#d9d4c7";
             context.strokeRect(x, y, cellWidth, rowHeight);
             drawReportText(context, label, index === 0 ? x + 12 : x + cellWidth - 12, y + rowHeight / 2, {
-              size: rowIndex === 0 ? 21 : 23, weight: group || type || rowIndex === 0 ? 900 : 500,
-              color, align: index === 0 ? "left" : "right", maxWidth: cellWidth - 24
+              size: rowIndex === 0 ? 24 : 27, weight: group || type || rowIndex === 0 ? 900 : 500,
+              color, align: index === 0 ? "left" : "right", maxWidth: cellWidth - 28
             });
             x += cellWidth;
           });
@@ -2186,7 +2196,7 @@
         downloadBlob(blob, safeReportFilename(`初一食午_${$("#report-period-label").textContent}_收入與支出項目明細表_橫向清晰.png`));
         canvas.width = canvas.height = 1;
       }
-      toast("單張橫向清晰 PNG 已下載。");
+      toast("超高清橫向 PNG 已下載；手機請以原圖或檔案方式開啟後放大。 ");
     } catch (error) {
       console.warn("Unable to export matrix PNG", error);
       toast("圖片未能產生，請重新嘗試。");
