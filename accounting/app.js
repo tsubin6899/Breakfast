@@ -2452,6 +2452,33 @@
     }
   }
 
+  async function exportMatrixPdf(button) {
+    const originalText = button.textContent;
+    button.disabled = true;
+    button.textContent = "產生清晰 PDF 中…";
+    try {
+      await document.fonts.ready;
+      const pages = [];
+      const pageCanvases = reportMatrixPdfCanvases($("#report-matrix-card"));
+      for (const pageCanvas of pageCanvases) {
+        const jpeg = new Uint8Array(await (await canvasJpeg(pageCanvas)).arrayBuffer());
+        pages.push({ width: pageCanvas.width, height: pageCanvas.height, jpeg });
+        pageCanvas.width = pageCanvas.height = 1;
+        await new Promise(resolve => window.setTimeout(resolve, 0));
+      }
+      const periodLabel = $("#report-period-label").textContent;
+      const pdf = buildPdfDocument(pages);
+      downloadBlob(new Blob([pdf], { type: "application/pdf" }), safeReportFilename(`初一食午_${periodLabel}_收入與支出項目明細表.pdf`));
+      toast(`明細表 PDF 已下載，共 ${pages.length} 頁。`);
+    } catch (error) {
+      console.error("Unable to export matrix PDF", error);
+      toast("明細表 PDF 產生失敗，請重新整理後再試一次。");
+    } finally {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+
   async function exportReportJpg(button) {
     const target = document.getElementById(button.dataset.reportJpg || "");
     if (!target) return;
@@ -2817,6 +2844,8 @@
     $("#report-dashboard").addEventListener("click", event => {
       const pngButton = event.target.closest("[data-report-png]");
       if (pngButton) { exportMatrixPng(pngButton); return; }
+      const matrixPdfButton = event.target.closest("[data-report-matrix-pdf]");
+      if (matrixPdfButton) { exportMatrixPdf(matrixPdfButton); return; }
       const button = event.target.closest("[data-report-jpg]");
       if (button) exportReportJpg(button);
     });
