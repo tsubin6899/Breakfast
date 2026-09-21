@@ -1320,7 +1320,7 @@ tbody tr:hover { background:#faf8f2; }
   }
 }
 
-/* Source-backed year, month and week income/expense reporting. */
+/* Source-backed year, month, week and day income/expense reporting. */
 .report-dashboard { margin-top: 18px; }
 .report-source-banner { margin: 0 0 16px; }
 .report-toolbar {
@@ -1338,7 +1338,7 @@ tbody tr:hover { background:#faf8f2; }
 .report-controls { display: grid; min-width: min(520px, 45vw); gap: 10px; }
 .report-grain-switch {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 5px;
   padding: 5px;
   border: 1px solid #c7d8e5;

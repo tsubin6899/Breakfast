@@ -852,6 +852,10 @@
       start = new Date(year, 0, 1, 12);
       end = new Date(year, 11, 31, 12);
       label = `${year} 年`;
+    } else if (grain === "day") {
+      start = new Date(year, month, anchor.getDate(), 12);
+      end = new Date(start);
+      label = `${year} 年 ${month + 1} 月 ${anchor.getDate()} 日`;
     } else if (grain === "week") {
       const mondayOffset = (anchor.getDay() + 6) % 7;
       start = new Date(anchor);
@@ -1065,7 +1069,7 @@
     $("#report-net-note").textContent = income ? `淨額率 ${decimal(netRatio)}%` : "期間內尚無收入";
     $("#report-expense-ratio").textContent = income ? `${decimal(expenseRatio)}%` : "—";
     $("#report-trend-subtitle").textContent = `${range.label}，每欄下方顯示該段期間淨額`;
-    $("#report-matrix-subtitle").textContent = `${range.label}依${range.grain === "year" ? "月份" : range.grain === "month" ? "每 7 日" : "每日"}分欄；項目占比以同類型總額為分母。`;
+    $("#report-matrix-subtitle").textContent = `${range.label}依${range.grain === "year" ? "月份" : range.grain === "month" ? "每 7 日" : range.grain === "week" ? "每日" : "單日"}分欄；項目占比以同類型總額為分母。`;
 
     const importedThrough = HISTORY.importedThrough ? `歷史資料匯入至 ${escapeHtml(HISTORY.importedThrough)}` : "使用目前記帳資料";
     $("#report-source-banner").innerHTML = `<strong>${escapeHtml(range.label)}報表資料：</strong>${escapeHtml(HISTORY.source)}＋本機新增記帳＋薪資管理資料；${importedThrough}。正式員工薪資為月結資料，統一列於每月 28 日以利週報與明細互相核對。`;
@@ -1080,7 +1084,7 @@
   }
 
   function setReportGrain(grain) {
-    if (!["year", "month", "week"].includes(grain)) return;
+    if (!["year", "month", "week", "day"].includes(grain)) return;
     reportGrain = grain;
     renderReport();
   }
@@ -1089,7 +1093,7 @@
     const anchor = reportAnchor();
     if (reportGrain === "year") anchor.setFullYear(anchor.getFullYear() + delta);
     else if (reportGrain === "month") anchor.setMonth(anchor.getMonth() + delta);
-    else anchor.setDate(anchor.getDate() + delta * 7);
+    else anchor.setDate(anchor.getDate() + delta * (reportGrain === "week" ? 7 : 1));
     reportAnchorDate = localDateString(anchor);
     renderReport();
   }
