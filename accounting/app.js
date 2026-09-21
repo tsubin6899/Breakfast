@@ -853,9 +853,9 @@
       end = new Date(year, 11, 31, 12);
       label = `${year} 年`;
     } else if (grain === "day") {
-      start = new Date(year, month, anchor.getDate(), 12);
-      end = new Date(start);
-      label = `${year} 年 ${month + 1} 月 ${anchor.getDate()} 日`;
+      start = new Date(year, month, 1, 12);
+      end = new Date(year, month + 1, 0, 12);
+      label = `${year} 年 ${month + 1} 月・每日收支`;
     } else if (grain === "week") {
       const mondayOffset = (anchor.getDay() + 6) % 7;
       start = new Date(anchor);
@@ -1092,8 +1092,8 @@
   function shiftReportPeriod(delta) {
     const anchor = reportAnchor();
     if (reportGrain === "year") anchor.setFullYear(anchor.getFullYear() + delta);
-    else if (reportGrain === "month") anchor.setMonth(anchor.getMonth() + delta);
-    else anchor.setDate(anchor.getDate() + delta * (reportGrain === "week" ? 7 : 1));
+    else if (reportGrain === "month" || reportGrain === "day") anchor.setMonth(anchor.getMonth() + delta);
+    else anchor.setDate(anchor.getDate() + delta * 7);
     reportAnchorDate = localDateString(anchor);
     renderReport();
   }
