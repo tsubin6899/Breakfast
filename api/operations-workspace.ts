@@ -302,6 +302,16 @@ async function handleWorkspaceRequest(request: Request) {
             if (!isConflict(retryError)) throw retryError;
             const newest = await readJson<WorkspaceDocument>(WORKSPACE_PATH);
             const newestModule = newest?.value.modules[moduleName];
+            if ((newestModule?.revision || "") === (current?.revision || "")) {
+              console.error("[operations-workspace] conditional write failed without module change", {
+                module: moduleName,
+                error: retryError instanceof Error ? retryError.message : String(retryError)
+              });
+              return json({
+                error: "STORAGE_WRITE_FAILED",
+                message: "雲端檔案寫入未完成，本機資料已保留。請確認已部署最新同步修正版。"
+              }, 503);
+            }
             return json({
               error: "REVISION_CONFLICT",
               message: "營運雲端資料剛由另一台裝置更新。",

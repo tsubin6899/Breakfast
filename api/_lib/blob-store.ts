@@ -1,4 +1,4 @@
-import { get, put } from "@vercel/blob";
+import { get, head, put } from "@vercel/blob";
 
 export type StoredJson<T> = { value: T; etag: string; url: string };
 
@@ -21,10 +21,22 @@ function isMissing(error: unknown) {
 
 export async function readJson<T>(pathname: string): Promise<StoredJson<T> | null> {
   try {
-    const result = await get(pathname, { access: "private", useCache: false });
-    if (!result || !result.stream) return null;
-    const text = await new Response(result.stream).text();
-    return { value: JSON.parse(text) as T, etag: result.blob.etag || "", url: result.blob.url };
+    // Use the storage API's ETag for conditional writes, rather than a delivery
+    // response ETag which may describe an encoded HTTP representation.
+    // Verify that the object stayed unchanged while its content was downloaded.
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const before = await head(pathname);
+      const result = await get(pathname, {
+        access: "private", useCache: false, headers: { "accept-encoding": "identity" }
+      });
+      if (!result || !result.stream) return null;
+      const text = await new Response(result.stream).text();
+      const after = await head(pathname);
+      if (before.etag && before.etag === after.etag) {
+        return { value: JSON.parse(text) as T, etag: after.etag, url: after.url };
+      }
+    }
+    throw new Error("BLOB_CHANGED_DURING_READ");
   } catch (error) {
     if (isMissing(error)) return null;
     throw error;
@@ -40,6 +52,7 @@ export async function writeJson(pathname: string, value: unknown, options: {
     contentType: "application/json; charset=utf-8",
     addRandomSuffix: false,
     allowOverwrite: options.overwrite === true,
+    cacheControlMaxAge: 60,
     ...(options.etag ? { ifMatch: options.etag } : {})
   });
 }
