@@ -40,8 +40,12 @@
     $("operations-backup-versions").replaceChildren(...["accounting", "payroll"].map(name => {
       const line = document.createElement("p");
       const meta = backup.read(backup.metaKey(name)) || {};
-      line.textContent = labels[name] + "｜最新變更：" + time(meta.lastLocalChangeAt || meta.lastSuccessAt) +
-        "｜" + (meta.dirty ? "等待同步" : meta.revision ? "已同步" : "尚未同步");
+      line.append(document.createTextNode(labels[name] + "｜最後修改：" + time(meta.lastLocalChangeAt || meta.lastSuccessAt) +
+        "｜" + (meta.dirty ? "等待同步" : meta.revision ? "已同步" : "尚未同步")));
+      const checked = document.createElement("small");
+      checked.style.display = "block";
+      checked.textContent = "最後同步核對：" + (meta.lastCheckedAt ? time(meta.lastCheckedAt) : "尚未記錄，完成下一次同步後顯示");
+      line.append(checked);
       return line;
     }));
     $("operations-last-backup").textContent = "最後下載整合備份：" + time(localStorage.getItem("breakfast-operations-last-backup"));
@@ -106,6 +110,12 @@
     $("operations-conflict").hidden = true;
     if (Object.keys(downloads).length) await backup.apply(downloads, { remotes, label: "整合雲端同步前快照" });
     if (!automatic) for (const name of uploads) await upload(name, remotes[name]);
+    const checkedAt = new Date().toISOString();
+    for (const name of ["accounting", "payroll"]) {
+      const meta = backup.read(backup.metaKey(name)) || {};
+      if (meta.dirty || !meta.revision) continue;
+      localStorage.setItem(backup.metaKey(name), JSON.stringify({ ...meta, lastCheckedAt: checkedAt }));
+    }
     status(automatic && uploads.length ? "本機有較新資料，請按「同步全部營運資料」完成上傳。" : "全部營運資料已核對完成。");
     window.dispatchEvent(new CustomEvent("breakfast-operations-restored"));
   }
