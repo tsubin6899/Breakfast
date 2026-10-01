@@ -384,3 +384,10 @@ body {
     line-height:1.65;
   }
 }
+/* Shared operations backup center. */
+#analysis-safety { scroll-margin-top: 24px; }
+.operations-safety-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 18px 0; }
+.operations-safety-actions button, .operations-safety-actions label { min-height: 44px; padding: 12px 16px; border: 1px solid #c7d8e5; border-radius: 10px; background: #edf5fa; color: #173f67; font-weight: 800; }
+.operations-safety-actions input { display: block; max-width: 100%; margin-top: 8px; }
+#operations-conflict { padding: 14px; border: 1px solid #dfb875; border-radius: 12px; background: #fff8e9; }
+#operations-safety-status { color: #173f67; font-weight: 800; }

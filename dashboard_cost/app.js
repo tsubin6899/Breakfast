@@ -799,6 +799,10 @@
     });
     document.addEventListener("keydown", event => { if (event.key === "Escape") setAnalyticsMenu(false); });
     $("#refresh-data").addEventListener("click", render);
+    window.addEventListener("breakfast-operations-restored", () => {
+      analysisSettings = { ...DEFAULT_ANALYSIS_SETTINGS, ...(safeJson(ANALYSIS_SETTINGS_KEY) || {}) };
+      render();
+    });
     document.querySelectorAll(".export-chart").forEach(button => button.addEventListener("click", exportChart));
     document.addEventListener("click", event => {
       const target = event.target.closest("[data-drilldown-type],[data-drilldown-system]");
@@ -815,7 +819,7 @@
       render();
     });
     render();
-    refreshAnalysisFromCloud();
+    // The data safety center coordinates both modules and their version checks.
   }
 
   document.addEventListener("DOMContentLoaded", init);

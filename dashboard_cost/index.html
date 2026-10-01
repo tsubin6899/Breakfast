@@ -30,6 +30,9 @@
   <script defer src="../salary_app/data/salary-history-2022-2025.js"></script>
   <script defer src="../salary_app/data/salary-history-2026-h1.js"></script>
   <script defer src="./app.js"></script>
+  <script defer src="../shared/cloud-sync.js"></script>
+  <script defer src="../shared/operations-backup.js"></script>
+  <script defer src="./safety.js"></script>
 </head>
 <body class="has-suite-brandbar analytics-system">
   <header class="suite-brandbar">
@@ -60,6 +63,7 @@
         <a href="#analysis-channels"><i aria-hidden="true" data-icon="channels"></i><span><strong>通路與供應商</strong><small>平台占比與採購變化</small></span></a>
         <a href="#analysis-planning"><i aria-hidden="true" data-icon="planning"></i><span><strong>預測與毛利</strong><small>現金流與商品貢獻</small></span></a>
         <a href="#analysis-alerts"><i aria-hidden="true" data-icon="alerts"></i><span><strong>異常與預警</strong><small>跨系統待處理事項</small></span></a>
+        <a href="#analysis-safety"><i aria-hidden="true" data-icon="safety"></i><span><strong>資料安全中心</strong><small>整合備份・還原與雲端同步</small></span></a>
       </nav>
       <div class="analytics-sidebar-note"><strong>跨系統月份同步</strong><p>在任一系統切換月份，另外兩套系統會自動沿用。</p></div>
     </aside>
@@ -227,6 +231,25 @@
         <span id="operations-alert-count">正在檢查</span>
       </div>
       <div id="operations-alerts" class="operations-alerts"></div>
+    </section>
+    <section class="panel" id="analysis-safety">
+      <div class="panel-heading"><div><p class="eyebrow">OPERATIONS DATA SAFETY</p><h2>資料安全中心</h2><p>薪資、打卡與記帳在這裡一起備份與同步。每份整合備份都有建立時間，還原前會保存可回復快照。</p></div></div>
+      <strong id="operations-backup-counts"></strong>
+      <div id="operations-backup-versions"></div>
+      <p id="operations-last-backup"></p>
+      <div class="operations-safety-actions">
+        <button id="operations-download" type="button">下載全部營運備份</button>
+        <button id="operations-sync" type="button">同步全部營運資料</button>
+        <label>還原整合備份<input id="operations-restore-file" type="file" accept=".json,application/json" /></label>
+      </div>
+      <p>整合檔包含記帳明細、日薪、收據、分類設定、員工、打卡紀錄、薪資設定、月結與報表設定。尚未在此裝置載入的薪資資料會標示為 0；請先同步雲端或開啟薪資管理後再備份。</p>
+      <div id="operations-conflict" hidden>
+        <p id="operations-conflict-detail"></p>
+        <div class="operations-safety-actions"><button id="operations-use-cloud" type="button">保留雲端版本</button><button id="operations-use-local" type="button">保留本機版本並同步</button></div>
+      </div>
+      <p id="operations-safety-status" role="status" aria-live="polite">本機資料已就緒。</p>
+      <h3>整合資料救援版本</h3>
+      <div id="operations-snapshot-list"></div>
     </section>
   </main>
   </div>
