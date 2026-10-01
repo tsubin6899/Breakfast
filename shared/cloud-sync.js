@@ -83,5 +83,26 @@
     return "download";
   }
 
-  window.BreakfastCloudSync = { isRetryable, requestJson, retryDelay, relativeTime, decideSync };
+  async function uploadWithVersionCheck(moduleName, remote, options) {
+    const url = "/api/operations-workspace?module=" + moduleName;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        return await requestJson(url, { ...options, method: "PUT", timeout: 75000 });
+      } catch (error) {
+        if (Number(error.status) !== 409) throw error;
+        const latest = await requestJson(url, { timeout: 75000 });
+        // Changes to the other module can invalidate the shared document's ETag.
+        // Retry only when this module's version is still the one we reviewed.
+        if ((latest.revision || "") !== (remote.revision || "")) {
+          error.moduleName = moduleName;
+          error.remote = latest;
+          throw error;
+        }
+        if (attempt === 2) throw new Error("雲端目前正在處理其他同步，本機資料已保留，請稍後再同步。");
+        await sleep(retryDelay(attempt));
+      }
+    }
+  }
+
+  window.BreakfastCloudSync = { isRetryable, requestJson, retryDelay, relativeTime, decideSync, uploadWithVersionCheck };
 })();

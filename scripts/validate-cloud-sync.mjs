@@ -62,6 +62,25 @@ sandbox.navigator.onLine = false;
 await assert.rejects(() => cloud.requestJson("/api/test"), error => error.code === "OFFLINE");
 assert.equal(calls.length, 3, "離線時不得送出網路請求");
 
+sandbox.navigator.onLine = true;
+responses.push(
+  { ok: false, status: 409, json: async () => ({ message: "營運雲端資料剛由另一台裝置更新。" }) },
+  { ok: true, json: async () => ({ revision: "reviewed", state: {} }) },
+  { ok: true, json: async () => ({ revision: "saved" }) }
+);
+const checked = await cloud.uploadWithVersionCheck("payroll", { revision: "reviewed" }, { body: "{}" });
+assert.equal(checked.revision, "saved", "共享文件碰撞但薪資版本未變時，應重新嘗試上傳");
+const beforeConflict = calls.length;
+responses.push(
+  { ok: false, status: 409, json: async () => ({ message: "conflict" }) },
+  { ok: true, json: async () => ({ revision: "changed", state: { employees: [] }, updatedAt: "2026-10-01T06:00:00Z" }) }
+);
+await assert.rejects(
+  () => cloud.uploadWithVersionCheck("payroll", { revision: "reviewed" }, { body: "{}" }),
+  error => error.status === 409 && error.moduleName === "payroll" && error.remote.revision === "changed"
+);
+assert.equal(calls.length - beforeConflict, 2, "薪資版本已變時只能讀取最新版本，不能自動覆蓋");
+
 const [accountingApp, payrollApp, accountingHtml, workspaceApi] = await Promise.all([
   readFile(resolve(ROOT, "accounting/app.js"), "utf8"),
   readFile(resolve(ROOT, "salary_app/app.js"), "utf8"),

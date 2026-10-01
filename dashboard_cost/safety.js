@@ -7,6 +7,13 @@
   const labels = { accounting: "記帳與日薪", payroll: "員工、打卡與薪資" };
   const time = value => value ? new Date(value).toLocaleString("zh-TW") : "尚無更新紀錄";
   function status(message) { $("operations-safety-status").textContent = message; }
+  function showConflict(remotes, names) {
+    pending = { remotes, names };
+    $("operations-conflict").hidden = false;
+    $("operations-conflict-detail").textContent = names.map(name => labels[name] + "：本機 " +
+      time((backup.read(backup.metaKey(name)) || {}).lastLocalChangeAt) + "／雲端 " + time(remotes[name].updatedAt)).join("；");
+    status("同步期間雲端版本有變更，本機資料已保留。請確認更新時間並選擇保留的版本。");
+  }
   async function requireOwner() {
     if (["localhost", "127.0.0.1"].includes(location.hostname)) return;
     const remote = await window.BreakfastCloudSync.requestJson("/api/operations-workspace?module=payroll", { timeout: 75000 });
@@ -44,7 +51,11 @@
     busy = true;
     document.querySelectorAll("#analysis-safety button").forEach(button => button.disabled = true);
     try { await action(); }
-    catch (error) { status(error.message || "操作失敗，請重試。"); }
+    catch (error) {
+      if (error.status === 409 && error.remote && error.moduleName) {
+        showConflict({ [error.moduleName]: error.remote }, [error.moduleName]);
+      } else status(error.message || "操作失敗，請重試。");
+    }
     finally {
       busy = false;
       document.querySelectorAll("#analysis-safety button").forEach(button => button.disabled = false);
@@ -63,7 +74,7 @@
       body = await new Response(new Blob([serialized]).stream().pipeThrough(new CompressionStream("gzip"))).blob();
       headers["Content-Type"] = "application/octet-stream";
     }
-    const result = await window.BreakfastCloudSync.requestJson("/api/operations-workspace?module=" + name, { method: "PUT", body, headers, timeout: 75000 });
+    const result = await window.BreakfastCloudSync.uploadWithVersionCheck(name, remote, { body, headers });
     // Do not clear pending changes made in another tab during the upload.
     const current = backup.read(backup.metaKey(name)) || {};
     localStorage.setItem(backup.metaKey(name), JSON.stringify({ ...current, revision: result.revision,
@@ -88,13 +99,11 @@
       else if (local && (!remote.state || meta.dirty)) uploads.push(name);
     }
     if (conflicts.length) {
-      pending = { remotes, names: conflicts };
-      $("operations-conflict").hidden = false;
-      $("operations-conflict-detail").textContent = conflicts.map(name => labels[name] + "：本機 " +
-        time((backup.read(backup.metaKey(name)) || {}).lastLocalChangeAt) + "／雲端 " + time(remotes[name].updatedAt)).join("；");
-      status("有待同步資料與另一個雲端版本，請選擇要保留的資料。");
+      showConflict(remotes, conflicts);
       return;
     }
+    pending = null;
+    $("operations-conflict").hidden = true;
     if (Object.keys(downloads).length) await backup.apply(downloads, { remotes, label: "整合雲端同步前快照" });
     if (!automatic) for (const name of uploads) await upload(name, remotes[name]);
     status(automatic && uploads.length ? "本機有較新資料，請按「同步全部營運資料」完成上傳。" : "全部營運資料已核對完成。");
