@@ -70,6 +70,22 @@ assert(
 assert(JSON.stringify(compactHistoryState).length < 500000, "精簡後本機薪資狀態仍過大，可能超出瀏覽器額度");
 
 // 舊瀏覽器資料的同名員工與誤列會在載入時自動清理，出勤改掛正確員工。
+let renamedState = api.createState();
+const shangqi = renamedState.employees.find(employee => employee.id === "shangqi");
+assert(shangqi, "上齊的歷史員工編號不存在");
+shangqi.name = "黃上齊";
+renamedState = api.setState(api.stateForPersistence(renamedState));
+assert(renamedState.employees.filter(employee => employee.id === "shangqi").length === 1, "改名後重新載入歷史資料不得建立第二筆員工");
+assert(renamedState.employees.find(employee => employee.id === "shangqi").name === "黃上齊", "歷史匯入不得還原舊姓名");
+renamedState.employees.push(api.normalizeEmployee({ id: "old-shangqi", name: "上齊", active: true }));
+renamedState.attendance["old-shangqi|2026-09-01"] = { employeeId: "old-shangqi", date: "2026-09-01", source: "人工輸入", segments: [{ start: "06:00", end: "13:00" }] };
+renamedState = api.setState(renamedState);
+assert(!renamedState.employees.some(employee => employee.name === "上齊"), "上齊與黃上齊應合併");
+assert(renamedState.attendance["shangqi|2026-09-01"]?.segments[0].start === "06:00", "合併時應保留打卡資料");
+renamedState.employees.push(api.normalizeEmployee({ id: "shangqi", name: "上齊", active: true }));
+renamedState = api.setState(renamedState);
+assert(renamedState.employees.filter(employee => employee.id === "shangqi").length === 1, "相同編號的舊姓名重複員工應合併");
+
 let migrated = api.createState();
 migrated.employees.push(api.normalizeEmployee({ id: "legacy-tsai", name: "采葳", payType: "hourly", hourlyRate: 200, active: false }));
 migrated.employees.push(api.normalizeEmployee({ id: "legacy-balance", name: "其他薪資支出（原營業額檔）", payType: "monthly", monthlySalary: 1000, active: false }));

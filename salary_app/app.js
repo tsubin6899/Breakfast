@@ -9,7 +9,7 @@
   const CLOUD_SAVE_DELAY = 60_000;
   const CLOUD_RETRY_DELAYS = [5_000, 15_000, 45_000];
   const APP_VERSION = 10;
-  const EMPLOYEE_NAME_ALIASES = { "采葳": "黃采葳" };
+  const EMPLOYEE_NAME_ALIASES = { "采葳": "黃采葳", "上齊": "黃上齊" };
   const EXCLUDED_EMPLOYEE_NAMES = new Set(["年終", "待補", "其他薪資支出（原營業額檔）"]);
   const LOCAL_MODE = Boolean(window.BREAKFAST_LOCAL_MODE);
   const CLOUD_SYNC = window.BreakfastCloudSync;
@@ -230,6 +230,12 @@
     const employeeByName = new Map(
       [...normalized.employees, ...(normalized.deletedEmployees || [])].map(employee => [employee.name, employee])
     );
+    const employeeById = new Map(
+      [...normalized.employees, ...(normalized.deletedEmployees || [])].map(employee => [employee.id, employee])
+    );
+    [...normalized.employees, ...(normalized.deletedEmployees || [])].forEach(employee => {
+      (employee.previousNames || []).forEach(name => employeeByName.set(name, employee));
+    });
     (BUNDLED_HISTORY.employees || []).forEach(definition => {
       const {
         name,
@@ -240,7 +246,7 @@
         active,
         ...rateFields
       } = definition;
-      let employee = employeeByName.get(name);
+      let employee = employeeById.get(id) || employeeByName.get(name) || employeeByName.get(EMPLOYEE_NAME_ALIASES[name]);
       const profile = {
         id: `imported-rate-${id}-${effectiveFrom}`,
         effectiveFrom,
@@ -270,6 +276,8 @@
             .sort((a, b) => String(a.effectiveFrom).localeCompare(String(b.effectiveFrom)));
         }
       }
+      employeeByName.set(name, employee);
+      employeeById.set(id, employee);
     });
 
     (BUNDLED_HISTORY.attendance || []).forEach(sourceRecord => {
@@ -379,6 +387,7 @@
     const deleted = normalized.deletedEmployees || [];
     const allEmployees = [...active, ...deleted];
     const idRemap = new Map();
+    const mergedEmployees = new Set();
     const excludedIds = new Set(
       allEmployees.filter(employee => EXCLUDED_EMPLOYEE_NAMES.has(employee.name)).map(employee => employee.id)
     );
@@ -391,8 +400,8 @@
         aliasEmployee.name = canonicalName;
         return;
       }
-      if (aliasEmployee.id === canonicalEmployee.id) return;
-      idRemap.set(aliasEmployee.id, canonicalEmployee.id);
+      mergedEmployees.add(aliasEmployee);
+      if (aliasEmployee.id !== canonicalEmployee.id) idRemap.set(aliasEmployee.id, canonicalEmployee.id);
       const profiles = [...(canonicalEmployee.payHistory || []), ...(aliasEmployee.payHistory || [])];
       canonicalEmployee.payHistory = [...new Map(profiles.map(profile => [
         `${profile.effectiveFrom || ""}|${profile.payType || ""}|${profile.hourlyRate || 0}|${profile.monthlySalary || 0}`,
@@ -402,7 +411,7 @@
       canonicalEmployee.endDate = [canonicalEmployee.endDate, aliasEmployee.endDate].filter(Boolean).sort().at(-1) || "";
     });
 
-    const keepEmployee = employee => !EXCLUDED_EMPLOYEE_NAMES.has(employee.name) && !idRemap.has(employee.id);
+    const keepEmployee = employee => !EXCLUDED_EMPLOYEE_NAMES.has(employee.name) && !idRemap.has(employee.id) && !mergedEmployees.has(employee);
     normalized.employees = active.filter(keepEmployee);
     normalized.deletedEmployees = deleted.filter(keepEmployee);
 
@@ -443,7 +452,7 @@
         return {
           ...row,
           employeeId: row.employeeId ? nextId : row.employeeId,
-          employee: row.employee ? { ...row.employee, id: nextId, name: "黃采葳" } : row.employee
+          employee: row.employee ? { ...row.employee, id: nextId, name: allEmployees.find(employee => employee.id === nextId && !mergedEmployees.has(employee))?.name || row.employee.name } : row.employee
         };
       });
     });
@@ -4875,6 +4884,7 @@
         ...profile,
         id,
         name: $("#employee-name").value.trim(),
+        previousNames: [...new Set([...(existing?.previousNames || []), existing?.name].filter(Boolean))],
         hireDate: $("#employee-hire-date").value,
         endDate: $("#employee-end-date").value,
         birthday: $("#employee-birthday").value,
