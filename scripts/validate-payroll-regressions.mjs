@@ -311,4 +311,34 @@ const sortedEmployees = api.employeesForDisplay([
 ]);
 assert(sortedEmployees.map(employee => employee.id).join(",") === "active-1,active-2,inactive-1,inactive-2", "員工卡片應將在職員工排在停用員工前方，並保留原本順序");
 
-console.log("薪資回歸測試通過：固定月薪、月休、特殊加班、假日、缺勤、分鐘加班、生日禮金與員工排序皆正確。");
+// 國定假日班表依日期套用，包括平日、補假與週末；仍尊重當日臨時班別。
+state = api.createState();
+state.specialDays.push({ date: "2026-10-09", type: "national", label: "測試補假" });
+state.specialDays.push({ date: "2026-10-10", type: "national", label: "測試國定假日" });
+const holidayEmployee = api.normalizeEmployee({
+  id: "holiday-schedule", name: "何秀芷班表測試", payType: "monthly", monthlySalary: 41000,
+  attendanceRequired: true, scheduleStart: "08:00", scheduleEnd: "15:00",
+  nationalScheduleStart: "06:00", nationalScheduleEnd: "14:00", expectedWorkdays: [1, 2, 3, 4, 5],
+  overtimeMode: "fixed_hourly", overtimeHourlyRate: 200
+});
+state.employees.push(holidayEmployee);
+state = api.setState(state);
+for (const date of ["2026-10-09", "2026-10-10"]) {
+  const schedule = api.scheduleForDate(holidayEmployee, date);
+  assert(schedule.start === "06:00" && schedule.end === "14:00" && schedule.expected, "平日補假與週末國定假日皆應套用假日班表");
+  const overtime = api.dailyOvertimeBreakdown(holidayEmployee, {
+    date, status: "confirmed", segments: [{ start: "05:30", end: "14:30" }]
+  });
+  assert(overtime.early === 30 && overtime.late === 30, "假日加班應依假日上班與下班時間起算");
+}
+assert(api.scheduleForDate(holidayEmployee, "2026-10-08").start === "08:00", "一般平日應沿用原班表");
+state.shiftOverrides[api.attendanceKey(holidayEmployee.id, "2026-10-09")] = { expected: true, start: "07:00", end: "13:00" };
+assert(api.scheduleForDate(holidayEmployee, "2026-10-09").start === "07:00", "當日臨時班別應優先於假日班表");
+const noHolidayEmployee = api.normalizeEmployee({ ...holidayEmployee, payHistory: [], nationalScheduleStart: "", nationalScheduleEnd: "" });
+assert(api.scheduleForDate(noHolidayEmployee, "2026-10-10").start === "08:00", "未設定假日時段應沿用原班表");
+const originalProfile = api.payProfileAt(holidayEmployee, "2026-10-09");
+assert(api.payProfileSignature(originalProfile) !== api.payProfileSignature({ ...originalProfile, nationalScheduleEnd: "15:00" }), "假日班表變更應納入費率歷史與月結保護");
+const restoredEmployee = api.normalizeEmployee(JSON.parse(JSON.stringify(holidayEmployee)));
+assert(api.scheduleForDate(restoredEmployee, "2026-10-10").end === "14:00", "儲存重新載入後應保留假日班表");
+
+console.log("薪資回歸測試通過：固定月薪、月休、特殊加班、國定假日班表、缺勤、分鐘加班、生日禮金與員工排序皆正確。");

@@ -836,6 +836,14 @@
           <label data-workday="0"><span><input type="checkbox" name="employee-workday" value="0" />週日</span><input class="workday-start" type="time" aria-label="週日上班" /><input class="workday-end" type="time" aria-label="週日下班" /></label>
         </div>
       </fieldset>
+      <fieldset class="workday-fieldset monthly-field attendance-required-field">
+        <legend>國定假日上班時間</legend>
+        <p>依「國定假日與特殊日」中的國定假日／補假套用，平日或週末皆優先使用此時段。兩欄留白時沿用每週班表；當日臨時班別優先。</p>
+        <div class="form-grid">
+          <label><span>國定假日上班</span><input id="employee-national-schedule-start" type="time" /></label>
+          <label><span>國定假日下班</span><input id="employee-national-schedule-end" type="time" /></label>
+        </div>
+      </fieldset>
       <fieldset id="employee-special-rules-fieldset" class="special-rules-fieldset monthly-field attendance-required-field">
         <legend>特殊加班起算規則</legend>
         <p>適合「每月特定日期後，某些星期改用不同上班起點」。當日臨時班別仍會優先於此規則。</p>

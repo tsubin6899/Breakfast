@@ -154,6 +154,8 @@
       monthlySalary: Number(employee.monthlySalary || 0),
       scheduleStart: employee.scheduleStart || "",
       scheduleEnd: employee.scheduleEnd || "",
+      nationalScheduleStart: employee.nationalScheduleStart || "",
+      nationalScheduleEnd: employee.nationalScheduleEnd || "",
       attendanceRequired,
       overtimeMode,
       overtimeHourlyRate,
@@ -712,6 +714,9 @@
         }
         signature.monthlySpecialDayMode = normalizeMonthlySpecialDayMode(profile.monthlySpecialDayMode);
         signature.weeklySchedule = weeklySchedule;
+        signature.nationalSchedule = profile.nationalScheduleStart && profile.nationalScheduleEnd
+          ? { start: profile.nationalScheduleStart, end: profile.nationalScheduleEnd }
+          : null;
       }
     } else {
       signature.hourlyRate = Number(profile.hourlyRate || 0);
@@ -785,6 +790,12 @@
     const override = state.shiftOverrides?.[attendanceKey(employee.id, date)];
     if (override) return { ...override, source: "override", rule: null, label: "當日臨時班別" };
     const profile = payProfileAt(employee, date);
+    if (profile.payType === "monthly" && profile.attendanceRequired !== false
+      && getDayInfo(date).type === "national"
+      && profile.nationalScheduleStart && profile.nationalScheduleEnd) {
+      return { expected: true, start: profile.nationalScheduleStart, end: profile.nationalScheduleEnd,
+        source: "national", rule: null, label: "國定假日班表" };
+    }
     const weekday = new Date(`${date}T12:00:00`).getDay();
     const weekly = profile.weeklySchedule?.[weekday] || profile.weeklySchedule?.[String(weekday)];
     const expected = weekly
@@ -2789,6 +2800,8 @@
     $("#employee-attendance-mode").value = profile?.attendanceRequired === false ? "none" : "required";
     $("#employee-schedule-start").value = profile?.scheduleStart || "08:00";
     $("#employee-schedule-end").value = profile?.scheduleEnd || "15:00";
+    $("#employee-national-schedule-start").value = profile?.nationalScheduleStart || "";
+    $("#employee-national-schedule-end").value = profile?.nationalScheduleEnd || "";
     $("#employee-overtime-mode").value = profile?.overtimeMode || "salary_multiplier";
     $("#employee-overtime-hourly-rate").value = profile?.overtimeHourlyRate || 200;
     $("#employee-monthly-special-day-mode").value = normalizeMonthlySpecialDayMode(profile?.monthlySpecialDayMode);
@@ -4805,6 +4818,12 @@
       if (!existing && !requireUnlockedMonth()) return;
       const isMonthly = $("#employee-pay-type").value === "monthly";
       const attendanceRequired = !isMonthly || $("#employee-attendance-mode").value !== "none";
+      const nationalScheduleStart = isMonthly && attendanceRequired ? $("#employee-national-schedule-start").value : "";
+      const nationalScheduleEnd = isMonthly && attendanceRequired ? $("#employee-national-schedule-end").value : "";
+      if (Boolean(nationalScheduleStart) !== Boolean(nationalScheduleEnd)) {
+        toast("請同時填寫國定假日上班與下班時間，或將兩欄留白。");
+        return;
+      }
       const expectedWorkdays = attendanceRequired
         ? $$('input[name="employee-workday"]:checked').map(input => Number(input.value))
         : [];
@@ -4849,6 +4868,8 @@
         monthlySalary: Number($("#employee-monthly-salary").value || 0),
         scheduleStart: attendanceRequired ? $("#employee-schedule-start").value : "",
         scheduleEnd: attendanceRequired ? $("#employee-schedule-end").value : "",
+        nationalScheduleStart,
+        nationalScheduleEnd,
         attendanceRequired,
         overtimeMode: !isMonthly || !attendanceRequired ? "none" : $("#employee-overtime-mode").value,
         overtimeHourlyRate: isMonthly && attendanceRequired && $("#employee-overtime-mode").value === "fixed_hourly"
@@ -5502,6 +5523,7 @@
 
   if (window.BREAKFAST_TEST_MODE) {
     window.BreakfastPayrollTestApi = {
+      scheduleForDate,
       createState: () => normalizeState(createDefaultState()),
       setState: value => { state = normalizeState(value); return state; },
       getState: () => state,
