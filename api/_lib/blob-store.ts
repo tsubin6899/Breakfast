@@ -1,3 +1,4 @@
+import { gzipSync } from "node:zlib";
 import { get, head, put } from "@vercel/blob";
 
 export type StoredJson<T> = { value: T; etag: string; url: string };
@@ -61,6 +62,29 @@ export async function writeImmutableJson(pathname: string, value: unknown) {
   try {
     return await writeJson(pathname, value);
   } catch (error) {
+    if (isAlreadyExists(error)) return null;
+    throw error;
+  }
+}
+
+// Keep one pre-change recovery point per Taiwan calendar day. Existing state
+// and payroll snapshots remain JSON; backups are explicitly named .json.gz.
+export async function writeDailyWorkspaceBackup(updatedAt: string, value: unknown) {
+  const day = new Date(Date.parse(updatedAt) + 8 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const pathname = `breakfast/backups/workspace-daily/${day}.json.gz`;
+  try {
+    await head(pathname);
+    return null;
+  } catch (error) {
+    if (!isMissing(error)) throw error;
+  }
+  try {
+    return await put(pathname, gzipSync(JSON.stringify(value)), {
+      access: "private", contentType: "application/gzip",
+      addRandomSuffix: false, allowOverwrite: false, cacheControlMaxAge: 60
+    });
+  } catch (error) {
+    // Concurrent syncs must never replace the day's first recovery point.
     if (isAlreadyExists(error)) return null;
     throw error;
   }

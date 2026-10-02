@@ -14,6 +14,7 @@ const module = { exports: {} };
 const sandbox = {
   module, exports: module.exports, Response, JSON, Error,
   require(name) {
+    if (name === "node:zlib") return { gzipSync: () => { throw new Error("Unexpected gzip in ETag test"); } };
     assert.equal(name, "@vercel/blob");
     return {
       head: async () => ({ etag: headVersions.shift() || authoritativeEtag, url: "private://state" }),

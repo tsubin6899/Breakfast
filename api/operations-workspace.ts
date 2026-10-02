@@ -1,6 +1,6 @@
 import { gunzipSync, gzipSync } from "node:zlib";
 import { getSession } from "./_lib/auth.js";
-import { readJson, writeImmutableJson, writeJson, type StoredJson } from "./_lib/blob-store.js";
+import { readJson, writeDailyWorkspaceBackup, writeImmutableJson, writeJson, type StoredJson } from "./_lib/blob-store.js";
 import { isSameOrigin, json } from "./_lib/http.js";
 
 type ModuleName = "accounting" | "payroll";
@@ -276,7 +276,7 @@ async function handleWorkspaceRequest(request: Request) {
     let savedDocument = document;
     try {
       if (workspace.stored) {
-        await writeImmutableJson(`breakfast/backups/workspace/${updatedAt.slice(0, 10)}/${updatedAt.replace(/[:.]/g, "-")}.json`, workspace.value);
+        await writeDailyWorkspaceBackup(updatedAt, workspace.value);
       }
       await writeJson(WORKSPACE_PATH, document, workspace.stored
         ? { overwrite: true, ...(force ? {} : { etag: workspace.stored.etag }) }
