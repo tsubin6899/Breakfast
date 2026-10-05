@@ -1,5 +1,5 @@
 import { gzipSync } from "node:zlib";
-import { get, head, put } from "@vercel/blob";
+import { BlobNotFoundError, get, head, put } from "@vercel/blob";
 
 export type StoredJson<T> = { value: T; etag: string; url: string };
 
@@ -17,7 +17,7 @@ function isAlreadyExists(error: unknown) {
 
 function isMissing(error: unknown) {
   const item = error as { status?: number; statusCode?: number; code?: string; name?: string };
-  return item?.status === 404 || item?.statusCode === 404 || item?.code === "not_found" || item?.name === "BlobNotFoundError";
+  return error instanceof BlobNotFoundError || item?.status === 404 || item?.statusCode === 404 || item?.code === "not_found" || item?.name === "BlobNotFoundError";
 }
 
 export async function readJson<T>(pathname: string): Promise<StoredJson<T> | null> {
