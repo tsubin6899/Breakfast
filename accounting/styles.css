@@ -1459,6 +1459,16 @@ tbody tr:hover { background:#faf8f2; }
 .report-matrix-table th:nth-child(2),
 .report-matrix-table td:first-child,
 .report-matrix-table td:nth-child(2) { text-align: left; }
+.report-matrix-table tr > :nth-child(n+3) {
+  white-space: nowrap;
+}
+.report-matrix-table tr > :first-child:not(:only-child),
+.report-matrix-table tr > :nth-child(2) {
+  min-width: 9rem;
+  max-width: 14rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .report-matrix-table td:first-child { color: var(--muted); }
 .report-matrix-table td strong { color: var(--ink); }
 .report-matrix-type th { position: static; color: #fff; background: var(--green); }

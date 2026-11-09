@@ -2216,17 +2216,18 @@
     const columnCount = Math.max(...rows.map(row => row.children.length), 0);
     const periodColumns = Array.from({ length: Math.max(0, columnCount - 4) }, (_, index) => index + 2);
     const summaryColumns = columnCount >= 2 ? [columnCount - 2, columnCount - 1] : [];
-    const midpoint = Math.ceil(periodColumns.length / 2);
-    const periodChunks = periodColumns.length > 3
-      ? [periodColumns.slice(0, midpoint), periodColumns.slice(midpoint)]
-      : [periodColumns];
+    const periodChunks = [];
+    for (let index = 0; index < periodColumns.length; index += 7) periodChunks.push(periodColumns.slice(index, index + 7));
+    if (!periodChunks.length) periodChunks.push([]);
+    const headerRows = rows.filter(row => row.parentElement.tagName === "THEAD");
+    const bodyRows = rows.filter(row => row.parentElement.tagName !== "THEAD");
     const pageWidth = 1240;
     const pageHeight = 1754;
     const margin = 42;
     const tableTop = 150;
     const footerHeight = 44;
     const availableWidth = pageWidth - margin * 2;
-    const rowHeight = Math.max(20, Math.min(31, Math.floor((pageHeight - tableTop - footerHeight) / Math.max(1, rows.length))));
+    const lineHeight = 20;
     const pages = [];
 
     periodChunks.forEach((periodChunk, pageIndex) => {
@@ -2234,27 +2235,36 @@
       const fixedWidths = [135, 225];
       const numericWidth = (availableWidth - fixedWidths[0] - fixedWidths[1]) / Math.max(1, selectedColumns.length - 2);
       const selectedWidths = selectedColumns.map((_, index) => index === 0 ? fixedWidths[0] : index === 1 ? fixedWidths[1] : numericWidth);
-      const canvas = document.createElement("canvas");
-      canvas.width = pageWidth;
-      canvas.height = pageHeight;
-      const context = canvas.getContext("2d");
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, pageWidth, pageHeight);
+      let canvas;
+      let context;
+      let y;
+      function startPage() {
+        canvas = document.createElement("canvas");
+        canvas.width = pageWidth;
+        canvas.height = pageHeight;
+        context = canvas.getContext("2d");
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, pageWidth, pageHeight);
 
-      const firstLabel = table.querySelector(`thead th:nth-child(${(periodChunk[0] ?? 2) + 1})`)?.textContent || "期間";
-      const lastLabel = table.querySelector(`thead th:nth-child(${(periodChunk.at(-1) ?? 2) + 1})`)?.textContent || firstLabel;
-      drawReportText(context, "初一食午｜收入與支出項目明細表", margin, 30, { size: 22, weight: 900 });
-      drawReportText(context, $("#report-period-label").textContent, pageWidth - margin, 30, { size: 16, weight: 800, color: "#66746d", align: "right" });
-      drawReportText(context, `明細表 ${pageIndex + 1}/${periodChunks.length}｜${firstLabel}${firstLabel === lastLabel ? "" : ` ～ ${lastLabel}`}｜右側保留期間合計與占比`, margin, 72, { size: 19, weight: 900, color: "#31536f", maxWidth: availableWidth });
-      drawReportText(context, "收入與支出分類使用相同期間與資料來源；正式員工薪資統一列於每月 28 日。", margin, 108, { size: 14, color: "#66746d", maxWidth: availableWidth });
-      context.strokeStyle = "#d9d4c7";
-      context.lineWidth = 1;
-      context.beginPath();
-      context.moveTo(margin, 132);
-      context.lineTo(pageWidth - margin, 132);
-      context.stroke();
+        const firstLabel = table.querySelector(`thead th:nth-child(${(periodChunk[0] ?? 2) + 1})`)?.textContent || "期間";
+        const lastLabel = table.querySelector(`thead th:nth-child(${(periodChunk.at(-1) ?? 2) + 1})`)?.textContent || firstLabel;
+        drawReportText(context, "初一食午｜收入與支出項目明細表", margin, 30, { size: 22, weight: 900 });
+        drawReportText(context, $("#report-period-label").textContent, pageWidth - margin, 30, { size: 16, weight: 800, color: "#66746d", align: "right" });
+        drawReportText(context, `明細表 ${pageIndex + 1}/${periodChunks.length}｜${firstLabel}${firstLabel === lastLabel ? "" : ` ～ ${lastLabel}`}｜右側保留期間合計與占比`, margin, 72, { size: 19, weight: 900, color: "#31536f", maxWidth: availableWidth });
+        drawReportText(context, "收入與支出分類使用相同期間與資料來源；正式員工薪資統一列於每月 28 日。", margin, 108, { size: 14, color: "#66746d", maxWidth: availableWidth });
+        context.strokeStyle = "#d9d4c7";
+        context.lineWidth = 1;
+        context.beginPath();
+        context.moveTo(margin, 132);
+        context.lineTo(pageWidth - margin, 132);
+        context.stroke();
+        y = tableTop;
+        pages.push(canvas);
+        headerRows.forEach(drawRow);
+      }
 
-      rows.forEach((row, rowIndex) => {
+
+      function drawRow(row, rowIndex) {
         const isHeader = row.parentElement?.tagName === "THEAD";
         const isIncomeType = row.classList.contains("report-matrix-type") && row.classList.contains("income");
         const isExpenseType = row.classList.contains("report-matrix-type") && row.classList.contains("expense");
@@ -2262,7 +2272,6 @@
         const isExpenseGroup = row.classList.contains("report-matrix-group") && row.classList.contains("expense");
         const background = isIncomeType ? "#23684f" : isExpenseType ? "#b54e52" : isIncomeGroup ? "#e6f2eb" : isExpenseGroup ? "#fbe9e7" : isHeader ? "#f7f4ec" : rowIndex % 2 ? "#fffdf8" : "#faf9f5";
         const foreground = isIncomeType || isExpenseType ? "#ffffff" : "#17231e";
-        const y = tableTop + rowIndex * rowHeight;
         const cells = Array(columnCount).fill(null);
         let logicalColumn = 0;
         [...row.children].forEach(cell => {
@@ -2270,37 +2279,65 @@
           cells[logicalColumn] = cell;
           logicalColumn += span;
         });
-        if (row.children.length === 1 && Number(row.children[0].colSpan || 1) > 1) {
-          context.fillStyle = background;
-          context.fillRect(margin, y, availableWidth, rowHeight);
-          context.strokeStyle = "#d9d4c7";
-          context.strokeRect(margin, y, availableWidth, rowHeight);
-          drawReportText(context, row.children[0].textContent?.trim() || "", pageWidth / 2, y + rowHeight / 2, { size: 15, color: foreground, align: "center", maxWidth: availableWidth - 24 });
-          return;
-        }
-        let x = margin;
-        selectedColumns.forEach((columnIndex, selectedIndex) => {
+        const fullWidth = row.children.length === 1 && row.children[0].colSpan > 1;
+        const columns = fullWidth ? [0] : selectedColumns;
+        const layout = columns.map((columnIndex, index) => {
           const cell = cells[columnIndex];
-          const cellWidth = selectedWidths[selectedIndex];
-          context.fillStyle = background;
-          context.fillRect(x, y, cellWidth, rowHeight);
-          context.strokeStyle = "#d9d4c7";
-          context.strokeRect(x, y, cellWidth, rowHeight);
-          const isLabel = columnIndex < 2;
-          const fontSize = isHeader ? Math.min(14, rowHeight * .5) : Math.min(periodChunk.length > 4 ? 13 : 15.5, rowHeight * .54);
-          drawReportText(context, cell?.textContent?.trim() || "", isLabel ? x + 7 : x + cellWidth - 6, y + rowHeight / 2, {
-            size: fontSize,
-            weight: isHeader || cell?.tagName === "TH" ? 900 : 500,
-            color: foreground,
-            align: isLabel ? "left" : "right",
-            maxWidth: cellWidth - 13
-          });
-          x += cellWidth;
+          const width = fullWidth ? availableWidth : selectedWidths[index];
+          const size = columnIndex < 2 ? 16 : 15;
+          const weight = cell?.tagName === "TH" ? 900 : 500;
+          const value = cell?.querySelector(".report-matrix-desktop-label")?.textContent
+            ?? (cell?.querySelector(".report-matrix-mobile-label") ? "" : cell?.textContent) ?? "";
+          context.font = `${weight} ${size}px ${REPORT_JPG_FONT}`;
+          const textWidth = context.measureText(value.trim()).width;
+          const align = fullWidth ? "center" : columnIndex < 2 ? "left" : "right";
+          if (!isHeader && columnIndex >= 2) {
+            return { width, size: size * Math.min(1, (width - 14) / Math.max(1, textWidth)), weight, lines: [value.trim()], align };
+          }
+          const lines = [""];
+          for (const character of value.trim()) {
+            const last = lines.length - 1;
+            if (lines[last] && context.measureText(lines[last] + character).width > width - 14) {
+              lines.push(character);
+            } else {
+              lines[last] += character;
+            }
+          }
+          return { width, size, weight, lines, align };
         });
-      });
+        const lineCount = Math.max(...layout.map(cell => cell.lines.length));
+        let offset = 0;
+        while (offset < lineCount) {
+          let capacity = Math.floor((pageHeight - footerHeight - y - 10) / lineHeight);
+          if (!isHeader && (capacity < 1 || (offset === 0 && lineCount > capacity && y > bodyTop))) {
+            startPage();
+            capacity = Math.floor((pageHeight - footerHeight - y - 10) / lineHeight);
+          }
+          const count = Math.min(lineCount - offset, capacity);
+          const rowHeight = count * lineHeight + 10;
+          let x = margin;
+          layout.forEach(({ width, size, weight, lines, align }) => {
+            context.fillStyle = background;
+            context.fillRect(x, y, width, rowHeight);
+            context.strokeStyle = "#d9d4c7";
+            context.strokeRect(x, y, width, rowHeight);
+            const textX = align === "center" ? x + width / 2 : align === "left" ? x + 7 : x + width - 7;
+            lines.slice(offset, offset + count).forEach((line, index) => {
+              drawReportText(context, line, textX, y + 5 + (index + .5) * lineHeight, { size, weight, color: foreground, align });
+            });
+            x += width;
+          });
+          y += rowHeight;
+          offset += count;
+        }
+      }
 
-      drawReportText(context, `收入與支出項目明細表｜第 ${pageIndex + 1} / ${periodChunks.length} 頁`, pageWidth / 2, pageHeight - 20, { size: 13, weight: 700, color: "#66746d", align: "center" });
-      pages.push(canvas);
+      startPage();
+      const bodyTop = y;
+      bodyRows.forEach(drawRow);
+    });
+    pages.forEach((canvas, index) => {
+      drawReportText(canvas.getContext("2d"), `收入與支出項目明細表｜第 ${index + 1} / ${pages.length} 頁`, pageWidth / 2, pageHeight - 20, { size: 13, weight: 700, color: "#66746d", align: "center" });
     });
     return pages;
   }
